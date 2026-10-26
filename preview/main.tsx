@@ -13,8 +13,10 @@ import { loadAll } from "../src/state";
 import { styles } from "../src/ui/styles";
 
 // Steam reports its interface language through SteamClient; the stand pretends to be Russian.
+// Interface sounds go through Steam; the stand stays silent.
 Object.assign(window, {
   SteamClient: { Settings: { GetCurrentLanguage: () => Promise.resolve("russian") } },
+  SteamUIStore: { GamepadUIAudio: { PlayNavSound: () => undefined } },
 });
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {

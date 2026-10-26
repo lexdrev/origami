@@ -4,6 +4,7 @@
 import { Focusable } from "@decky/ui";
 import type { ReactNode } from "react";
 
+import { playSound, UISound } from "../sounds";
 import { ChevronIcon } from "./icons";
 
 interface PressableProps {
@@ -13,11 +14,13 @@ interface PressableProps {
   action: string;
   label?: string;
   pressed?: boolean;
+  /** Played on activation; screen changes play their own sound in navigation. */
+  sound?: UISound;
   children: ReactNode;
 }
 
-/** Base of every interactive element: reachable with the D-pad, activated with A. */
-export function Pressable({ className, onPress, action, label, pressed, children }: PressableProps) {
+/** Base of every interactive element: reachable with the D-pad, activated with A or a tap. */
+export function Pressable({ className, onPress, action, label, pressed, sound, children }: PressableProps) {
   return (
     <Focusable
       className={className}
@@ -27,6 +30,7 @@ export function Pressable({ className, onPress, action, label, pressed, children
       aria-label={label}
       aria-pressed={pressed}
       onActivate={() => {
+        if (sound !== undefined) playSound(sound);
         onPress();
       }}
       onOKActionDescription={action}
@@ -63,6 +67,7 @@ export function ChoiceGroup<T extends string>({ label, choices, value, action, o
             key={choice.value}
             className={selected ? "og-choice og-choice--selected" : "og-choice"}
             pressed={selected}
+            sound={UISound.Press}
             action={action}
             onPress={() => {
               onChange(choice.value);

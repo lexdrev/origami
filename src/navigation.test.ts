@@ -1,0 +1,33 @@
+// SPDX-FileCopyrightText: 2026 lexdrev
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { back, navigate } from "./navigation";
+import { UISound } from "./sounds";
+
+const playNavSound = vi.fn();
+
+beforeEach(() => {
+  vi.stubGlobal("window", { SteamUIStore: { GamepadUIAudio: { PlayNavSound: playNavSound } } });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  playNavSound.mockClear();
+});
+
+describe("navigation sounds", () => {
+  it("play Steam's transition sounds into a screen and back", () => {
+    navigate("settings");
+    back();
+
+    expect(playNavSound.mock.calls).toEqual([[UISound.IntoScreen], [UISound.OutOfScreen]]);
+  });
+
+  it("stay silent when there is nowhere to go back to", () => {
+    back();
+
+    expect(playNavSound).not.toHaveBeenCalled();
+  });
+});
