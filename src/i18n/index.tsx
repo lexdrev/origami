@@ -12,7 +12,7 @@ export type Language = "ru" | "en";
 export interface Messages {
   locale: string;
   unknown: string;
-  actions: { open: string; back: string; select: string };
+  actions: { open: string; back: string; select: string; toggle: string };
   units: { watts: string; rpm: string; celsius: string };
   main: {
     settings: string;
@@ -27,9 +27,40 @@ export interface Messages {
     language: string;
     languages: Record<LanguageSetting, string>;
     system: string;
+    qamTab: string;
+    qamTabOff: string;
+    qamTabFirst: string;
+    qamTabLast: string;
+    qamTabAbove(tab: string): string;
     changes: string;
     changesSummary(count: number): string;
     slogan: readonly [string, string];
+  };
+  qamTab: {
+    title: string;
+    subtitle: string;
+    own: string;
+    ownOn: string;
+    ownOff: string;
+    place: string;
+    placeHint: string;
+    up: string;
+    down: string;
+    toTop: string;
+    toBottom: string;
+  };
+  /** Names of the quick access tabs, as Steam calls them. */
+  tabs: {
+    notifications: string;
+    remotePlay: string;
+    voiceChat: string;
+    friends: string;
+    quickSettings: string;
+    performance: string;
+    help: string;
+    soundtracks: string;
+    decky: string;
+    plugin: string;
   };
   changes: {
     title: string;

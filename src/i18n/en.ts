@@ -9,7 +9,7 @@ const locale = "en-US";
 export const en: Messages = {
   locale,
   unknown: "—",
-  actions: { open: "Open", back: "Back", select: "Select" },
+  actions: { open: "Open", back: "Back", select: "Select", toggle: "Toggle" },
   units: { watts: "W", rpm: "rpm", celsius: "°C" },
   main: {
     settings: "Settings",
@@ -24,12 +24,42 @@ export const en: Messages = {
     language: "Language",
     languages: { auto: "Same as Steam", ru: "Русский", en: "English" },
     system: "System",
+    qamTab: "Quick access tab",
+    qamTabOff: "Off · only inside Decky",
+    qamTabFirst: "On · first in the column",
+    qamTabLast: "On · last in the column",
+    qamTabAbove: (tab) => `On · above ${tab}`,
     changes: "System changes",
     changesSummary: (count) =>
       count === 0
         ? "ORIGAMI has changed nothing"
         : `${count} ${pluralForm(locale, count, { one: "change", other: "changes" })} · restore all`,
     slogan: ["Every fold unfolds.", "Fold your handheld your way."],
+  },
+  qamTab: {
+    title: "ORIGAMI tab",
+    subtitle: "Settings · quick access menu",
+    own: "Own tab",
+    ownOn: "Fox in the quick access column",
+    ownOff: "Only inside the Decky tab",
+    place: "Place in the column",
+    placeHint: "Move ORIGAMI up or down.",
+    up: "Up",
+    down: "Down",
+    toTop: "To the top",
+    toBottom: "To the bottom",
+  },
+  tabs: {
+    notifications: "Notifications",
+    remotePlay: "Remote Play Together",
+    voiceChat: "Voice chat",
+    friends: "Friends",
+    quickSettings: "Quick settings",
+    performance: "Performance",
+    help: "Help",
+    soundtracks: "Soundtracks",
+    decky: "Decky",
+    plugin: "Plugin",
   },
   changes: {
     title: "System changes",

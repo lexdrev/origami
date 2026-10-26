@@ -172,6 +172,63 @@ ${fontFaces}
 .og-row__chevron { position: absolute; top: 50%; right: 10px; display: flex; margin-top: -8px; color: var(--og-dim); }
 .og-row.og-focused .og-row__chevron { color: var(--og-accent); }
 
+.og-toggle { padding-right: 58px; }
+.og-switch {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 38px;
+  height: 20px;
+  margin-top: -10px;
+  border: 1px solid var(--og-border);
+  background: var(--og-track);
+}
+.og-switch__knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--og-dim); }
+.og-switch--on { border-color: var(--og-accent); background: rgba(255, 176, 32, 0.18); }
+.og-switch--on .og-switch__knob { left: 20px; background: var(--og-accent); }
+
+.og-column { display: flex; flex-direction: column; gap: 6px; }
+.og-column__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--og-border);
+  border-radius: 2px;
+  background: var(--og-surface);
+  color: var(--og-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.og-column__item--own { border-color: var(--og-accent); background: rgba(255, 176, 32, 0.06); color: var(--og-accent); }
+.og-column__number { width: 14px; color: var(--og-dim); font: 500 10px var(--og-mono); }
+.og-column__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.og-column__item .og-icon-button { width: 30px; height: 28px; }
+
+.og-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.og-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: 1px solid var(--og-border);
+  border-radius: 2px;
+  background: var(--og-surface);
+  color: var(--og-text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.og-button.og-focused { border-color: var(--og-accent); color: var(--og-accent); }
+
+.og-disabled { opacity: 0.4; }
+
+.og-hint { margin-top: -4px; color: var(--og-muted); font-size: 11px; line-height: 1.45; }
+
 .og-facts {
   display: grid;
   grid-template-columns: 90px minmax(0, 1fr);

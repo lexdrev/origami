@@ -16,7 +16,7 @@ const info: Info = {
   },
 };
 
-let settings: Settings = { language: "auto" };
+let settings: Settings = { language: "auto", qamTab: true, qamTabBefore: 7 };
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {

@@ -8,8 +8,11 @@ import { App } from "../src/App";
 import { I18nProvider, type Language } from "../src/i18n";
 import { ChangesScreen } from "../src/screens/ChangesScreen";
 import { MainScreen } from "../src/screens/MainScreen";
+import { QamTabScreen } from "../src/screens/QamTabScreen";
 import { SettingsScreen } from "../src/screens/SettingsScreen";
+import { PluginTitle } from "../src/PluginTitle";
 import { loadAll } from "../src/state";
+import { quickAccessColumn } from "../src/tabPosition";
 import { styles } from "../src/ui/styles";
 
 // Steam reports its interface language through SteamClient; the stand pretends to be Russian.
@@ -28,7 +31,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** Decky's frame around an open plugin: its title row with the back button and the name, then the content. */
+/** Decky's frame around an open plugin: its title row with the back button and ORIGAMI's title, then the content. */
 function DeckyPluginView({ children }: { children: ReactNode }) {
   return (
     <>
@@ -36,7 +39,7 @@ function DeckyPluginView({ children }: { children: ReactNode }) {
         <span className="decky-back" aria-hidden="true">
           ←
         </span>
-        <span>ORIGAMI</span>
+        <PluginTitle />
       </div>
       <div className="decky-content">{children}</div>
     </>
@@ -73,6 +76,11 @@ function Stand() {
             <SettingsScreen />
           </Static>
         </Frame>
+        <Frame title="Quick access tab · RU">
+          <Static language="ru">
+            <QamTabScreen />
+          </Static>
+        </Frame>
         <Frame title="System changes · RU">
           <Static language="ru">
             <ChangesScreen />
@@ -83,6 +91,9 @@ function Stand() {
   );
 }
 
+// The quick access column as on the console: Notifications, Friends, Quick settings, Performance,
+// Soundtracks, Help, Decky.
+quickAccessColumn.set([0, 3, 4, 5, 7, 6, 999].map((key) => ({ key, title: null })));
 void loadAll();
 const container = document.getElementById("root");
 if (container === null) throw new Error("No #root element");

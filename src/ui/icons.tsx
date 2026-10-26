@@ -160,6 +160,8 @@ function StrokeIcon({ size, width, d }: { size: number; width: number; d: string
 }
 
 export const BackIcon = () => <StrokeIcon size={18} width={2.2} d="M15 5l-7 7 7 7" />;
+export const UpIcon = () => <StrokeIcon size={14} width={2.4} d="M5 15l7-7 7 7" />;
+export const DownIcon = () => <StrokeIcon size={14} width={2.4} d="M5 9l7 7 7-7" />;
 export const ChevronIcon = () => <StrokeIcon size={16} width={2.2} d="M9 5l7 7-7 7" />;
 export const CheckIcon = () => <StrokeIcon size={12} width={3} d="M4 12l5 5L20 6" />;
 

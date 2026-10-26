@@ -9,6 +9,7 @@ import { useStore } from "../store";
 import { Header, Screen, SectionLabel } from "../ui/blocks";
 import { ChoiceGroup, NavRow, type Choice } from "../ui/controls";
 import { FoxMark, GearIcon } from "../ui/icons";
+import { ownTabSummary, quickAccessColumn } from "../tabPosition";
 
 const REPOSITORY = "github.com/lexdrev/origami";
 const LICENSE = "GPL-3.0";
@@ -18,6 +19,7 @@ export function SettingsScreen() {
   const current = useStore(settings);
   const journal = useStore(changes);
   const plugin = useStore(info);
+  const column = useStore(quickAccessColumn);
 
   const languages: Choice<LanguageSetting>[] = (["auto", "ru", "en"] as const).map((value) => ({
     value,
@@ -38,6 +40,18 @@ export function SettingsScreen() {
       />
 
       <SectionLabel>{t.settings.system}</SectionLabel>
+      <NavRow
+        title={t.settings.qamTab}
+        subtitle={
+          current.status === "ready"
+            ? ownTabSummary(current.value.qamTab, current.value.qamTabBefore, column, t)
+            : t.unknown
+        }
+        action={t.actions.open}
+        onPress={() => {
+          navigate("qamTab");
+        }}
+      />
       <NavRow
         title={t.settings.changes}
         subtitle={journal.status === "ready" ? t.settings.changesSummary(journal.value.length) : t.unknown}

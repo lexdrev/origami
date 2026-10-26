@@ -11,6 +11,8 @@ const steamSound = (value: number): SteamSound => value;
 // Steam's sound enum, read from the Steam client on 2026-10-26.
 export const UISound = {
   OutOfScreen: steamSound(14),
+  ToggleOn: steamSound(16),
+  ToggleOff: steamSound(17),
   Press: steamSound(21),
 } as const;
 

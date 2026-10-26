@@ -34,6 +34,10 @@ export type LanguageSetting = "auto" | "ru" | "en";
 
 export interface Settings {
   language: LanguageSetting;
+  /** ORIGAMI has its own quick access tab besides its place inside Decky. */
+  qamTab: boolean;
+  /** Steam tab that ORIGAMI's tab stands before; -1 on top, null at the end. */
+  qamTabBefore: number | null;
 }
 
 export interface Change {

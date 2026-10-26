@@ -4,7 +4,7 @@
 import { playSound, UISound } from "./sounds";
 import { createStore, useStore } from "./store";
 
-export type ScreenId = "main" | "settings" | "changes";
+export type ScreenId = "main" | "settings" | "qamTab" | "changes";
 
 const stack = createStore<readonly ScreenId[]>(["main"]);
 

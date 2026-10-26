@@ -11,20 +11,27 @@ import {
 } from "@decky/ui";
 import type { ReactNode } from "react";
 
+import { FIRST_TAB, quickAccessColumn, type TabPosition } from "./tabPosition";
+
 /** Key of ORIGAMI's own tab in the quick access menu ("ORG" in ASCII). Steam's tabs use 0–7, Decky 999. */
 export const ORIGAMI_TAB = 0x4f5247;
-/** Steam's soundtracks tab (QuickAccessTab.Music); ORIGAMI's tab sits right above it by default. */
-export const SOUNDTRACKS_TAB = 7;
 
 /** Entry of Steam's quick access tab list. */
-export interface SteamTab {
+interface SteamTab {
   key: number;
+  title?: unknown;
 }
 
 export interface TabContent {
   title: ReactNode;
   icon: ReactNode;
   content: ReactNode;
+}
+
+export interface OwnTab {
+  /** Shows or hides ORIGAMI's tab and moves it to `position`. */
+  apply: (enabled: boolean, position: TabPosition) => void;
+  dispose: () => void;
 }
 
 // Decky's tabs hook (decky-loader frontend/src/tabs-hook.tsx, v3.3.0) renders plugin tabs with
@@ -48,13 +55,13 @@ function isTabsHook(value: unknown): value is DeckyTabsHook {
   return typeof candidate.add === "function" && typeof candidate.removeById === "function";
 }
 
-/** Moves the tab `key` right before the tab `before`, or to the end of the list when `before` is absent. */
-export function placeTab(tabs: SteamTab[], key: number, before: number): void {
+/** Moves the tab `key` to `position`; a position before a tab that is not there means the end. */
+export function placeTab(tabs: SteamTab[], key: number, position: TabPosition): void {
   const from = tabs.findIndex((tab) => tab.key === key);
   if (from < 0) return;
   const [moved] = tabs.splice(from, 1);
   if (moved === undefined) return;
-  const anchor = tabs.findIndex((tab) => tab.key === before);
+  const anchor = position === FIRST_TAB ? 0 : tabs.findIndex((tab) => tab.key === position);
   tabs.splice(anchor < 0 ? tabs.length : anchor, 0, moved);
 }
 
@@ -101,11 +108,25 @@ function refreshMountedMenu(renderers: object[]): void {
   if (node.alternate) node.alternate.type = node.type;
 }
 
+function publishColumn(tabs: SteamTab[]): void {
+  const column = tabs
+    .filter((tab) => tab.key !== ORIGAMI_TAB)
+    .map((tab) => ({ key: tab.key, title: typeof tab.title === "string" ? tab.title : null }));
+  const current = quickAccessColumn.get();
+  const changed = column.length !== current.length || column.some((tab, i) => tab.key !== current[i]?.key);
+  // The menu is rendering right now; the settings screen re-renders after it, not inside it.
+  if (changed) {
+    queueMicrotask(() => {
+      quickAccessColumn.set(column);
+    });
+  }
+}
+
 /**
- * Adds ORIGAMI's own tab to the quick access menu, right before the tab `before`.
- * Returns the function that removes it, or null when the menu cannot be extended.
+ * Prepares ORIGAMI's own tab in the quick access menu. Returns null when the menu cannot be
+ * extended; ORIGAMI then lives only inside the Decky tab.
  */
-export function installQamTab(tab: TabContent, before: number): (() => void) | null {
+export function createOwnTab(tab: TabContent): OwnTab | null {
   const hook = window.DeckyPluginLoader?.tabsHook;
   const renderers = quickAccessRenderers();
   if (!isTabsHook(hook) || renderers.length === 0) {
@@ -113,9 +134,18 @@ export function installQamTab(tab: TabContent, before: number): (() => void) | n
     return null;
   }
 
+  let added = false;
+  let position: TabPosition = null;
+  let steamTabs: SteamTab[] | null = null;
+
+  const removeFromColumn = () => {
+    const index = steamTabs?.findIndex((entry) => entry.key === ORIGAMI_TAB) ?? -1;
+    // Decky only ever appends to Steam's list, so the entry is taken out here.
+    if (index >= 0) steamTabs?.splice(index, 1);
+  };
+
   // Decky appends plugin tabs to Steam's list while the menu renders. This patch runs after
   // Decky's (and after any plugin that reorders its own tab) and only moves ORIGAMI's tab.
-  let steamTabs: SteamTab[] | null = null;
   const placeOrigami = createReactTreePatcher(
     [
       (tree: unknown) => {
@@ -127,22 +157,36 @@ export function installQamTab(tab: TabContent, before: number): (() => void) | n
       const tabs = propsOf(findInReactTree(tree, (node: unknown) => Array.isArray(propsOf(node)?.tabs)))?.tabs;
       if (Array.isArray(tabs)) {
         steamTabs = tabs as SteamTab[];
-        placeTab(steamTabs, ORIGAMI_TAB, before);
+        placeTab(steamTabs, ORIGAMI_TAB, position);
+        publishColumn(steamTabs);
       }
       return tree;
     },
     "ORIGAMI tab",
   );
   const patches: Patch[] = renderers.map((renderer) => afterPatch(renderer, "type", placeOrigami));
-  hook.add({ id: ORIGAMI_TAB, ...tab });
   refreshMountedMenu(renderers);
 
-  return () => {
-    for (const patch of patches) patch.unpatch();
-    refreshMountedMenu(renderers);
-    hook.removeById(ORIGAMI_TAB);
-    // Decky only ever appends to Steam's list, so the entry is taken out here.
-    const index = steamTabs?.findIndex((entry) => entry.key === ORIGAMI_TAB) ?? -1;
-    if (index >= 0) steamTabs?.splice(index, 1);
+  return {
+    apply(enabled, next) {
+      position = next;
+      if (enabled && !added) {
+        hook.add({ id: ORIGAMI_TAB, ...tab });
+        added = true;
+      } else if (!enabled && added) {
+        hook.removeById(ORIGAMI_TAB);
+        removeFromColumn();
+        added = false;
+      }
+      if (added && steamTabs) placeTab(steamTabs, ORIGAMI_TAB, position);
+    },
+    dispose() {
+      for (const patch of patches) patch.unpatch();
+      refreshMountedMenu(renderers);
+      if (added) {
+        hook.removeById(ORIGAMI_TAB);
+        removeFromColumn();
+      }
+    },
   };
 }

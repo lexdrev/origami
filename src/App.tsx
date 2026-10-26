@@ -7,6 +7,7 @@ import { I18nProvider, useMessages } from "./i18n";
 import { useCurrentScreen, type ScreenId } from "./navigation";
 import { ChangesScreen } from "./screens/ChangesScreen";
 import { MainScreen } from "./screens/MainScreen";
+import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { actionError, useLanguage } from "./state";
 import { useStore } from "./store";
@@ -16,6 +17,7 @@ import { styles } from "./ui/styles";
 const screens: Record<ScreenId, ComponentType> = {
   main: MainScreen,
   settings: SettingsScreen,
+  qamTab: QamTabScreen,
   changes: ChangesScreen,
 };
 

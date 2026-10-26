@@ -9,7 +9,7 @@ const locale = "ru-RU";
 export const ru: Messages = {
   locale,
   unknown: "—",
-  actions: { open: "Открыть", back: "Назад", select: "Выбрать" },
+  actions: { open: "Открыть", back: "Назад", select: "Выбрать", toggle: "Переключить" },
   units: { watts: "Вт", rpm: "об/мин", celsius: "°C" },
   main: {
     settings: "Настройки",
@@ -24,6 +24,11 @@ export const ru: Messages = {
     language: "Язык",
     languages: { auto: "Как в Steam", ru: "Русский", en: "English" },
     system: "Система",
+    qamTab: "Вкладка в быстром меню",
+    qamTabOff: "Выкл · только внутри Decky",
+    qamTabFirst: "Вкл · первая в колонке",
+    qamTabLast: "Вкл · последняя в колонке",
+    qamTabAbove: (tab) => `Вкл · над вкладкой «${tab}»`,
     changes: "Изменения в системе",
     changesSummary: (count) =>
       count === 0
@@ -34,6 +39,31 @@ export const ru: Messages = {
             other: "изменений",
           })} · вернуть всё как было`,
     slogan: ["Любой сгиб можно расправить", "А консоль — сложить под себя"],
+  },
+  qamTab: {
+    title: "Вкладка ORIGAMI",
+    subtitle: "Настройки · быстрое меню",
+    own: "Отдельная вкладка",
+    ownOn: "Лиса в колонке быстрого меню",
+    ownOff: "Только внутри вкладки Decky",
+    place: "Место в колонке",
+    placeHint: "Двигайте ORIGAMI выше или ниже.",
+    up: "Выше",
+    down: "Ниже",
+    toTop: "В начало",
+    toBottom: "В конец",
+  },
+  tabs: {
+    notifications: "Уведомления",
+    remotePlay: "Remote Play Together",
+    voiceChat: "Голосовой чат",
+    friends: "Друзья",
+    quickSettings: "Быстрые настройки",
+    performance: "Производительность",
+    help: "Помощь",
+    soundtracks: "Саундтреки",
+    decky: "Decky",
+    plugin: "Плагин",
   },
   changes: {
     title: "Изменения в системе",
