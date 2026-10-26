@@ -49,13 +49,13 @@ ${fontFaces}
 
 .og-screen { display: flex; flex-direction: column; gap: 10px; }
 
+/* Decky's title row already puts 10 px between its back button and this block. */
 .og-title {
   display: flex;
   flex: 1;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  margin-left: 10px;
 }
 .og-title__icon { display: flex; color: var(--og-accent); }
 .og-title__texts { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
