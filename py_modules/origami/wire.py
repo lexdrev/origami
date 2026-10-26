@@ -22,6 +22,15 @@ def to_wire(value: object) -> JsonValue:
     raise TypeError(f"Cannot send {type(value).__name__} to the frontend")
 
 
+def from_wire(changes: dict[str, object]) -> dict[str, object]:
+    """Keys sent by the frontend (camelCase) as the backend's field names."""
+    return {_snake(key): value for key, value in changes.items()}
+
+
 def _camel(name: str) -> str:
     head, *rest = name.split("_")
     return head + "".join(part.capitalize() for part in rest)
+
+
+def _snake(name: str) -> str:
+    return "".join(f"_{char.lower()}" if char.isupper() else char for char in name)

@@ -15,6 +15,11 @@ log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
 
+# Keys of Steam's quick access tabs (QuickAccessTab): ORIGAMI's own tab stands before one of them.
+SOUNDTRACKS_TAB = 7
+FIRST_TAB = -1
+"""Position before every other tab."""
+
 
 class Language(StrEnum):
     AUTO = "auto"
@@ -25,20 +30,48 @@ class Language(StrEnum):
 @dataclass(frozen=True, slots=True)
 class Settings:
     language: Language = Language.AUTO
+    qam_tab: bool = True
+    """ORIGAMI has its own tab in the quick access menu, besides its place inside Decky."""
+    qam_tab_before: int | None = SOUNDTRACKS_TAB
+    """Steam tab that ORIGAMI's tab stands before; FIRST_TAB puts it on top, None at the end."""
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
-        language = self.language
+        language, qam_tab, qam_tab_before = self.language, self.qam_tab, self.qam_tab_before
         for key, value in changes.items():
             match key:
                 case "language":
                     language = Language(value)
+                case "qam_tab":
+                    qam_tab = _boolean(key, value)
+                case "qam_tab_before":
+                    qam_tab_before = _tab_position(value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
-        return Settings(language=language)
+        return Settings(language=language, qam_tab=qam_tab, qam_tab_before=qam_tab_before)
 
     def to_json(self) -> dict[str, object]:
-        return {"version": SCHEMA_VERSION, "language": self.language.value}
+        return {
+            "version": SCHEMA_VERSION,
+            "language": self.language.value,
+            "qam_tab": self.qam_tab,
+            "qam_tab_before": self.qam_tab_before,
+        }
+
+
+def _boolean(key: str, value: object) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"{key} must be true or false")
+    return value
+
+
+def _tab_position(value: object) -> int | None:
+    if value is None:
+        return None
+    # bool is an int in Python; true/false here is a client bug, not a tab key.
+    if isinstance(value, int) and not isinstance(value, bool) and value >= FIRST_TAB:
+        return value
+    raise ValueError(f"Not a quick access tab position: {value!r}")
 
 
 _FIELDS = frozenset(field.name for field in fields(Settings))

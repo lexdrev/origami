@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import pytest
 
 from origami.settings import Language
-from origami.wire import to_wire
+from origami.wire import from_wire, to_wire
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,14 @@ def test_dataclasses_become_camel_case_objects() -> None:
         "language": "ru",
         "vibrationPct": [50, 50],
         "inner": [{"cpuTempC": 61.5}, {"cpuTempC": None}],
+    }
+
+
+def test_frontend_keys_become_field_names() -> None:
+    assert from_wire({"language": "ru", "qamTab": False, "qamTabBefore": 7}) == {
+        "language": "ru",
+        "qam_tab": False,
+        "qam_tab_before": 7,
     }
 
 

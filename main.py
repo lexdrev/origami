@@ -10,7 +10,7 @@ import decky
 
 from origami.app import Origami
 from origami.jsonio import JsonValue
-from origami.wire import to_wire
+from origami.wire import from_wire, to_wire
 
 
 class Plugin:
@@ -38,7 +38,8 @@ class Plugin:
     async def update_settings(self, changes: object) -> JsonValue:
         if not isinstance(changes, dict):
             raise TypeError("Settings changes must be an object")
-        return to_wire(await self._app.update_settings(cast("dict[str, object]", changes)))
+        settings = await self._app.update_settings(from_wire(cast("dict[str, object]", changes)))
+        return to_wire(settings)
 
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
