@@ -12,7 +12,7 @@ import { FoxGlyph } from "./ui/icons";
 export default definePlugin(() => {
   // Loaded when Decky starts the plugin, so the first opening shows data at once.
   void loadAll();
-  const removeTab = installQamTab({ title: "ORIGAMI", icon: <FoxGlyph />, content: <TabApp /> }, SOUNDTRACKS_TAB);
+  const removeTab = installQamTab({ title: null, icon: <FoxGlyph />, content: <TabApp /> }, SOUNDTRACKS_TAB);
   return {
     name: "ORIGAMI",
     icon: <FoxGlyph />,

@@ -30,7 +30,7 @@ vi.mock("@decky/ui", () => ({
 // Performance, Soundtracks, Help, then Decky.
 const steamColumn = () => [0, 3, 4, 5, 7, 6, 999].map((key) => ({ key }));
 const keys = (tabs: SteamTab[]) => tabs.map((tab) => tab.key);
-const content = { title: "ORIGAMI", icon: null, content: null };
+const content = { title: null, icon: null, content: null };
 
 /** Like Decky's tabs hook: keeps added tabs, which Decky appends to Steam's list on render. */
 function fakeTabsHook() {
@@ -95,7 +95,7 @@ describe("installQamTab", () => {
     const remove = installQamTab(content, SOUNDTRACKS_TAB);
     renderMenu(tabs, hook);
 
-    expect(hook.add).toHaveBeenCalledWith(expect.objectContaining({ id: ORIGAMI_TAB, title: "ORIGAMI" }));
+    expect(hook.add).toHaveBeenCalledWith(expect.objectContaining({ id: ORIGAMI_TAB }));
     expect(keys(tabs)).toEqual([0, 3, 4, 5, ORIGAMI_TAB, 7, 6, 999]);
 
     remove?.();

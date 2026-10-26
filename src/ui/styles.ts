@@ -48,7 +48,8 @@ ${fontFaces}
 
 .og-screen { display: flex; flex-direction: column; gap: 10px; }
 
-/* In ORIGAMI's own tab, the same gap under the title row as Decky leaves under its own. */
+/* ORIGAMI's own tab: Steam's title row laid out like Decky's, and the same gap under it. */
+.og-tab-title { display: flex; position: sticky; top: 0; padding-right: 16px; }
 .og-tab-content { padding-top: 16px; }
 
 .og-header {
