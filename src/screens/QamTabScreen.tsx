@@ -15,7 +15,7 @@ import {
   type ColumnTab,
   type TabPosition,
 } from "../tabPosition";
-import { Header, Screen, SectionLabel } from "../ui/blocks";
+import { Alert, Header, Screen, SectionLabel } from "../ui/blocks";
 import { IconButton, Pressable, ToggleRow } from "../ui/controls";
 import { DownIcon, UpIcon } from "../ui/icons";
 
@@ -38,15 +38,21 @@ export function QamTabScreen() {
             action={t.actions.toggle}
             onChange={(qamTab) => void updateSettings({ qamTab })}
           />
-          {current.value.qamTab && (
+          {current.value.qamTab && column.arranger !== null && (
+            <>
+              <SectionLabel>{t.qamTab.place}</SectionLabel>
+              <Alert title={t.qamTab.arranged(column.arranger.name)}>{t.qamTab.arrangedText}</Alert>
+            </>
+          )}
+          {current.value.qamTab && column.arranger === null && (
             <>
               <SectionLabel>{t.qamTab.place}</SectionLabel>
               <span className="og-hint">{t.qamTab.placeHint}</span>
               <Column
-                column={column}
-                index={ownTabIndex(column, current.value.qamTabBefore)}
+                column={column.tabs}
+                index={ownTabIndex(column.tabs, current.value.qamTabBefore)}
                 onMove={(index) => {
-                  place(positionAt(column, index));
+                  place(positionAt(column.tabs, index));
                 }}
               />
               <div className="og-actions">

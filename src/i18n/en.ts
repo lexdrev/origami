@@ -28,6 +28,7 @@ export const en: Messages = {
     qamTabOff: "Off · only inside Decky",
     qamTabFirst: "On · first in the column",
     qamTabLast: "On · last in the column",
+    qamTabArranged: (plugin) => `On · placed by ${plugin ?? "another plugin"}`,
     qamTabAbove: (tab) => `On · above ${tab}`,
     changes: "System changes",
     changesSummary: (count) =>
@@ -44,6 +45,9 @@ export const en: Messages = {
     ownOff: "Only inside the Decky tab",
     place: "Place in the column",
     placeHint: "Move ORIGAMI up or down.",
+    arranged: (plugin) => `${plugin ?? "Another plugin"} arranges the tabs`,
+    arrangedText:
+      "ORIGAMI leaves its tab where it is so as not to get in the way. Without that plugin, you can choose the place here again.",
     up: "Up",
     down: "Down",
     toTop: "To the top",

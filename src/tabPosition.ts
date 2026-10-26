@@ -17,8 +17,21 @@ export interface ColumnTab {
   title: string | null;
 }
 
-/** Steam's column without ORIGAMI, as of the last time the quick access menu was drawn. */
-export const quickAccessColumn = createStore<readonly ColumnTab[]>([]);
+/** A plugin that arranges the column itself; ORIGAMI then leaves its tab where that plugin puts it. */
+export interface Arranger {
+  /** The plugin's name in Decky; null when ORIGAMI does not know the plugin. */
+  name: string | null;
+}
+
+/** Steam's column as of the last time the quick access menu was drawn. */
+export interface QuickAccessColumn {
+  /** The tabs without ORIGAMI. */
+  tabs: readonly ColumnTab[];
+  /** Null while ORIGAMI places its tab itself. */
+  arranger: Arranger | null;
+}
+
+export const quickAccessColumn = createStore<QuickAccessColumn>({ tabs: [], arranger: null });
 
 /** Index ORIGAMI takes among the other tabs; a tab that is gone means the end. */
 export function ownTabIndex(column: readonly ColumnTab[], position: TabPosition): number {
@@ -58,12 +71,13 @@ export function tabName(tab: ColumnTab, t: Messages): string {
 export function ownTabSummary(
   enabled: boolean,
   position: TabPosition,
-  column: readonly ColumnTab[],
+  column: QuickAccessColumn,
   t: Messages,
 ): string {
   if (!enabled) return t.settings.qamTabOff;
-  const index = ownTabIndex(column, position);
-  const next = column[index];
+  if (column.arranger) return t.settings.qamTabArranged(column.arranger.name);
+  const index = ownTabIndex(column.tabs, position);
+  const next = column.tabs[index];
   if (index === 0) return t.settings.qamTabFirst;
   return next ? t.settings.qamTabAbove(tabName(next, t)) : t.settings.qamTabLast;
 }

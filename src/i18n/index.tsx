@@ -31,6 +31,8 @@ export interface Messages {
     qamTabOff: string;
     qamTabFirst: string;
     qamTabLast: string;
+    /** Summary when another plugin, named or not, arranges the column. */
+    qamTabArranged(plugin: string | null): string;
     qamTabAbove(tab: string): string;
     changes: string;
     changesSummary(count: number): string;
@@ -44,6 +46,8 @@ export interface Messages {
     ownOff: string;
     place: string;
     placeHint: string;
+    arranged(plugin: string | null): string;
+    arrangedText: string;
     up: string;
     down: string;
     toTop: string;

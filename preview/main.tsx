@@ -93,7 +93,10 @@ function Stand() {
 
 // The quick access column as on the console: Notifications, Friends, Quick settings, Performance,
 // Soundtracks, Help, Decky.
-quickAccessColumn.set([0, 3, 4, 5, 7, 6, 999].map((key) => ({ key, title: null })));
+quickAccessColumn.set({
+  tabs: [0, 3, 4, 5, 7, 6, 999].map((key) => ({ key, title: null })),
+  arranger: null,
+});
 void loadAll();
 const container = document.getElementById("root");
 if (container === null) throw new Error("No #root element");

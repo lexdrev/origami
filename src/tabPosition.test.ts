@@ -53,6 +53,14 @@ describe("summary in the settings", () => {
     [true, null, "Вкл · последняя в колонке"],
     [false, 7, "Выкл · только внутри Decky"],
   ] as const)("enabled %s, before %s", (enabled, position, text) => {
-    expect(ownTabSummary(enabled, position, column, ru)).toBe(text);
+    expect(ownTabSummary(enabled, position, { tabs: column, arranger: null }, ru)).toBe(text);
+  });
+
+  it("names the plugin that arranges the column, when it is known", () => {
+    const known = ownTabSummary(true, 7, { tabs: column, arranger: { name: "Panel de Control" } }, ru);
+    const unknown = ownTabSummary(true, 7, { tabs: column, arranger: { name: null } }, ru);
+
+    expect(known).toBe("Вкл · место задаёт Panel de Control");
+    expect(unknown).toBe("Вкл · место задаёт другой плагин");
   });
 });

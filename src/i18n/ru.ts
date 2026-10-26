@@ -28,6 +28,7 @@ export const ru: Messages = {
     qamTabOff: "Выкл · только внутри Decky",
     qamTabFirst: "Вкл · первая в колонке",
     qamTabLast: "Вкл · последняя в колонке",
+    qamTabArranged: (plugin) => `Вкл · место задаёт ${plugin ?? "другой плагин"}`,
     qamTabAbove: (tab) => `Вкл · над вкладкой «${tab}»`,
     changes: "Изменения в системе",
     changesSummary: (count) =>
@@ -48,6 +49,9 @@ export const ru: Messages = {
     ownOff: "Только внутри вкладки Decky",
     place: "Место в колонке",
     placeHint: "Двигайте ORIGAMI выше или ниже.",
+    arranged: (plugin) => `Порядком управляет ${plugin ?? "другой плагин"}`,
+    arrangedText:
+      "ORIGAMI не двигает свою вкладку, чтобы ему не мешать. Без него место снова можно выбирать здесь.",
     up: "Выше",
     down: "Ниже",
     toTop: "В начало",
