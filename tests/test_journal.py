@@ -22,10 +22,12 @@ def test_empty_without_a_file(tmp_path: Path) -> None:
 def test_first_original_is_kept(tmp_path: Path) -> None:
     path = tmp_path / "changes.json"
     journal = reopened(path)
+    assert not journal.recorded("power", "ppt_pl1_spl")
 
     journal.record("power", "ppt_pl1_spl", 17)
     journal.record("power", "ppt_pl1_spl", 20)
 
+    assert reopened(path).recorded("power", "ppt_pl1_spl")
     assert reopened(path).entries() == [Change("power", "ppt_pl1_spl", 17)]
 
 

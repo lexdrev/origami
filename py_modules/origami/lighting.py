@@ -14,7 +14,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
-from origami.controller import VENDOR_REPORT, find_config_hidraw, send_feature_reports
+from origami.controller import VENDOR_REPORT, configure
 from origami.jsonio import JsonValue, expect_bool
 
 YELLOW = 0xFFD200
@@ -145,7 +145,4 @@ def _mode_report(zone: int, colour: int, lighting: Lighting) -> bytes:
 
 def apply_lighting(root: Path, lighting: Lighting) -> None:
     """Send the lighting to the controller; raise OSError when it cannot be reached."""
-    path = find_config_hidraw(root)
-    if path is None:
-        raise FileNotFoundError("The Ally controller's configuration interface is not there")
-    send_feature_reports(path, lighting_reports(lighting))
+    configure(root, lighting_reports(lighting))

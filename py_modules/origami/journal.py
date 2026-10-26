@@ -50,9 +50,12 @@ class ChangeJournal:
     def entries(self) -> list[Change]:
         return list(self._changes.values())
 
+    def recorded(self, module: str, key: str) -> bool:
+        return (module, key) in self._changes
+
     def record(self, module: str, key: str, original: JsonValue) -> None:
         """Remember the value before the first change; later changes keep that original."""
-        if (module, key) in self._changes:
+        if self.recorded(module, key):
             return
         self._changes[module, key] = Change(module, key, original)
         self._save()

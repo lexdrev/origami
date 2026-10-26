@@ -55,6 +55,9 @@ class Plugin:
             Lighting.from_json(from_wire(cast("dict[str, object]", lighting)))
         )
 
+    async def test_vibration(self) -> None:
+        await self._app.test_vibration()
+
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
 

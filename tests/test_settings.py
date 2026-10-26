@@ -8,6 +8,7 @@ import pytest
 
 from origami.lighting import Lighting, LightMode
 from origami.settings import FIRST_TAB, SOUNDTRACKS_TAB, Language, Settings, SettingsStore
+from origami.vibration import Vibration
 
 
 def test_defaults_when_there_is_no_file(tmp_path: Path) -> None:
@@ -105,3 +106,17 @@ def test_lighting_is_unset_until_chosen_and_then_saved(tmp_path: Path) -> None:
 def test_bad_lighting_is_rejected() -> None:
     with pytest.raises(ValueError, match="mode"):
         Settings().updated({"lighting": {"mode": "disco"}})
+
+
+def test_vibration_is_unset_until_chosen_and_then_saved(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    assert Settings().vibration is None
+
+    store.save(Settings().updated({"vibration": {"left": 25, "right": 75}}))
+
+    assert store.load() == Settings(vibration=Vibration(left=25, right=75))
+
+
+def test_bad_vibration_is_rejected() -> None:
+    with pytest.raises(ValueError, match="left"):
+        Settings().updated({"vibration": {"left": 101, "right": 50}})

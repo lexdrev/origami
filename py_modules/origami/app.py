@@ -9,7 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from origami.buttons import Button, button_presses
-from origami.decky_plugins import LIGHTING_OWNERS, SATURATION_OWNERS, enabled_plugins
+from origami.decky_plugins import (
+    LIGHTING_OWNERS,
+    SATURATION_OWNERS,
+    VIBRATION_OWNERS,
+    enabled_plugins,
+)
 from origami.device import Device, read_device
 from origami.journal import Change, ChangeJournal
 from origami.lighting import Lighting, apply_lighting
@@ -20,6 +25,14 @@ from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
 from origami.versions import Versions, read_versions
+from origami.vibration import (
+    PULSE_SECONDS,
+    Vibration,
+    apply_vibration,
+    read_driver_strength,
+    start_pulse,
+    stop_rumble,
+)
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +70,7 @@ class Conflicts:
 
     lighting: str | None
     saturation: str | None
+    vibration: str | None
 
 
 class Origami:
@@ -73,12 +87,13 @@ class Origami:
         self._journal = ChangeJournal(environment.data_dir / "changes.json")
         self._settings = Settings()
         self._settings_lock = asyncio.Lock()
-        self._lighting_lock = asyncio.Lock()
+        self._controller_lock = asyncio.Lock()
         self._info: Info | None = None
         self._ready = asyncio.Event()
         self._start_error: Exception | None = None
         self._qam_assist = BackgroundTask("origami-qam-assist", self._forward_quick_access)
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
+        self._pulsing = False
 
     async def start(self) -> None:
         try:
@@ -95,7 +110,7 @@ class Origami:
             return
         finally:
             self._ready.set()
-        await self._restore_lighting()
+        await self._restore_controller()
         await self._follow_settings()
 
     async def info(self) -> Info:
@@ -122,6 +137,8 @@ class Origami:
                 await self._send_lighting(updated.lighting)
             if updated.saturation is not None and updated.saturation != self._settings.saturation:
                 await self._send_saturation(updated.saturation)
+            if updated.vibration is not None and updated.vibration != self._settings.vibration:
+                await self._send_vibration(updated.vibration)
             await asyncio.to_thread(self._settings_store.save, updated)
             self._settings = updated
             await self._follow_settings()
@@ -134,6 +151,21 @@ class Origami:
         """
         await self._started()
         await self._send_lighting(lighting)
+
+    async def test_vibration(self) -> None:
+        """Rumble the handles for a second, so the strength can be felt without a game.
+
+        The controller keeps a rumble until it is told to stop, so the pulse always ends with a
+        stop, also when the call is cancelled or the plugin unloads. A press during it is ignored.
+        """
+        if self._pulsing:
+            return
+        self._pulsing = True
+        try:
+            await asyncio.to_thread(start_pulse, self._env.root)
+            await asyncio.sleep(PULSE_SECONDS)
+        finally:
+            self._end_pulse()
 
     async def saturation(self) -> int | None:
         """The saturation gamescope shows now, ORIGAMI's or not; None without gamescope."""
@@ -163,28 +195,48 @@ class Origami:
         def owner(names: tuple[str, ...]) -> str | None:
             return next((name for name in names if name in enabled), None)
 
-        return Conflicts(lighting=owner(LIGHTING_OWNERS), saturation=owner(SATURATION_OWNERS))
+        return Conflicts(
+            lighting=owner(LIGHTING_OWNERS),
+            saturation=owner(SATURATION_OWNERS),
+            vibration=owner(VIBRATION_OWNERS),
+        )
 
     def stop(self) -> None:
         """Cancel background work before Decky unloads the plugin, without waiting for it.
 
         Decky ends the process right after unloading, and while the unload waits, Decky 3.3.0's
         own socket listener spins on the closed socket and freezes the event loop, so a waiting
-        unload never returns and Decky kills the plugin after 5 s.
+        unload never returns and Decky kills the plugin after 5 s. A vibration test still running
+        is stopped right away.
         """
         self._qam_assist.cancel()
         self._after_resume.cancel()
+        self._end_pulse()
         log.info("ORIGAMI stopped")
 
+    def _end_pulse(self) -> None:
+        # Sent at once, without awaiting: an await could be cut short and leave the motors running.
+        if not self._pulsing:
+            return
+        self._pulsing = False
+        try:
+            stop_rumble(self._env.root)
+        except OSError as error:
+            log.warning("Vibration test not stopped: %s", error)
+
     async def _follow_settings(self) -> None:
-        await self._qam_assist.run_while(on=self._settings.qam_assist)
-        await self._after_resume.run_while(on=self._settings.lighting is not None)
+        settings = self._settings
+        await self._qam_assist.run_while(on=settings.qam_assist)
+        # The controller forgets ORIGAMI's lighting and vibration in sleep.
+        await self._after_resume.run_while(
+            on=settings.lighting is not None or settings.vibration is not None
+        )
 
     async def _send_lighting(self, lighting: Lighting) -> None:
         owner = (await self.conflicts()).lighting
         if owner is not None:
             raise RuntimeError(f"{owner} drives the stick lighting, so ORIGAMI leaves it alone")
-        async with self._lighting_lock:
+        async with self._controller_lock:
             await asyncio.to_thread(self._record_lighting)
             await asyncio.to_thread(apply_lighting, self._env.root, lighting)
 
@@ -192,30 +244,52 @@ class Origami:
         owner = (await self.conflicts()).saturation
         if owner is not None:
             raise RuntimeError(f"{owner} sets the screen colour, so ORIGAMI leaves it alone")
-        if not any(change.module == "display" for change in self._journal.entries()):
+        if not self._journal.recorded("display", "saturation"):
             original = await read_saturation(self._env.root)
             await asyncio.to_thread(self._journal.record, "display", "saturation", original)
         await write_saturation(self._env.root, percent)
+
+    async def _send_vibration(self, vibration: Vibration) -> None:
+        owner = (await self.conflicts()).vibration
+        if owner is not None:
+            raise RuntimeError(f"{owner} sets the vibration strength, so ORIGAMI leaves it alone")
+        async with self._controller_lock:
+            await asyncio.to_thread(self._record_vibration)
+            await asyncio.to_thread(apply_vibration, self._env.root, vibration)
 
     def _record_lighting(self) -> None:
         # The controller cannot report its lighting, so the original is its own animation (None).
         self._journal.record("lighting", "rings", None)
 
-    async def _restore_lighting(self) -> None:
-        """Send the saved lighting again, at start and after sleep; failures are only logged."""
-        lighting = self._settings.lighting
-        if lighting is None:
+    def _record_vibration(self) -> None:
+        if self._journal.recorded("gamepad", "vibration"):
             return
-        try:
-            await self._send_lighting(lighting)
-        except (OSError, RuntimeError) as error:
-            log.warning("Lighting not restored: %s", error)
+        # The MCU cannot be asked, so the original is what the driver last took.
+        strength = read_driver_strength(self._env.root)
+        self._journal.record("gamepad", "vibration", None if strength is None else list(strength))
+
+    async def _restore_controller(self) -> None:
+        """Send the saved lighting and vibration again, at start and after sleep.
+
+        Failures are only logged: the controller may be gone, or another plugin drives it now.
+        """
+        lighting, vibration = self._settings.lighting, self._settings.vibration
+        if lighting is not None:
+            try:
+                await self._send_lighting(lighting)
+            except (OSError, RuntimeError) as error:
+                log.warning("Lighting not restored: %s", error)
+        if vibration is not None:
+            try:
+                await self._send_vibration(vibration)
+            except (OSError, RuntimeError) as error:
+                log.warning("Vibration not restored: %s", error)
 
     async def _follow_resumes(self) -> None:
         async with aclosing(resumes()) as wakes:
             async for _ in wakes:
                 await asyncio.sleep(RESUME_SETTLE_SECONDS)
-                await self._restore_lighting()
+                await self._restore_controller()
 
     async def _forward_quick_access(self) -> None:
         # Steam misses some presses while a game runs (B16). The frontend sees whether Steam

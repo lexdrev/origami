@@ -15,6 +15,7 @@ from origami.app import QAM_PRESSED, Emit, Environment, Origami
 from origami.journal import Change
 from origami.lighting import Lighting, LightMode
 from origami.settings import Language, Settings
+from origami.vibration import Vibration
 
 from fakes import FakeRoot
 
@@ -58,6 +59,18 @@ def sent_lighting(monkeypatch: pytest.MonkeyPatch) -> list[Lighting]:
         sent.append(lighting)
 
     monkeypatch.setattr(app_module, "apply_lighting", apply)
+    return sent
+
+
+@pytest.fixture
+def sent_vibration(monkeypatch: pytest.MonkeyPatch) -> list[Vibration]:
+    """Vibration strengths the app sent to the controller."""
+    sent: list[Vibration] = []
+
+    def apply(_root: Path, vibration: Vibration) -> None:
+        sent.append(vibration)
+
+    monkeypatch.setattr(app_module, "apply_vibration", apply)
     return sent
 
 
@@ -315,6 +328,13 @@ def test_vibrantdeck_owns_the_saturation(ally_x: FakeRoot, tmp_path: Path) -> No
     assert (conflicts.lighting, conflicts.saturation) == (None, "vibrantDeck")
 
 
+@pytest.mark.parametrize("plugin", ["Ally Vibe Control", "Ally Fix"])
+def test_vibration_plugins_own_the_vibration(ally_x: FakeRoot, tmp_path: Path, plugin: str) -> None:
+    install_plugin(tmp_path, plugin)
+
+    assert asyncio.run(make_app(ally_x, tmp_path).conflicts()).vibration == plugin
+
+
 @pytest.fixture
 def screen(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[int] | int]:
     """gamescope's saturation as the app reads and writes it."""
@@ -373,5 +393,133 @@ def test_saturation_is_left_alone_while_vibrantdeck_runs(
 
         assert screen["written"] == []
         assert (await app.settings()).saturation is None
+
+    asyncio.run(scenario())
+
+
+def test_vibration_is_sent_kept_and_journaled_with_the_driver_strength(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert sent_vibration == []
+
+        settings = await app.update_settings({"vibration": {"left": 25, "right": 75}})
+        await app.update_settings({"vibration": {"left": 30, "right": 30}})
+
+        assert sent_vibration == [Vibration(left=25, right=75), Vibration(left=30, right=30)]
+        assert settings.vibration == Vibration(left=25, right=75)
+        assert await app.changes() == [Change("gamepad", "vibration", [50, 50])]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_vibration_is_left_alone_while_ally_vibe_control_runs(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    install_plugin(tmp_path, "Ally Vibe Control")
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+
+        with pytest.raises(RuntimeError, match="Ally Vibe Control"):
+            await app.update_settings({"vibration": {"left": 30, "right": 30}})
+
+        assert sent_vibration == []
+        assert (await app.settings()).vibration is None
+        assert await app.changes() == []
+
+    asyncio.run(scenario())
+
+
+def test_saved_vibration_comes_back_at_start_and_after_sleep(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    sent_vibration: list[Vibration],
+    sent_lighting: list[Lighting],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    woke = asyncio.Event()
+
+    async def one_resume() -> AsyncGenerator[None]:
+        yield
+        woke.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(app_module, "resumes", one_resume)
+    monkeypatch.setattr(app_module, "RESUME_SETTLE_SECONDS", 0)
+
+    async def scenario() -> None:
+        first = make_app(ally_x, tmp_path)
+        await first.start()
+        await first.update_settings({"vibration": {"left": 20, "right": 20}})
+        first.stop()
+        sent_vibration.clear()
+
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        async with asyncio.timeout(1):
+            await woke.wait()
+
+        assert sent_vibration == [Vibration(left=20, right=20)] * 2
+        assert sent_lighting == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.fixture
+def rumbles(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """What the app told the motors, with a pulse of a few milliseconds."""
+    told: list[str] = []
+
+    def pulse(_root: Path) -> None:
+        told.append("pulse")
+
+    def stop(_root: Path) -> None:
+        told.append("stop")
+
+    monkeypatch.setattr(app_module, "start_pulse", pulse)
+    monkeypatch.setattr(app_module, "stop_rumble", stop)
+    monkeypatch.setattr(app_module, "PULSE_SECONDS", 0.02)
+    return told
+
+
+def test_vibration_test_is_a_pulse_that_ends_with_a_stop(
+    ally_x: FakeRoot, tmp_path: Path, rumbles: list[str]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        first = asyncio.create_task(app.test_vibration())
+        await asyncio.sleep(0)
+        await app.test_vibration()  # pressed again during the pulse
+        await first
+
+    asyncio.run(scenario())
+
+    assert rumbles == ["pulse", "stop"]
+
+
+def test_a_cancelled_or_unloaded_vibration_test_still_stops_the_motors(
+    ally_x: FakeRoot, tmp_path: Path, rumbles: list[str]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        cancelled = asyncio.create_task(app.test_vibration())
+        await asyncio.sleep(0.005)
+        cancelled.cancel()
+        await asyncio.gather(cancelled, return_exceptions=True)
+        assert rumbles == ["pulse", "stop"]
+
+        unloaded = asyncio.create_task(app.test_vibration())
+        await asyncio.sleep(0.005)
+        app.stop()
+        # Decky unloads synchronously: the stop is out before anything else runs.
+        assert rumbles == ["pulse", "stop", "pulse", "stop"]
+        await unloaded
+        assert rumbles == ["pulse", "stop", "pulse", "stop"]
 
     asyncio.run(scenario())

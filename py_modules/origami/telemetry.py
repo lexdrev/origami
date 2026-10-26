@@ -6,11 +6,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from origami.sysfs import find_hwmon, read_int, read_text
+from origami.sysfs import find_hwmon, read_int
+from origami.vibration import read_driver_strength
 
 ARMOURY = Path("sys/class/firmware-attributes/asus-armoury/attributes")
 CPU_BOOST = Path("sys/devices/system/cpu/cpufreq/boost")
-ALLY_HID = Path("sys/module/hid_asus_ally/drivers/hid:asus_rog_ally")
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,7 +31,7 @@ class FanTelemetry:
 @dataclass(frozen=True, slots=True)
 class GamepadTelemetry:
     vibration_pct: tuple[int, int] | None
-    """Left and right handle strength as reported by the hid-asus-ally driver."""
+    """Left and right handle strength as the hid-asus-ally driver last took it."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,7 +50,7 @@ def read_telemetry(root: Path) -> Telemetry:
             cpu_boost=_flag(root / CPU_BOOST),
         ),
         fans=_read_fans(root, amdgpu),
-        gamepad=GamepadTelemetry(vibration_pct=_read_vibration(root)),
+        gamepad=GamepadTelemetry(vibration_pct=read_driver_strength(root)),
     )
 
 
@@ -65,19 +65,6 @@ def _read_fans(root: Path, amdgpu: Path | None) -> FanTelemetry:
         cpu_temp_c=_scaled(find_hwmon(root, "k10temp"), "temp1_input", 1000),
         gpu_temp_c=_scaled(amdgpu, "temp1_input", 1000),
     )
-
-
-def _read_vibration(root: Path) -> tuple[int, int] | None:
-    for attribute in sorted((root / ALLY_HID).glob("*/vibration_intensity")):
-        text = read_text(attribute)
-        if text is None:
-            continue
-        match text.split():
-            case [left, right] if left.isdigit() and right.isdigit():
-                return int(left), int(right)
-            case _:
-                return None
-    return None
 
 
 def _scaled(hwmon: Path | None, attribute: str, divisor: int) -> float | None:

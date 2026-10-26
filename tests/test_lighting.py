@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from origami import lighting as lighting_module
+from origami import controller
 from origami.lighting import (
     Brightness,
     Lighting,
@@ -119,7 +119,7 @@ def test_bad_lighting_is_rejected(value: object) -> None:
         Lighting.from_json(value)
 
 
-def test_apply_sends_the_commands_and_the_sleep_switch(
+def test_apply_sends_the_commands_to_the_controller(
     ally_x: FakeRoot, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     sent: list[tuple[Path, list[bytes]]] = []
@@ -127,7 +127,7 @@ def test_apply_sends_the_commands_and_the_sleep_switch(
     def send(path: Path, reports: Iterable[bytes]) -> None:
         sent.append((path, list(reports)))
 
-    monkeypatch.setattr(lighting_module, "send_feature_reports", send)
+    monkeypatch.setattr(controller, "send_feature_reports", send)
     node = ally_x.ally_controller()
     value = Lighting()
 

@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: 2026 lexdrev
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The configuration interface of the Ally controller.
+"""The Ally controller's HID interfaces that ORIGAMI talks to.
 
-The hid-asus-ally driver binds HID interface 2 of the controller. The MCU reports the
-special buttons there and takes its settings there as vendor feature reports `5a ...`,
-64 bytes long. InputPlumber hides the hidraw node from users; ORIGAMI uses it as root.
+The hid-asus-ally driver binds HID interfaces 2 and 5 of the controller. On interface 2 the MCU
+reports the special buttons and takes its settings as vendor feature reports `5a ...`, 64 bytes
+long. Interface 5 is the gamepad itself, which takes the rumble output report. InputPlumber
+hides both hidraw nodes from users; ORIGAMI uses them as root.
 """
 
 import fcntl
@@ -18,21 +19,44 @@ from origami.sysfs import read_text
 HIDRAW = Path("sys/class/hidraw")
 DRIVER = "asus_rog_ally"
 CONFIG_INTERFACE = "input2"
+GAMEPAD_INTERFACE = "input5"
 VENDOR_REPORT = 0x5A
 REPORT_SIZE = 64
 
 
 def find_config_hidraw(root: Path) -> Path | None:
     """Find the node of the controller's configuration interface; hidrawN changes between boots."""
+    return _find_hidraw(root, CONFIG_INTERFACE)
+
+
+def configure(root: Path, reports: Iterable[bytes]) -> None:
+    """Send vendor feature reports to the MCU; raise OSError when the controller is not there."""
+    path = find_config_hidraw(root)
+    if path is None:
+        raise FileNotFoundError("The Ally controller's configuration interface is not there")
+    send_feature_reports(path, reports)
+
+
+def rumble(root: Path, report: bytes) -> None:
+    """Write a rumble report to the gamepad; raise OSError when the controller is not there."""
+    path = _find_hidraw(root, GAMEPAD_INTERFACE)
+    if path is None:
+        raise FileNotFoundError("The Ally controller's gamepad interface is not there")
+    fd = os.open(path, os.O_WRONLY | os.O_CLOEXEC)
+    try:
+        os.write(fd, report)
+    finally:
+        os.close(fd)
+
+
+def _find_hidraw(root: Path, interface: str) -> Path | None:
     try:
         nodes = sorted((root / HIDRAW).iterdir())
     except OSError:
         return None
     for node in nodes:
         uevent = _parse_uevent(read_text(node / "device" / "uevent") or "")
-        if uevent.get("DRIVER") == DRIVER and uevent.get("HID_PHYS", "").endswith(
-            f"/{CONFIG_INTERFACE}"
-        ):
+        if uevent.get("DRIVER") == DRIVER and uevent.get("HID_PHYS", "").endswith(f"/{interface}"):
             return root / "dev" / node.name
     return None
 

@@ -18,6 +18,8 @@ LIGHTING_OWNERS = ("HueSync",)
 """Plugins that drive the stick rings; while one runs, ORIGAMI leaves them alone."""
 SATURATION_OWNERS = ("vibrantDeck",)
 """Plugins that write gamescope's colour gamut themselves, past Steam's own saturation setting."""
+VIBRATION_OWNERS = ("Ally Vibe Control", "Ally Fix")
+"""Plugins that set the strength of the handle vibration."""
 
 
 def enabled_plugins(decky_home: Path) -> frozenset[str]:
