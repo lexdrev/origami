@@ -3,10 +3,8 @@
 
 """Presses of the Ally's own buttons, read from the controller's configuration interface.
 
-The hid-asus-ally driver binds HID interface 2 of the controller, where the MCU reports
-these buttons as vendor reports `5a <code>`: one on press, `5a 00` about 1 ms later, and
-nothing while no button is pressed. InputPlumber hides this hidraw node from users and
-reads its own copy; ORIGAMI reads beside it as root.
+The MCU reports these buttons as vendor reports `5a <code>`: one on press, `5a 00` about
+1 ms later, and nothing while no button is pressed (HARDWARE.md, check 12).
 """
 
 import asyncio
@@ -18,42 +16,18 @@ from contextlib import aclosing
 from enum import Enum
 from pathlib import Path
 
-from origami.sysfs import read_text
+from origami.controller import REPORT_SIZE, VENDOR_REPORT, find_config_hidraw
 
 log = logging.getLogger(__name__)
 
-HIDRAW = Path("sys/class/hidraw")
-DRIVER = "asus_rog_ally"
-CONFIG_INTERFACE = "input2"
-VENDOR_REPORT = 0x5A
 BUTTON_CODE = 1
 """Index of the button code in a vendor report."""
-REPORT_SIZE = 64
 RETRY_SECONDS = 5.0
 
 
 class Button(Enum):
     QUICK_ACCESS = 0x93
     """Library, pressed shortly: Steam's quick access menu."""
-
-
-def find_config_hidraw(root: Path) -> Path | None:
-    """Find the node of the controller's configuration interface; hidrawN changes between boots."""
-    try:
-        nodes = sorted((root / HIDRAW).iterdir())
-    except OSError:
-        return None
-    for node in nodes:
-        uevent = _parse_uevent(read_text(node / "device" / "uevent") or "")
-        if uevent.get("DRIVER") == DRIVER and uevent.get("HID_PHYS", "").endswith(
-            f"/{CONFIG_INTERFACE}"
-        ):
-            return root / "dev" / node.name
-    return None
-
-
-def _parse_uevent(text: str) -> dict[str, str]:
-    return dict(line.split("=", 1) for line in text.splitlines() if "=" in line)
 
 
 def parse_press(report: bytes) -> Button | None:

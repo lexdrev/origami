@@ -33,3 +33,12 @@ class FakeRoot:
         node.parent.mkdir(parents=True, exist_ok=True)
         os.mkfifo(node)
         return node
+
+    def ally_controller(self) -> Path:
+        """The controller's hidraw devices as on the console; returns the configuration node."""
+        self.hidraw(0, driver="asus", phys="usb-0000:66:00.0-4/input0")
+        self.hidraw(2, driver="asus", phys="usb-0000:66:00.0-4/input3")
+        node = self.hidraw(5, driver="asus_rog_ally", phys="usb-0000:66:00.0-4/input2")
+        self.hidraw(6, driver="asus_rog_ally", phys="usb-0000:66:00.0-4/input5")
+        self.hidraw(7, driver="hid-generic", phys="")
+        return node
