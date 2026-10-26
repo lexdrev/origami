@@ -84,7 +84,7 @@ ${fontFaces}
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  min-height: 150px;
+  min-height: 140px;
   padding: 12px;
   border: 1px solid var(--og-border);
   border-radius: 2px;
