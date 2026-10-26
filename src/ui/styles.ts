@@ -30,8 +30,11 @@ const tokens = `
 export const styles = `
 ${fontFaces}
 
-.og-root {
+.og-root, .og-tab-title {
   ${tokens}
+}
+
+.og-root {
   color: var(--og-text);
   font-family: var(--og-sans);
   line-height: 1.3;
@@ -49,7 +52,8 @@ ${fontFaces}
 .og-screen { display: flex; flex-direction: column; gap: 10px; }
 
 /* ORIGAMI's own tab: Steam's title row laid out like Decky's, and the same gap under it. */
-.og-tab-title { display: flex; position: sticky; top: 0; padding-right: 16px; }
+.og-tab-title { display: flex; align-items: center; gap: 10px; position: sticky; top: 0; padding-right: 16px; }
+.og-tab-title__icon { display: flex; color: var(--og-accent); }
 .og-tab-content { padding-top: 16px; }
 
 .og-header {

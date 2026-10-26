@@ -4,6 +4,7 @@
 import { staticClasses } from "@decky/ui";
 
 import { App } from "./App";
+import { FoxMark } from "./ui/icons";
 
 /**
  * ORIGAMI in its own quick access tab. Like Decky's tab, it draws Steam's large white title
@@ -12,7 +13,12 @@ import { App } from "./App";
 export function TabApp() {
   return (
     <>
-      <div className={`${staticClasses.Title} og-tab-title`}>ORIGAMI</div>
+      <div className={`${staticClasses.Title} og-tab-title`}>
+        <span className="og-tab-title__icon">
+          <FoxMark size={28} />
+        </span>
+        ORIGAMI
+      </div>
       <div className="og-tab-content">
         <App />
       </div>

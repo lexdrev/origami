@@ -7,7 +7,7 @@ import { info } from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
-import { DisplayIcon, FansIcon, FoxMark, GamepadIcon, GearIcon, PowerIcon } from "../ui/icons";
+import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon } from "../ui/icons";
 import { useTelemetry } from "../useTelemetry";
 import { deviceName, systemName } from "./system";
 import { tileTexts } from "./tiles";
@@ -31,7 +31,7 @@ export function MainScreen() {
   );
 }
 
-/** Under Decky's own title row: the console, its system and the way to the settings. */
+/** Under the title row: the console, its system and the way to the settings. */
 function DeviceHeader() {
   const t = useMessages();
   const plugin = useStore(info);
@@ -40,9 +40,6 @@ function DeviceHeader() {
 
   return (
     <header className="og-header">
-      <span className="og-header__icon">
-        <FoxMark size={30} />
-      </span>
       <span className="og-header__titles">
         <span className="og-header__title">{device ?? t.unknown}</span>
         <span className="og-header__subtitle">{system ?? t.unknown}</span>
