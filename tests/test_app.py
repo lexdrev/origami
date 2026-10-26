@@ -11,8 +11,11 @@ import pytest
 
 from origami import app as app_module
 from origami import versions
-from origami.app import QAM_PRESSED, Emit, Environment, Origami
+from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
+from origami.buttons import ButtonAction
+from origami.inputplumber import SteamChord
 from origami.journal import Change
+from origami.jsonio import JsonValue
 from origami.lighting import Lighting, LightMode
 from origami.settings import Language, Settings
 from origami.vibration import Vibration
@@ -28,7 +31,7 @@ def no_busctl(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(versions, "run", fake_run)
 
 
-async def no_events(_event: str) -> None:
+async def no_events(_event: str, *_args: JsonValue) -> None:
     pass
 
 
@@ -146,7 +149,7 @@ def test_qam_assist_forwards_presses_while_it_is_on(ally_x: FakeRoot, tmp_path: 
         events: list[str] = []
         received = asyncio.Event()
 
-        async def emit(event: str) -> None:
+        async def emit(event: str, *_args: JsonValue) -> None:
             events.append(event)
             received.set()
 
@@ -181,7 +184,7 @@ def test_qam_assist_starts_with_the_plugin_when_it_was_on(ally_x: FakeRoot, tmp_
         events: list[str] = []
         received = asyncio.Event()
 
-        async def emit(event: str) -> None:
+        async def emit(event: str, *_args: JsonValue) -> None:
             events.append(event)
             received.set()
 
@@ -299,7 +302,7 @@ def test_stop_cancels_background_work_without_waiting(ally_x: FakeRoot, tmp_path
     async def scenario() -> None:
         events: list[str] = []
 
-        async def emit(event: str) -> None:
+        async def emit(event: str, *_args: JsonValue) -> None:
             events.append(event)
 
         writer = os.open(node, os.O_RDWR | os.O_NONBLOCK)
@@ -521,5 +524,126 @@ def test_a_cancelled_or_unloaded_vibration_test_still_stops_the_motors(
         assert rumbles == ["pulse", "stop", "pulse", "stop"]
         await unloaded
         assert rumbles == ["pulse", "stop", "pulse", "stop"]
+
+    asyncio.run(scenario())
+
+
+def test_armoury_crate_presses_bring_their_actions(ally_x: FakeRoot, tmp_path: Path) -> None:
+    short_press = bytes.fromhex("5aa600000000")
+    hold = bytes.fromhex("0100007000000000")
+
+    async def scenario() -> None:
+        config = ally_x.ally_controller()
+        events: asyncio.Queue[tuple[str, ...]] = asyncio.Queue()
+
+        async def emit(event: str, *args: JsonValue) -> None:
+            events.put_nowait((event, *(str(arg) for arg in args)))
+
+        config_writer = os.open(config, os.O_RDWR | os.O_NONBLOCK)
+        keyboard_writer = os.open(ally_x.path / "dev" / "hidraw2", os.O_RDWR | os.O_NONBLOCK)
+        app = make_app(ally_x, tmp_path, emit)
+        await app.start()
+        settings = await app.update_settings({"armoury_crate": "origami"})
+        assert settings.armoury_crate is ButtonAction.ORIGAMI
+        await asyncio.sleep(0.05)
+
+        os.write(config_writer, short_press)
+        assert await asyncio.wait_for(events.get(), 1) == (BUTTON_ACTION, "origami")
+
+        # Holding the button comes from the keyboard interface: the reader starts again with it.
+        await app.update_settings({"armoury_crate_hold": "performance"})
+        await asyncio.sleep(0.05)
+        os.write(keyboard_writer, hold)
+        assert await asyncio.wait_for(events.get(), 1) == (BUTTON_ACTION, "performance")
+
+        # Another action for a button already read takes effect with the next press.
+        await app.update_settings({"armoury_crate": "quick_access"})
+        os.write(config_writer, short_press)
+        assert await asyncio.wait_for(events.get(), 1) == (BUTTON_ACTION, "quick_access")
+
+        app.stop()
+        os.close(config_writer)
+        os.close(keyboard_writer)
+
+    asyncio.run(scenario())
+
+
+def test_buttons_are_not_read_until_something_is_assigned(ally_x: FakeRoot, tmp_path: Path) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        settings = await app.settings()
+
+        assert (settings.armoury_crate, settings.armoury_crate_hold) == (ButtonAction.NONE,) * 2
+        assert not any(task.get_name() == "origami-buttons" for task in asyncio.all_tasks())
+
+    asyncio.run(scenario())
+
+
+def test_steam_chords_are_pressed_and_other_actions_go_to_the_frontend(
+    ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    short_press = bytes.fromhex("5aa600000000")
+    pressed: list[SteamChord] = []
+
+    async def press(_root: Path, chord: SteamChord) -> None:
+        pressed.append(chord)
+
+    monkeypatch.setattr(app_module, "press_chord", press)
+
+    async def scenario() -> None:
+        config = ally_x.ally_controller()
+        events: asyncio.Queue[tuple[str, ...]] = asyncio.Queue()
+
+        async def emit(event: str, *args: JsonValue) -> None:
+            events.put_nowait((event, *(str(arg) for arg in args)))
+
+        writer = os.open(config, os.O_RDWR | os.O_NONBLOCK)
+        app = make_app(ally_x, tmp_path, emit)
+        await app.start()
+        await app.update_settings({"armoury_crate": "screenshot"})
+        await asyncio.sleep(0.05)
+
+        os.write(writer, short_press)
+        await asyncio.sleep(0.05)
+        assert pressed == [SteamChord.SCREENSHOT]
+        assert events.empty()
+
+        await app.update_settings({"armoury_crate": "overlay"})
+        os.write(writer, short_press)
+        assert await asyncio.wait_for(events.get(), 1) == (BUTTON_ACTION, "overlay")
+        assert pressed == [SteamChord.SCREENSHOT]
+
+        app.stop()
+        os.close(writer)
+
+    asyncio.run(scenario())
+
+
+def test_the_magnifier_is_switched_through_gamescope(
+    ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    switched: list[Path] = []
+
+    async def toggle(root: Path) -> bool:
+        switched.append(root)
+        return True
+
+    monkeypatch.setattr(app_module, "toggle_magnifier", toggle)
+
+    async def scenario() -> None:
+        config = ally_x.ally_controller()
+        writer = os.open(config, os.O_RDWR | os.O_NONBLOCK)
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"armoury_crate": "magnifier"})
+        await asyncio.sleep(0.05)
+
+        os.write(writer, bytes.fromhex("5aa600000000"))
+        await asyncio.sleep(0.05)
+
+        assert switched == [ally_x.path]
+        app.stop()
+        os.close(writer)
 
     asyncio.run(scenario())

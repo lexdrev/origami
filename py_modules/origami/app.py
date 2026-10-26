@@ -3,12 +3,13 @@
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Mapping
 from contextlib import aclosing
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
-from origami.buttons import Button, button_presses
+from origami.buttons import Button, ButtonAction, button_presses
 from origami.decky_plugins import (
     LIGHTING_OWNERS,
     SATURATION_OWNERS,
@@ -16,8 +17,11 @@ from origami.decky_plugins import (
     enabled_plugins,
 )
 from origami.device import Device, read_device
+from origami.inputplumber import SteamChord, press_chord
 from origami.journal import Change, ChangeJournal
+from origami.jsonio import JsonValue
 from origami.lighting import Lighting, apply_lighting
+from origami.magnifier import toggle_magnifier
 from origami.power import resumes
 from origami.proc import CommandError
 from origami.saturation import read_saturation, write_saturation
@@ -38,11 +42,23 @@ log = logging.getLogger(__name__)
 
 QAM_PRESSED = "qam_pressed"
 """Event sent to the frontend on every press of the quick access button while QAM assist is on."""
+BUTTON_ACTION = "button_action"
+"""Event sent to the frontend with the action of a button ORIGAMI drives, on every press of it."""
+
+STEAM_CHORDS = {
+    ButtonAction.SCREENSHOT: SteamChord.SCREENSHOT,
+    ButtonAction.KEYBOARD: SteamChord.KEYBOARD,
+}
+"""Actions Steam does on a chord of its own, which ORIGAMI presses through InputPlumber."""
 
 RESUME_SETTLE_SECONDS = 2.0
 """The driver resets the controller on resume; ORIGAMI sends its settings after that."""
 
-Emit = Callable[[str], Awaitable[None]]
+
+class Emit(Protocol):
+    """Sends an event with its arguments to the frontend (decky.emit)."""
+
+    def __call__(self, event: str, /, *args: JsonValue) -> Awaitable[None]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,7 +107,8 @@ class Origami:
         self._info: Info | None = None
         self._ready = asyncio.Event()
         self._start_error: Exception | None = None
-        self._qam_assist = BackgroundTask("origami-qam-assist", self._forward_quick_access)
+        self._buttons = BackgroundTask("origami-buttons", self._forward_buttons)
+        self._buttons_read: frozenset[Button] = frozenset()
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
         self._pulsing = False
 
@@ -209,7 +226,7 @@ class Origami:
         unload never returns and Decky kills the plugin after 5 s. A vibration test still running
         is stopped right away.
         """
-        self._qam_assist.cancel()
+        self._buttons.cancel()
         self._after_resume.cancel()
         self._end_pulse()
         log.info("ORIGAMI stopped")
@@ -226,7 +243,12 @@ class Origami:
 
     async def _follow_settings(self) -> None:
         settings = self._settings
-        await self._qam_assist.run_while(on=settings.qam_assist)
+        buttons = _driven_buttons(settings)
+        if buttons != self._buttons_read:
+            # The reader opens only the interfaces its buttons come from.
+            await self._buttons.stop()
+            self._buttons_read = buttons
+        await self._buttons.run_while(on=bool(buttons))
         # The controller forgets ORIGAMI's lighting and vibration in sleep.
         await self._after_resume.run_while(
             on=settings.lighting is not None or settings.vibration is not None
@@ -291,15 +313,43 @@ class Origami:
                 await asyncio.sleep(RESUME_SETTLE_SECONDS)
                 await self._restore_controller()
 
-    async def _forward_quick_access(self) -> None:
-        # Steam misses some presses while a game runs (B16). The frontend sees whether Steam
-        # registered this one and opens the menu itself if it did not.
-        async with aclosing(button_presses(self._env.root)) as presses:
+    async def _forward_buttons(self) -> None:
+        async with aclosing(button_presses(self._env.root, self._buttons_read)) as presses:
             async for button in presses:
-                if button is Button.QUICK_ACCESS:
-                    await self._emit(QAM_PRESSED)
+                match button:
+                    case Button.QUICK_ACCESS:
+                        # Steam misses some presses while a game runs (B16). The frontend sees
+                        # whether Steam registered this one and opens the menu itself if not.
+                        await self._emit(QAM_PRESSED)
+                    case Button.ARMOURY_CRATE:
+                        await self._act(self._settings.armoury_crate)
+                    case Button.ARMOURY_CRATE_HOLD:
+                        await self._act(self._settings.armoury_crate_hold)
+
+    async def _act(self, action: ButtonAction) -> None:
+        """Do what the backend can do itself; have the frontend do the rest in Steam's interface."""
+        chord = STEAM_CHORDS.get(action)
+        try:
+            if chord is not None:
+                await press_chord(self._env.root, chord)
+            elif action is ButtonAction.MAGNIFIER:
+                await toggle_magnifier(self._env.root)
+            elif action is not ButtonAction.NONE:
+                await self._emit(BUTTON_ACTION, action.value)
+        except (CommandError, TimeoutError) as error:
+            log.warning("%s not done: %s", action.value, error)
 
     async def _started(self) -> None:
         await self._ready.wait()
         if self._start_error is not None:
             raise RuntimeError("ORIGAMI failed to start, see the plugin log") from self._start_error
+
+
+def _driven_buttons(settings: Settings) -> frozenset[Button]:
+    """The buttons whose presses ORIGAMI needs with these settings."""
+    driven = {
+        Button.QUICK_ACCESS: settings.qam_assist,
+        Button.ARMOURY_CRATE: settings.armoury_crate is not ButtonAction.NONE,
+        Button.ARMOURY_CRATE_HOLD: settings.armoury_crate_hold is not ButtonAction.NONE,
+    }
+    return frozenset(button for button, needed in driven.items() if needed)

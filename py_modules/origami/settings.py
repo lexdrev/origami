@@ -8,6 +8,7 @@ from dataclasses import dataclass, fields, replace
 from enum import StrEnum
 from pathlib import Path
 
+from origami.buttons import ButtonAction
 from origami.fsutil import atomic_write_text
 from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
@@ -45,6 +46,10 @@ class Settings:
     """Screen saturation in percent (100 = sRGB); None until the user sets it."""
     vibration: Vibration | None = None
     """Handle vibration strength; None until the user sets it, so the controller keeps its own."""
+    armoury_crate: ButtonAction = ButtonAction.NONE
+    """What a short press of the upper left button does; nothing reaches Steam from it (B17)."""
+    armoury_crate_hold: ButtonAction = ButtonAction.NONE
+    """What holding the upper left button does, besides the L5 Steam gets from it."""
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
@@ -61,6 +66,8 @@ class Settings:
                     parsed[key] = None if value is None else Lighting.from_json(value)
                 case "saturation":
                     parsed[key] = _saturation(value)
+                case "armoury_crate" | "armoury_crate_hold":
+                    parsed[key] = ButtonAction(value)
                 case "vibration":
                     parsed[key] = None if value is None else Vibration.from_json(value)
                 case _:
@@ -77,6 +84,8 @@ class Settings:
             "lighting": None if self.lighting is None else self.lighting.to_json(),
             "saturation": self.saturation,
             "vibration": None if self.vibration is None else self.vibration.to_json(),
+            "armoury_crate": self.armoury_crate.value,
+            "armoury_crate_hold": self.armoury_crate_hold.value,
         }
 
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from origami.buttons import ButtonAction
 from origami.lighting import Lighting, LightMode
 from origami.settings import FIRST_TAB, SOUNDTRACKS_TAB, Language, Settings, SettingsStore
 from origami.vibration import Vibration
@@ -69,10 +70,13 @@ def test_own_tab_position(before: int | None) -> None:
         {"qam_assist": "yes"},
         {"saturation": 201},
         {"saturation": True},
+        {"armoury_crate": "dance"},
     ],
 )
 def test_update_rejects_invalid_changes(changes: dict[str, object]) -> None:
-    with pytest.raises(ValueError, match=r"theme|de|qam_tab|position|qam_assist|Saturation"):
+    with pytest.raises(
+        ValueError, match=r"theme|de|qam_tab|position|qam_assist|Saturation|ButtonAction"
+    ):
         Settings().updated(changes)
 
 
@@ -120,3 +124,16 @@ def test_vibration_is_unset_until_chosen_and_then_saved(tmp_path: Path) -> None:
 def test_bad_vibration_is_rejected() -> None:
     with pytest.raises(ValueError, match="left"):
         Settings().updated({"vibration": {"left": 101, "right": 50}})
+
+
+def test_armoury_crate_actions_are_saved(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    changes = {"armoury_crate": "origami", "armoury_crate_hold": "quick_access"}
+
+    store.save(Settings().updated(changes))
+
+    loaded = store.load()
+    assert (loaded.armoury_crate, loaded.armoury_crate_hold) == (
+        ButtonAction.ORIGAMI,
+        ButtonAction.QUICK_ACCESS,
+    )
