@@ -92,6 +92,7 @@ ${fontFaces}
 
 .og-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .og-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -103,6 +104,8 @@ ${fontFaces}
   background: var(--og-surface);
 }
 .og-tile.og-focused { border-color: var(--og-accent); }
+.og-tile__chevron { position: absolute; top: 12px; right: 10px; display: flex; color: var(--og-dim); }
+.og-tile.og-focused .og-tile__chevron { color: var(--og-accent); }
 .og-tile__icon {
   display: flex;
   align-items: center;

@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 import { useMessages } from "../i18n";
 import { IconButton, Pressable } from "./controls";
-import { BackIcon, WarningIcon } from "./icons";
+import { BackIcon, ChevronIcon, WarningIcon } from "./icons";
 
 interface ScreenProps {
   /** Goes one screen back; B does the same. The main screen has none. */
@@ -79,6 +79,9 @@ export function Tile({ icon, name, value, subtitle, onOpen }: TileProps) {
   );
   return onOpen ? (
     <Pressable className="og-tile" action={t.actions.open} onPress={onOpen}>
+      <span className="og-tile__chevron">
+        <ChevronIcon />
+      </span>
       {content}
     </Pressable>
   ) : (
