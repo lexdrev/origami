@@ -18,10 +18,10 @@ const allyX: Telemetry = {
 
 describe("tile texts", () => {
   it("show live values in Russian", () => {
-    expect(tileTexts(allyX, ru)).toEqual({
+    expect(tileTexts(allyX, 150, ru)).toEqual({
       power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · буст${NBSP}выкл` },
       fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C` },
-      display: { value: "—", subtitle: "Насыщенность" },
+      display: { value: "150%", subtitle: "Насыщенность" },
       gamepad: { value: "50%", subtitle: "Вибрация ручек" },
     });
   });
@@ -29,7 +29,7 @@ describe("tile texts", () => {
   it("show both handles when they differ", () => {
     const telemetry = { ...allyX, gamepad: { vibrationPct: [40, 60] as [number, number] } };
 
-    expect(tileTexts(telemetry, en).gamepad.value).toBe("40% / 60%");
+    expect(tileTexts(telemetry, null, en).gamepad.value).toBe("40% / 60%");
   });
 
   it("show dashes before the first reading and on other hardware", () => {
@@ -40,7 +40,7 @@ describe("tile texts", () => {
     };
 
     for (const telemetry of [null, unknown]) {
-      const texts = tileTexts(telemetry, en);
+      const texts = tileTexts(telemetry, null, en);
       expect(texts.power).toEqual({ value: "—", subtitle: "" });
       expect(texts.fans).toEqual({ value: "—", subtitle: "rpm" });
       expect(texts.gamepad.value).toBe("—");

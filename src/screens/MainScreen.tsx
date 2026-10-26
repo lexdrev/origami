@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Focusable } from "@decky/ui";
+import { useEffect } from "react";
 
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
+import { refreshSaturation, saturation } from "../saturation";
 import { info } from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
@@ -17,7 +19,12 @@ import { tileTexts } from "./tiles";
 export function MainScreen() {
   const t = useMessages();
   const telemetry = useTelemetry();
-  const tiles = tileTexts(telemetry.status === "ready" ? telemetry.value : null, t);
+  const level = useStore(saturation);
+  // Steam's own setting, changed from Steam's settings page too.
+  useEffect(() => {
+    void refreshSaturation();
+  }, []);
+  const tiles = tileTexts(telemetry.status === "ready" ? telemetry.value : null, level, t);
 
   return (
     <Screen>

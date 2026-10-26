@@ -19,11 +19,21 @@ import {
   usesColour,
 } from "../lighting";
 import { back, navigate } from "../navigation";
+import {
+  DEFAULT_SATURATION,
+  MAX_SATURATION,
+  presetOf,
+  refreshSaturation,
+  saturation,
+  SATURATION_PRESETS,
+  SATURATION_STEP,
+  setSaturation,
+} from "../saturation";
 import { UISound } from "../sounds";
 import { conflicts, refreshConflicts, settings, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Alert, Card, Header, Screen, SectionLabel } from "../ui/blocks";
-import { ChoiceGroup, Pressable, ToggleRow } from "../ui/controls";
+import { ChoiceGroup, choiceClass, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { Rings } from "../ui/rings";
 
 /** Decky's own list of plugins, where one can be switched off or removed. */
@@ -36,26 +46,49 @@ export function DisplayScreen() {
 
   useEffect(() => {
     void refreshConflicts();
+    void refreshSaturation();
   }, []);
 
-  const owner = owners.status === "ready" ? owners.value.lighting : null;
+  if (owners.status !== "ready") {
+    return (
+      <Screen onBack={back}>
+        <Header onBack={back} title={t.display.title} />
+      </Screen>
+    );
+  }
+  const { saturation: saturationOwner, lighting: lightingOwner } = owners.value;
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={t.display.title} />
-      {owner !== null && <LightingOwnedBy plugin={owner} />}
-      {owner === null && owners.status === "ready" && current.status === "ready" && (
-        <LightingSettings lighting={current.value.lighting} />
+      {saturationOwner === null ? (
+        <SaturationSettings />
+      ) : (
+        <OwnedBy
+          section={t.display.saturation}
+          title={t.display.saturationOwnedBy(saturationOwner)}
+          text={t.display.saturationOwnedText(saturationOwner)}
+        />
+      )}
+      {lightingOwner === null ? (
+        current.status === "ready" && <LightingSettings lighting={current.value.lighting} />
+      ) : (
+        <OwnedBy
+          section={t.display.lighting}
+          title={t.display.ownedBy(lightingOwner)}
+          text={t.display.ownedText(lightingOwner)}
+        />
       )}
     </Screen>
   );
 }
 
-function LightingOwnedBy({ plugin }: { plugin: string }) {
+/** A section another plugin drives: why ORIGAMI stays out, and the way to that plugin. */
+function OwnedBy({ section, title, text }: { section: string; title: string; text: string }) {
   const t = useMessages();
   return (
     <>
-      <SectionLabel>{t.display.lighting}</SectionLabel>
-      <Alert title={t.display.ownedBy(plugin)}>{t.display.ownedText(plugin)}</Alert>
+      <SectionLabel>{section}</SectionLabel>
+      <Alert title={title}>{text}</Alert>
       <Pressable
         className="og-button"
         action={t.actions.open}
@@ -67,6 +100,63 @@ function LightingOwnedBy({ plugin }: { plugin: string }) {
       >
         {t.display.openPlugins}
       </Pressable>
+    </>
+  );
+}
+
+/** Steam's own colour vibrance, shown where Steam has colour management. */
+function SaturationSettings() {
+  const t = useMessages();
+  const value = useStore(saturation);
+  if (value === null) return null;
+  const preset = presetOf(value);
+  const fill = `${(value / MAX_SATURATION) * 100}%`;
+
+  return (
+    <>
+      <Card
+        title={t.display.saturation}
+        subtitle={t.display.saturationSub}
+        aside={<span className="og-card__value">{`${value}%`}</span>}
+      >
+        <Slider
+          label={t.display.saturation}
+          value={value}
+          min={0}
+          max={MAX_SATURATION}
+          step={SATURATION_STEP}
+          track={`linear-gradient(90deg, var(--og-accent) ${fill}, var(--og-track) ${fill})`}
+          thumb="var(--og-accent)"
+          notch={DEFAULT_SATURATION}
+          lessLabel={t.actions.less}
+          moreLabel={t.actions.more}
+          onChange={setSaturation}
+        />
+        <div className="og-slider__ends" aria-hidden="true">
+          <span>0</span>
+          <span>{DEFAULT_SATURATION}</span>
+          <span>{MAX_SATURATION}</span>
+        </div>
+      </Card>
+      <ChoiceGroup
+        label={t.display.saturation}
+        choices={SATURATION_PRESETS.map((choice) => ({
+          value: choice.id,
+          label: t.display.presets[choice.id],
+          detail: `${choice.value}%`,
+        }))}
+        value={preset?.id}
+        action={t.actions.select}
+        onChange={(id) => {
+          setSaturation(SATURATION_PRESETS.find((choice) => choice.id === id)?.value ?? DEFAULT_SATURATION);
+        }}
+        after={
+          <span className={`${choiceClass(preset === undefined, true)} og-choice--static`}>
+            {t.display.presets.custom}
+            <span className="og-choice__detail">{preset === undefined ? `${value}%` : "+"}</span>
+          </span>
+        }
+      />
     </>
   );
 }

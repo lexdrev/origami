@@ -9,7 +9,7 @@ const locale = "en-US";
 export const en: Messages = {
   locale,
   unknown: "—",
-  actions: { open: "Open", back: "Back", select: "Select", toggle: "Toggle" },
+  actions: { open: "Open", back: "Back", select: "Select", toggle: "Toggle", less: "Less", more: "More" },
   units: { watts: "W", rpm: "rpm", celsius: "°C" },
   main: {
     settings: "Settings",
@@ -55,6 +55,12 @@ export const en: Messages = {
   },
   display: {
     title: "Display & Light",
+    saturation: "Saturation",
+    saturationSub: "Whole screen · games and Steam",
+    presets: { default: "Default", brighter: "Brighter", vivid: "Vivid", max: "Max", custom: "Custom" },
+    saturationOwnedBy: (plugin) => `${plugin} controls the saturation`,
+    saturationOwnedText: (plugin) =>
+      `${plugin} writes the screen colour past Steam's setting, so ORIGAMI leaves it alone. Switch off or remove ${plugin} in Decky, and the saturation appears here.`,
     lighting: "Stick lighting",
     lightingOn: "On",
     lightingOff: "Off",
@@ -90,8 +96,6 @@ export const en: Messages = {
     saturation: "Saturation",
     white: "White",
     pure: "Pure colour",
-    less: "Less",
-    more: "More",
     hint: "The rings on the console change colour right away. LEDs show colours differently from the screen, so look at the rings.",
     cancel: "Cancel",
     apply: "Apply",

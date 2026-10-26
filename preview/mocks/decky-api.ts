@@ -22,8 +22,11 @@ let settings: Settings = {
   qamTabBefore: 7,
   qamAssist: false,
   lighting: null,
+  saturation: null,
 };
-const conflicts: Conflicts = { lighting: null };
+// Steam's value, as gamescope shows it on the console without vibrantDeck.
+const STEAM_SATURATION = 100;
+const conflicts: Conflicts = { lighting: null, saturation: null };
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {
@@ -42,6 +45,8 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   update_settings: (update: Partial<Settings>) => (settings = { ...settings, ...update }),
   get_changes: () => changes,
   get_conflicts: () => conflicts,
+  get_saturation: () => settings.saturation ?? STEAM_SATURATION,
+  restore_saturation: () => undefined,
 };
 
 export function callable(route: string) {

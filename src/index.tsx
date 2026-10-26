@@ -3,6 +3,8 @@
 
 import { definePlugin } from "@decky/api";
 
+import { backend } from "./backend";
+
 import { App } from "./App";
 import { PluginTitle } from "./PluginTitle";
 import { watchQuickAccessButton } from "./qamAssist";
@@ -14,6 +16,11 @@ import { FoxGlyph } from "./ui/icons";
 export default definePlugin(() => {
   // Loaded when Decky starts the plugin, so the first opening shows data at once.
   void loadAll();
+  // gamescope forgets ORIGAMI's saturation when it restarts and Steam sets its own as it starts;
+  // the plugin loads again after that, so this is the moment to bring ORIGAMI's back.
+  backend.restoreSaturation().catch((error: unknown) => {
+    console.warn("ORIGAMI: cannot restore the saturation", error);
+  });
   // The backend reports quick access presses only while QAM assist is switched on.
   const stopQamAssist = watchQuickAccessButton();
   const ownTab = createOwnTab({ title: null, icon: <FoxGlyph />, content: <TabApp /> });

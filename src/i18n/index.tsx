@@ -13,7 +13,7 @@ export type Language = "ru" | "en";
 export interface Messages {
   locale: string;
   unknown: string;
-  actions: { open: string; back: string; select: string; toggle: string };
+  actions: { open: string; back: string; select: string; toggle: string; less: string; more: string };
   units: { watts: string; rpm: string; celsius: string };
   main: {
     settings: string;
@@ -56,6 +56,11 @@ export interface Messages {
   };
   display: {
     title: string;
+    saturation: string;
+    saturationSub: string;
+    presets: Record<"default" | "brighter" | "vivid" | "max" | "custom", string>;
+    saturationOwnedBy(plugin: string): string;
+    saturationOwnedText(plugin: string): string;
     lighting: string;
     lightingOn: string;
     lightingOff: string;
@@ -81,8 +86,6 @@ export interface Messages {
     saturation: string;
     white: string;
     pure: string;
-    less: string;
-    more: string;
     hint: string;
     cancel: string;
     apply: string;

@@ -9,7 +9,7 @@ const locale = "ru-RU";
 export const ru: Messages = {
   locale,
   unknown: "—",
-  actions: { open: "Открыть", back: "Назад", select: "Выбрать", toggle: "Переключить" },
+  actions: { open: "Открыть", back: "Назад", select: "Выбрать", toggle: "Переключить", less: "Меньше", more: "Больше" },
   units: { watts: "Вт", rpm: "об/мин", celsius: "°C" },
   main: {
     settings: "Настройки",
@@ -59,6 +59,12 @@ export const ru: Messages = {
   },
   display: {
     title: "Дисплей и свет",
+    saturation: "Насыщенность",
+    saturationSub: "Весь экран · игры и\u00a0Steam",
+    presets: { default: "Дефолт", brighter: "Ярче", vivid: "Сочно", max: "Макс.", custom: "Свой" },
+    saturationOwnedBy: (plugin) => `Насыщенностью управляет ${plugin}`,
+    saturationOwnedText: (plugin) =>
+      `${plugin} пишет цвет экрана мимо настройки Steam, поэтому ORIGAMI её не\u00a0трогает. Выключите или удалите ${plugin} в\u00a0Decky — насыщенность появится здесь.`,
     lighting: "Подсветка стиков",
     lightingOn: "Включена",
     lightingOff: "Выключена",
@@ -94,8 +100,6 @@ export const ru: Messages = {
     saturation: "Насыщенность",
     white: "Белый",
     pure: "Чистый цвет",
-    less: "Меньше",
-    more: "Больше",
     hint: "Кольца на консоли меняют цвет сразу. Светодиоды показывают цвета иначе, чем экран, — смотрите на кольца.",
     cancel: "Отменить",
     apply: "Применить",

@@ -20,7 +20,7 @@ export interface TileTexts {
 const SEPARATOR = " · ";
 
 /** Current values under the tile names; unknown readings show as a dash. */
-export function tileTexts(telemetry: Telemetry | null, t: Messages): TileTexts {
+export function tileTexts(telemetry: Telemetry | null, saturation: number | null, t: Messages): TileTexts {
   const number = (value: number, digits = 0) => formatNumber(value, t.locale, digits);
   const power = telemetry?.power;
   const fans = telemetry?.fans;
@@ -45,7 +45,7 @@ export function tileTexts(telemetry: Telemetry | null, t: Messages): TileTexts {
         .filter((part) => part !== false)
         .join(SEPARATOR),
     },
-    display: { value: t.unknown, subtitle: t.main.displaySub },
+    display: { value: saturation !== null ? `${saturation}%` : t.unknown, subtitle: t.main.displaySub },
     gamepad: {
       value: vibration
         ? vibration[0] === vibration[1]

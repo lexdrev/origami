@@ -23,6 +23,8 @@ export const Focusable = forwardRef<HTMLDivElement, FocusableProps>(function Foc
     onOKActionDescription,
     onCancelActionDescription,
     focusWithinClassName,
+    // The stand has no D-pad; Tab and the keyboard stand in for it.
+    onGamepadDirection: _onGamepadDirection,
     ...attributes
   } = props;
   const [focused, setFocused] = useState(false);

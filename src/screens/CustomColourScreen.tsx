@@ -107,8 +107,8 @@ function CustomColourEditor({ saved }: { saved: Lighting }) {
           wrap
           track={HUE_TRACK}
           thumb={hex(hsToRgb({ hue: edited.hue, saturation: 100 }))}
-          lessLabel={t.customColour.less}
-          moreLabel={t.customColour.more}
+          lessLabel={t.actions.less}
+          moreLabel={t.actions.more}
           onChange={(hue) => {
             update({ hue });
           }}
@@ -126,8 +126,8 @@ function CustomColourEditor({ saved }: { saved: Lighting }) {
           step={STEP}
           track={`linear-gradient(90deg, #ffffff, ${hex(hsToRgb({ hue: edited.hue, saturation: 100 }))})`}
           thumb={hex(hsToRgb(edited))}
-          lessLabel={t.customColour.less}
-          moreLabel={t.customColour.more}
+          lessLabel={t.actions.less}
+          moreLabel={t.actions.more}
           onChange={(saturation) => {
             update({ saturation });
           }}

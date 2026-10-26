@@ -57,11 +57,14 @@ export interface Settings {
   qamAssist: boolean;
   /** Null until the user sets it; the controller keeps its own lighting until then. */
   lighting: Lighting | null;
+  /** Screen saturation in percent (100 = sRGB); null until the user sets it. */
+  saturation: number | null;
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
 export interface Conflicts {
   lighting: string | null;
+  saturation: string | null;
 }
 
 export interface Change {
@@ -78,4 +81,6 @@ export const backend = {
   getChanges: callable<[], Change[]>("get_changes"),
   getConflicts: callable<[], Conflicts>("get_conflicts"),
   previewLighting: callable<[lighting: Lighting]>("preview_lighting"),
+  getSaturation: callable<[], number | null>("get_saturation"),
+  restoreSaturation: callable("restore_saturation"),
 };
