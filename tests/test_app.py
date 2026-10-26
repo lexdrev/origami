@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import asyncio
+import os
 from pathlib import Path
 
 import pytest
 
 from origami import app as app_module
 from origami import versions
-from origami.app import Origami
+from origami.app import QAM_PRESSED, Emit, Origami
 from origami.settings import Language, Settings
 
 from fakes import FakeRoot
@@ -22,13 +23,18 @@ def no_busctl(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(versions, "run", fake_run)
 
 
-def make_app(root: FakeRoot, tmp_path: Path) -> Origami:
+async def no_events(_event: str) -> None:
+    pass
+
+
+def make_app(root: FakeRoot, tmp_path: Path, emit: Emit = no_events) -> Origami:
     return Origami(
         root=root.path,
         settings_dir=tmp_path / "settings",
         data_dir=tmp_path / "data",
         version="0.1.0",
         decky_version="v3.3.0",
+        emit=emit,
     )
 
 
@@ -94,3 +100,69 @@ def test_telemetry(ally_x: FakeRoot, tmp_path: Path) -> None:
     telemetry = asyncio.run(make_app(ally_x, tmp_path).telemetry())
 
     assert telemetry.power.tdp_limit_w == 17
+
+
+def test_qam_assist_forwards_presses_while_it_is_on(ally_x: FakeRoot, tmp_path: Path) -> None:
+    press = bytes.fromhex("5a9300000000")
+    node = ally_x.hidraw(5, driver="asus_rog_ally", phys="usb-0000:66:00.0-4/input2")
+
+    async def scenario() -> None:
+        events: list[str] = []
+        received = asyncio.Event()
+
+        async def emit(event: str) -> None:
+            events.append(event)
+            received.set()
+
+        writer = os.open(node, os.O_RDWR | os.O_NONBLOCK)
+        app = make_app(ally_x, tmp_path, emit)
+        await app.start()
+        assert (await app.settings()).qam_assist is False
+
+        await app.update_settings({"qam_assist": True})
+        await asyncio.sleep(0.05)
+        os.write(writer, press)
+        async with asyncio.timeout(1):
+            await received.wait()
+        assert events == [QAM_PRESSED]
+
+        await app.update_settings({"qam_assist": False})
+        os.write(writer, press)
+        await asyncio.sleep(0.05)
+        assert events == [QAM_PRESSED]
+
+        await app.stop()
+        os.close(writer)
+
+    asyncio.run(scenario())
+
+
+def test_qam_assist_starts_with_the_plugin_when_it_was_on(ally_x: FakeRoot, tmp_path: Path) -> None:
+    press = bytes.fromhex("5a9300000000")
+    node = ally_x.hidraw(5, driver="asus_rog_ally", phys="usb-0000:66:00.0-4/input2")
+
+    async def scenario() -> None:
+        events: list[str] = []
+        received = asyncio.Event()
+
+        async def emit(event: str) -> None:
+            events.append(event)
+            received.set()
+
+        first = make_app(ally_x, tmp_path)
+        await first.start()
+        await first.update_settings({"qam_assist": True})
+        await first.stop()
+
+        writer = os.open(node, os.O_RDWR | os.O_NONBLOCK)
+        app = make_app(ally_x, tmp_path, emit)
+        await app.start()
+        await asyncio.sleep(0.05)
+        os.write(writer, press)
+        async with asyncio.timeout(1):
+            await received.wait()
+        assert events == [QAM_PRESSED]
+        await app.stop()
+        os.close(writer)
+
+    asyncio.run(scenario())

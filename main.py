@@ -21,10 +21,14 @@ class Plugin:
             data_dir=Path(decky.DECKY_PLUGIN_RUNTIME_DIR),
             version=decky.DECKY_PLUGIN_VERSION,
             decky_version=decky.DECKY_VERSION or None,
+            emit=decky.emit,
         )
 
     async def _main(self) -> None:
         await self._app.start()
+
+    async def _unload(self) -> None:
+        await self._app.stop()
 
     async def get_info(self) -> JsonValue:
         return to_wire(await self._app.info())

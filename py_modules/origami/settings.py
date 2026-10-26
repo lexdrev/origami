@@ -4,7 +4,7 @@
 import json
 import logging
 from collections.abc import Mapping
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from enum import StrEnum
 from pathlib import Path
 
@@ -34,21 +34,23 @@ class Settings:
     """ORIGAMI has its own tab in the quick access menu, besides its place inside Decky."""
     qam_tab_before: int | None = SOUNDTRACKS_TAB
     """Steam tab that ORIGAMI's tab stands before; FIRST_TAB puts it on top, None at the end."""
+    qam_assist: bool = False
+    """ORIGAMI opens the quick access menu when Steam misses a press of its button (B16)."""
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
-        language, qam_tab, qam_tab_before = self.language, self.qam_tab, self.qam_tab_before
+        parsed: dict[str, object] = {}
         for key, value in changes.items():
             match key:
                 case "language":
-                    language = Language(value)
-                case "qam_tab":
-                    qam_tab = _boolean(key, value)
+                    parsed[key] = Language(value)
+                case "qam_tab" | "qam_assist":
+                    parsed[key] = _boolean(key, value)
                 case "qam_tab_before":
-                    qam_tab_before = _tab_position(value)
+                    parsed[key] = _tab_position(value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
-        return Settings(language=language, qam_tab=qam_tab, qam_tab_before=qam_tab_before)
+        return replace(self, **parsed)
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -56,6 +58,7 @@ class Settings:
             "language": self.language.value,
             "qam_tab": self.qam_tab,
             "qam_tab_before": self.qam_tab_before,
+            "qam_assist": self.qam_assist,
         }
 
 

@@ -4,3 +4,5 @@ DECKY_VERSION: str
 DECKY_PLUGIN_VERSION: str
 DECKY_PLUGIN_SETTINGS_DIR: str
 DECKY_PLUGIN_RUNTIME_DIR: str
+
+async def emit(event: str, *args: object) -> None: ...

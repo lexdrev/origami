@@ -64,10 +64,11 @@ def test_own_tab_position(before: int | None) -> None:
         {"qam_tab_before": -2},
         {"qam_tab_before": True},
         {"qam_tab_before": "7"},
+        {"qam_assist": "yes"},
     ],
 )
 def test_update_rejects_invalid_changes(changes: dict[str, object]) -> None:
-    with pytest.raises(ValueError, match=r"theme|de|qam_tab|position"):
+    with pytest.raises(ValueError, match=r"theme|de|qam_tab|position|qam_assist"):
         Settings().updated(changes)
 
 
@@ -78,3 +79,12 @@ def test_own_tab_settings_are_saved(tmp_path: Path) -> None:
     store.save(settings)
 
     assert store.load() == settings
+
+
+def test_qam_assist_is_off_until_switched_on(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    assert Settings().qam_assist is False
+
+    store.save(Settings().updated({"qam_assist": True}))
+
+    assert store.load() == Settings(qam_assist=True)

@@ -3,10 +3,12 @@
 
 import asyncio
 import logging
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
+from contextlib import aclosing
 from dataclasses import dataclass
 from pathlib import Path
 
+from origami.buttons import Button, button_presses
 from origami.device import Device, read_device
 from origami.journal import Change, ChangeJournal
 from origami.settings import Settings, SettingsStore
@@ -14,6 +16,11 @@ from origami.telemetry import Telemetry, read_telemetry
 from origami.versions import Versions, read_versions
 
 log = logging.getLogger(__name__)
+
+QAM_PRESSED = "qam_pressed"
+"""Event sent to the frontend on every press of the quick access button while QAM assist is on."""
+
+Emit = Callable[[str], Awaitable[None]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,8 +45,10 @@ class Origami:
         data_dir: Path,
         version: str,
         decky_version: str | None,
+        emit: Emit,
     ) -> None:
         self._root = root
+        self._emit = emit
         self._version = version
         self._decky_version = decky_version
         self._settings_store = SettingsStore(settings_dir / "settings.json")
@@ -49,6 +58,7 @@ class Origami:
         self._info: Info | None = None
         self._ready = asyncio.Event()
         self._start_error: Exception | None = None
+        self._qam_assist: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         try:
@@ -58,6 +68,7 @@ class Origami:
             versions = await read_versions(self._root, decky=self._decky_version)
             self._info = Info(version=self._version, device=device, versions=versions)
             log.info("ORIGAMI %s started, board %s", self._version, device.board)
+            await self._apply_qam_assist()
         except Exception as error:
             # Surfaced to every frontend call instead of leaving them waiting forever.
             log.exception("ORIGAMI failed to start")
@@ -85,13 +96,46 @@ class Origami:
             if updated != self._settings:
                 await asyncio.to_thread(self._settings_store.save, updated)
                 self._settings = updated
+                await self._apply_qam_assist()
             return self._settings
 
     async def changes(self) -> list[Change]:
         await self._started()
         return self._journal.entries()
 
+    async def stop(self) -> None:
+        """Stop background work; Decky calls it before unloading the plugin."""
+        await self._stop_qam_assist()
+
+    async def _apply_qam_assist(self) -> None:
+        if self._settings.qam_assist and self._qam_assist is None:
+            self._qam_assist = asyncio.create_task(
+                self._forward_quick_access(), name="origami-qam-assist"
+            )
+            self._qam_assist.add_done_callback(_log_failure)
+        elif not self._settings.qam_assist:
+            await self._stop_qam_assist()
+
+    async def _stop_qam_assist(self) -> None:
+        task, self._qam_assist = self._qam_assist, None
+        if task is not None:
+            task.cancel()
+            await asyncio.wait({task})
+
+    async def _forward_quick_access(self) -> None:
+        # Steam misses some presses while a game runs (B16). The frontend sees whether Steam
+        # registered this one and opens the menu itself if it did not.
+        async with aclosing(button_presses(self._root)) as presses:
+            async for button in presses:
+                if button is Button.QUICK_ACCESS:
+                    await self._emit(QAM_PRESSED)
+
     async def _started(self) -> None:
         await self._ready.wait()
         if self._start_error is not None:
             raise RuntimeError("ORIGAMI failed to start, see the plugin log") from self._start_error
+
+
+def _log_failure(task: asyncio.Task[None]) -> None:
+    if not task.cancelled() and (error := task.exception()) is not None:
+        log.error("QAM assist stopped", exc_info=error)

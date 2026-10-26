@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 lexdrev
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import os
 from pathlib import Path
 
 
@@ -22,3 +23,13 @@ class FakeRoot:
         for attribute, value in attributes.items():
             self.write(f"{device}/{attribute}", value)
         return self.path / device
+
+    def hidraw(self, index: int, *, driver: str, phys: str) -> Path:
+        """Add a hidraw device; its node is a FIFO the test writes reports into."""
+        self.write(
+            f"sys/class/hidraw/hidraw{index}/device/uevent", f"DRIVER={driver}\nHID_PHYS={phys}"
+        )
+        node = self.path / "dev" / f"hidraw{index}"
+        node.parent.mkdir(parents=True, exist_ok=True)
+        os.mkfifo(node)
+        return node

@@ -26,6 +26,10 @@ ignore = [
     "TRY400", # expected failures are logged without a traceback
 ]
 
+[tool.ruff.lint.pylint]
+# The backend's constructor takes each of its dependencies by keyword.
+max-args = 6
+
 [tool.ruff.lint.isort]
 known-first-party = ["origami"]
 known-local-folder = ["fakes"]
@@ -51,6 +55,8 @@ include = ["main.py", "py_modules", "tests", "scripts"]
 extraPaths = ["py_modules"]
 stubPath = "typings"
 pythonVersion = "3.14"
+# ORIGAMI runs only inside Decky on Linux, even when checked on Windows.
+pythonPlatform = "Linux"
 typeCheckingMode = "strict"
 # decky exists only inside Decky Loader; typings/decky.pyi describes it.
 reportMissingModuleSource = "none"
