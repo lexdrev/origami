@@ -1,7 +1,15 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { backend, type Change, type Info, type Settings, type Telemetry } from "./backend";
+import {
+  backend,
+  type Change,
+  type Conflicts,
+  type Info,
+  type Lighting,
+  type Settings,
+  type Telemetry,
+} from "./backend";
 import { resolveLanguage, type Language } from "./i18n";
 import { readSteamLanguage } from "./steam";
 import { createStore, errorMessage, useStore, type Loadable, type Store } from "./store";
@@ -10,6 +18,7 @@ export const info = createStore<Loadable<Info>>({ status: "loading" });
 export const settings = createStore<Loadable<Settings>>({ status: "loading" });
 export const changes = createStore<Loadable<Change[]>>({ status: "loading" });
 export const telemetry = createStore<Loadable<Telemetry>>({ status: "loading" });
+export const conflicts = createStore<Loadable<Conflicts>>({ status: "loading" });
 export const steamLanguage = createStore<Language>("en");
 /** The last failed action, shown until the next one succeeds. */
 export const actionError = createStore<string | null>(null);
@@ -43,6 +52,21 @@ export function useLanguage(): Language {
 
 export function refreshTelemetry(): Promise<void> {
   return load(telemetry, backend.getTelemetry);
+}
+
+/** Other plugins can be switched on and off at any time, so this is read when a screen opens. */
+export function refreshConflicts(): Promise<void> {
+  return load(conflicts, backend.getConflicts);
+}
+
+/** Shows lighting on the rings without saving it; a failure shows like a failed action. */
+export async function previewLighting(lighting: Lighting): Promise<void> {
+  try {
+    await backend.previewLighting(lighting);
+    actionError.set(null);
+  } catch (error) {
+    actionError.set(errorMessage(error));
+  }
 }
 
 export async function updateSettings(changes: Partial<Settings>): Promise<void> {

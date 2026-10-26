@@ -35,6 +35,38 @@ export function useStore<T>(store: Store<T>): T {
   return useSyncExternalStore(store.subscribe, store.get);
 }
 
+/**
+ * Sends only the newest value: while one is on its way, later ones replace each other, so a
+ * slider moved quickly does not queue up a request for every step.
+ */
+export function latestOnly<T>(send: (value: T) => Promise<void>) {
+  let busy = false;
+  let pending: { value: T } | null = null;
+
+  const run = async (value: T): Promise<void> => {
+    busy = true;
+    try {
+      await send(value);
+    } finally {
+      busy = false;
+      const next = pending;
+      pending = null;
+      if (next) void run(next.value);
+    }
+  };
+
+  return {
+    send(value: T): void {
+      if (busy) pending = { value };
+      else void run(value);
+    },
+    /** Forgets a value not sent yet. */
+    drop(): void {
+      pending = null;
+    },
+  };
+}
+
 export type Loadable<T> =
   | { status: "loading" }
   | { status: "ready"; value: T }

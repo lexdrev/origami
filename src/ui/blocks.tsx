@@ -89,6 +89,21 @@ export function Tile({ icon, name, value, subtitle, onOpen }: TileProps) {
   );
 }
 
+/** A framed group of controls with its title, as in the B2 screens; framed amber while focus is inside. */
+export function Card({ title, aside, children }: { title?: string; aside?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="og-card">
+      {title && (
+        <div className="og-card__head">
+          <span className="og-card__title">{title}</span>
+          {aside && <span className="og-card__aside">{aside}</span>}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
 export function SectionLabel({ children }: { children: ReactNode }) {
   return <span className="og-section-label">{children}</span>;
 }

@@ -63,5 +63,9 @@ export const Focusable = forwardRef<HTMLDivElement, FocusableProps>(function Foc
   );
 });
 
-// Steam's window store; the stand has no quick access menu to open.
+// The D-pad buttons ORIGAMI reads, with Steam's numbers; Tab stands in for them on the stand.
+export const GamepadButton = { DIR_LEFT: 11, DIR_RIGHT: 12 } as const;
+
+// Steam's window store and navigation; the stand has no quick access menu or routes.
 export const Router = {};
+export const Navigation = { Navigate: () => undefined, CloseSideMenus: () => undefined };

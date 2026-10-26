@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Focusable } from "@decky/ui";
+
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
 import { info } from "../state";
@@ -21,10 +23,18 @@ export function MainScreen() {
     <Screen>
       <DeviceHeader />
       {telemetry.status === "failed" && <Alert title={t.errors.backend}>{telemetry.error}</Alert>}
-      <div className="og-tiles">
+      {/* Steam moves focus up and down a screen by default; the tiles go every way. */}
+      <Focusable className="og-tiles" flow-children="grid">
         <Tile icon={<PowerIcon />} name={t.main.tiles.power} {...tiles.power} />
         <Tile icon={<FansIcon />} name={t.main.tiles.fans} {...tiles.fans} />
-        <Tile icon={<DisplayIcon />} name={t.main.tiles.display} {...tiles.display} />
+        <Tile
+          icon={<DisplayIcon />}
+          name={t.main.tiles.display}
+          {...tiles.display}
+          onOpen={() => {
+            navigate("display");
+          }}
+        />
         <Tile
           icon={<GamepadIcon />}
           name={t.main.tiles.gamepad}
@@ -33,7 +43,7 @@ export function MainScreen() {
             navigate("gamepad");
           }}
         />
-      </div>
+      </Focusable>
     </Screen>
   );
 }

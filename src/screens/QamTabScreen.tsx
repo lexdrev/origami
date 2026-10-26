@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Focusable } from "@decky/ui";
+
 import { useMessages } from "../i18n";
 import { back } from "../navigation";
 import { UISound } from "../sounds";
@@ -55,7 +57,7 @@ export function QamTabScreen() {
                   place(positionAt(column.tabs, index));
                 }}
               />
-              <div className="og-actions">
+              <Focusable className="og-actions" flow-children="row">
                 <Pressable
                   className="og-button"
                   action={t.actions.select}
@@ -76,7 +78,7 @@ export function QamTabScreen() {
                 >
                   {t.qamTab.toBottom}
                 </Pressable>
-              </div>
+              </Focusable>
             </>
           )}
         </>
@@ -105,7 +107,7 @@ function Column({ column, index, onMove }: ColumnProps) {
   return (
     <div className="og-column">
       {column.slice(0, index).map((tab, i) => row(tab, i + 1))}
-      <div className="og-column__item og-column__item--own">
+      <Focusable className="og-column__item og-column__item--own" flow-children="row">
         <span className="og-column__number">{index + 1}</span>
         <span className="og-column__name">ORIGAMI</span>
         <IconButton
@@ -130,7 +132,7 @@ function Column({ column, index, onMove }: ColumnProps) {
         >
           <DownIcon />
         </IconButton>
-      </div>
+      </Focusable>
       {column.slice(index).map((tab, i) => row(tab, index + i + 2))}
     </div>
   );

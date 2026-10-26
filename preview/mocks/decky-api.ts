@@ -3,7 +3,7 @@
 
 // Browser stand-in for @decky/api with readings taken from the console (HARDWARE.md).
 
-import type { Change, Info, Settings, Telemetry } from "../../src/backend";
+import type { Change, Conflicts, Info, Settings, Telemetry } from "../../src/backend";
 
 const info: Info = {
   version: "0.1.0",
@@ -16,7 +16,14 @@ const info: Info = {
   },
 };
 
-let settings: Settings = { language: "auto", qamTab: true, qamTabBefore: 7, qamAssist: false };
+let settings: Settings = {
+  language: "auto",
+  qamTab: true,
+  qamTabBefore: 7,
+  qamAssist: false,
+  lighting: null,
+};
+const conflicts: Conflicts = { lighting: null };
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {
@@ -34,6 +41,7 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   get_settings: () => settings,
   update_settings: (update: Partial<Settings>) => (settings = { ...settings, ...update }),
   get_changes: () => changes,
+  get_conflicts: () => conflicts,
 };
 
 export function callable(route: string) {

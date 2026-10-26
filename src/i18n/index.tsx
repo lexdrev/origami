@@ -3,7 +3,8 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
-import type { LanguageSetting } from "../backend";
+import type { LanguageSetting, LightBrightness, LightMode, LightSpeed } from "../backend";
+import type { PaletteColour } from "../lighting";
 import { en } from "./en";
 import { ru } from "./ru";
 
@@ -52,6 +53,39 @@ export interface Messages {
     down: string;
     toTop: string;
     toBottom: string;
+  };
+  display: {
+    title: string;
+    lighting: string;
+    lightingOn: string;
+    lightingOff: string;
+    mode: string;
+    rings: { left: string; right: string };
+    modes: Record<LightMode, string>;
+    colour: string;
+    colours: Record<PaletteColour["id"], string>;
+    customColour: string;
+    speed: string;
+    speeds: Record<LightSpeed, string>;
+    brightness: string;
+    levels: Record<LightBrightness, string>;
+    ownedBy(plugin: string): string;
+    ownedText(plugin: string): string;
+    openPlugins: string;
+  };
+  customColour: {
+    title: string;
+    subtitle: string;
+    targets: { both: string; left: string; right: string };
+    hue: string;
+    saturation: string;
+    white: string;
+    pure: string;
+    less: string;
+    more: string;
+    hint: string;
+    cancel: string;
+    apply: string;
   };
   gamepad: {
     title: string;
