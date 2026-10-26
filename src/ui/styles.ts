@@ -30,7 +30,7 @@ const tokens = `
 export const styles = `
 ${fontFaces}
 
-.og-root, .og-tab-title {
+.og-root, .og-plugin-title {
   ${tokens}
 }
 
@@ -52,8 +52,11 @@ ${fontFaces}
 .og-screen { display: flex; flex-direction: column; gap: 10px; }
 
 /* ORIGAMI's own tab: Steam's title row laid out like Decky's, and the same gap under it. */
-.og-tab-title { display: flex; align-items: center; gap: 10px; position: sticky; top: 0; padding-right: 16px; }
-.og-tab-title__icon { display: flex; color: var(--og-accent); }
+.og-tab-title { display: flex; position: sticky; top: 0; padding-right: 16px; }
+
+/* Fox and name in the title row; flex 0.9 is what Decky gives a plugin name there. */
+.og-plugin-title { display: flex; flex: 0.9; align-items: center; gap: 10px; }
+.og-plugin-title__icon { display: flex; color: var(--og-accent); }
 .og-tab-content { padding-top: 16px; }
 
 .og-header {

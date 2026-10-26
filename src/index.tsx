@@ -4,6 +4,7 @@
 import { definePlugin } from "@decky/api";
 
 import { App } from "./App";
+import { PluginTitle } from "./PluginTitle";
 import { installQamTab, SOUNDTRACKS_TAB } from "./qamTab";
 import { loadAll } from "./state";
 import { TabApp } from "./TabApp";
@@ -15,6 +16,7 @@ export default definePlugin(() => {
   const removeTab = installQamTab({ title: null, icon: <FoxGlyph />, content: <TabApp /> }, SOUNDTRACKS_TAB);
   return {
     name: "ORIGAMI",
+    titleView: <PluginTitle />,
     icon: <FoxGlyph />,
     content: <App />,
     onDismount() {
