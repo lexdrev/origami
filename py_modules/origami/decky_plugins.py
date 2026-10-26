@@ -16,6 +16,8 @@ log = logging.getLogger(__name__)
 
 LIGHTING_OWNERS = ("HueSync",)
 """Plugins that drive the stick rings; while one runs, ORIGAMI leaves them alone."""
+SATURATION_OWNERS = ("vibrantDeck",)
+"""Plugins that write gamescope's colour gamut themselves, past Steam's own saturation setting."""
 
 
 def enabled_plugins(decky_home: Path) -> frozenset[str]:

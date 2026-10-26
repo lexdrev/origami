@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: 2026 lexdrev
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import asyncio
+
+import pytest
+
+from origami import saturation
+from origami.proc import CommandError
+from origami.saturation import from_cardinal, read_saturation, to_cardinal, write_saturation
+
+from fakes import FakeRoot
+
+SRGB = 1056964608
+"""0.5 as a CARDINAL, what the console's display has without vibrantDeck."""
+
+type Calls = list[tuple[tuple[str, ...], object]]
+
+
+def test_percent_and_gamescope_value_convert_both_ways() -> None:
+    assert to_cardinal(100) == SRGB
+    assert from_cardinal(SRGB) == 100
+    assert from_cardinal(to_cardinal(150)) == 150
+
+
+@pytest.fixture
+def xprop(fake_root: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> Calls:
+    """Calls to xprop; the display's socket is there and belongs to another user."""
+    fake_root.write("tmp/.X11-unix/X0", "")
+    calls: Calls = []
+    output = f"GAMESCOPE_COLOR_SDR_GAMUT_WIDENESS(CARDINAL) = {SRGB}\n"
+
+    async def run(*args: str, user: tuple[int, int] | None = None) -> str:
+        calls.append((args, user))
+        return output
+
+    monkeypatch.setattr(saturation, "run", run)
+    monkeypatch.setattr(saturation.os, "geteuid", lambda: 0)
+    return calls
+
+
+def test_reads_the_value_gamescope_shows(fake_root: FakeRoot, xprop: Calls) -> None:
+    assert asyncio.run(read_saturation(fake_root.path)) == 100
+    args, user = xprop[0]
+    assert args == ("xprop", "-display", ":0", "-root", "GAMESCOPE_COLOR_SDR_GAMUT_WIDENESS")
+    assert user is not None
+
+
+def test_writes_the_property_as_the_display_owner(fake_root: FakeRoot, xprop: Calls) -> None:
+    asyncio.run(write_saturation(fake_root.path, 150))
+
+    args, user = xprop[0]
+    atom = "GAMESCOPE_COLOR_SDR_GAMUT_WIDENESS"
+    expected = ("xprop", "-display", ":0", "-root", "-f", atom, "32c", "-set", atom)
+    assert args == (*expected, str(to_cardinal(150)))
+    socket = (fake_root.path / "tmp/.X11-unix/X0").stat()
+    assert user == (socket.st_uid, socket.st_gid)
+
+
+def test_without_gamescope_there_is_no_saturation(fake_root: FakeRoot) -> None:
+    assert asyncio.run(read_saturation(fake_root.path)) is None
+    with pytest.raises(CommandError):
+        asyncio.run(write_saturation(fake_root.path, 150))

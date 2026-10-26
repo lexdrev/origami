@@ -58,5 +58,11 @@ class Plugin:
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
 
+    async def get_saturation(self) -> JsonValue:
+        return await self._app.saturation()
+
+    async def restore_saturation(self) -> None:
+        await self._app.restore_saturation()
+
     async def get_conflicts(self) -> JsonValue:
         return to_wire(await self._app.conflicts())

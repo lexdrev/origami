@@ -43,10 +43,10 @@ def make_app(root: FakeRoot, tmp_path: Path, emit: Emit = no_events) -> Origami:
     return Origami(environment, emit=emit)
 
 
-def install_huesync(tmp_path: Path) -> None:
-    manifest = tmp_path / "decky" / "plugins" / "HueSync" / "plugin.json"
+def install_plugin(tmp_path: Path, name: str) -> None:
+    manifest = tmp_path / "decky" / "plugins" / name / "plugin.json"
     manifest.parent.mkdir(parents=True)
-    manifest.write_text(json.dumps({"name": "HueSync"}), encoding="utf-8")
+    manifest.write_text(json.dumps({"name": name}), encoding="utf-8")
 
 
 @pytest.fixture
@@ -215,7 +215,7 @@ def test_lighting_is_sent_kept_and_journaled(
 def test_lighting_is_left_alone_while_huesync_runs(
     ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting]
 ) -> None:
-    install_huesync(tmp_path)
+    install_plugin(tmp_path, "HueSync")
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
@@ -303,5 +303,75 @@ def test_stop_cancels_background_work_without_waiting(ally_x: FakeRoot, tmp_path
 
         assert events == []
         os.close(writer)
+
+    asyncio.run(scenario())
+
+
+def test_vibrantdeck_owns_the_saturation(ally_x: FakeRoot, tmp_path: Path) -> None:
+    install_plugin(tmp_path, "vibrantDeck")
+
+    conflicts = asyncio.run(make_app(ally_x, tmp_path).conflicts())
+
+    assert (conflicts.lighting, conflicts.saturation) == (None, "vibrantDeck")
+
+
+@pytest.fixture
+def screen(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[int] | int]:
+    """gamescope's saturation as the app reads and writes it."""
+    state: dict[str, list[int] | int] = {"now": 100, "written": []}
+
+    async def read(_root: Path) -> int:
+        now = state["now"]
+        assert isinstance(now, int)
+        return now
+
+    async def write(_root: Path, percent: int) -> None:
+        written = state["written"]
+        assert isinstance(written, list)
+        written.append(percent)
+        state["now"] = percent
+
+    monkeypatch.setattr(app_module, "read_saturation", read)
+    monkeypatch.setattr(app_module, "write_saturation", write)
+    return state
+
+
+def test_saturation_is_written_kept_journaled_and_restored(
+    ally_x: FakeRoot, tmp_path: Path, screen: dict[str, list[int] | int]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.restore_saturation()
+        assert screen["written"] == []
+
+        settings = await app.update_settings({"saturation": 150})
+
+        assert settings.saturation == 150
+        assert screen["written"] == [150]
+        assert await app.changes() == [Change("display", "saturation", 100)]
+
+        # gamescope restarts and Steam sets its own value; the frontend asks for ORIGAMI's again.
+        screen["now"] = 100
+        await app.restore_saturation()
+        assert screen["written"] == [150, 150]
+
+    asyncio.run(scenario())
+
+
+def test_saturation_is_left_alone_while_vibrantdeck_runs(
+    ally_x: FakeRoot, tmp_path: Path, screen: dict[str, list[int] | int]
+) -> None:
+    install_plugin(tmp_path, "vibrantDeck")
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+
+        with pytest.raises(RuntimeError, match="vibrantDeck"):
+            await app.update_settings({"saturation": 150})
+
+        assert screen["written"] == []
+        assert (await app.settings()).saturation is None
 
     asyncio.run(scenario())

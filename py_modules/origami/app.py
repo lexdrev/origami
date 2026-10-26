@@ -9,11 +9,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from origami.buttons import Button, button_presses
-from origami.decky_plugins import LIGHTING_OWNERS, enabled_plugins
+from origami.decky_plugins import LIGHTING_OWNERS, SATURATION_OWNERS, enabled_plugins
 from origami.device import Device, read_device
 from origami.journal import Change, ChangeJournal
 from origami.lighting import Lighting, apply_lighting
 from origami.power import resumes
+from origami.proc import CommandError
+from origami.saturation import read_saturation, write_saturation
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
@@ -54,6 +56,7 @@ class Conflicts:
     """Enabled plugins that drive hardware ORIGAMI also drives; ORIGAMI then leaves it alone."""
 
     lighting: str | None
+    saturation: str | None
 
 
 class Origami:
@@ -114,9 +117,11 @@ class Origami:
             updated = self._settings.updated(changes)
             if updated == self._settings:
                 return self._settings
+            # Sent before saving: a change the hardware did not take is not kept.
             if updated.lighting is not None and updated.lighting != self._settings.lighting:
-                # Sent before saving: lighting the controller did not take is not kept.
                 await self._send_lighting(updated.lighting)
+            if updated.saturation is not None and updated.saturation != self._settings.saturation:
+                await self._send_saturation(updated.saturation)
             await asyncio.to_thread(self._settings_store.save, updated)
             self._settings = updated
             await self._follow_settings()
@@ -130,13 +135,35 @@ class Origami:
         await self._started()
         await self._send_lighting(lighting)
 
+    async def saturation(self) -> int | None:
+        """The saturation gamescope shows now, ORIGAMI's or not; None without gamescope."""
+        return await read_saturation(self._env.root)
+
+    async def restore_saturation(self) -> None:
+        """Send the saved saturation again; the frontend calls it whenever Steam's interface loads.
+
+        gamescope forgets the property when it restarts, and Steam sets its own value as it starts.
+        """
+        await self._started()
+        saturation = self._settings.saturation
+        if saturation is None:
+            return
+        try:
+            await self._send_saturation(saturation)
+        except (CommandError, OSError, RuntimeError, TimeoutError) as error:
+            log.warning("Saturation not restored: %s", error)
+
     async def changes(self) -> list[Change]:
         await self._started()
         return self._journal.entries()
 
     async def conflicts(self) -> Conflicts:
         enabled = await asyncio.to_thread(enabled_plugins, self._env.decky_home)
-        return Conflicts(lighting=next((name for name in LIGHTING_OWNERS if name in enabled), None))
+
+        def owner(names: tuple[str, ...]) -> str | None:
+            return next((name for name in names if name in enabled), None)
+
+        return Conflicts(lighting=owner(LIGHTING_OWNERS), saturation=owner(SATURATION_OWNERS))
 
     def stop(self) -> None:
         """Cancel background work before Decky unloads the plugin, without waiting for it.
@@ -160,6 +187,15 @@ class Origami:
         async with self._lighting_lock:
             await asyncio.to_thread(self._record_lighting)
             await asyncio.to_thread(apply_lighting, self._env.root, lighting)
+
+    async def _send_saturation(self, percent: int) -> None:
+        owner = (await self.conflicts()).saturation
+        if owner is not None:
+            raise RuntimeError(f"{owner} sets the screen colour, so ORIGAMI leaves it alone")
+        if not any(change.module == "display" for change in self._journal.entries()):
+            original = await read_saturation(self._env.root)
+            await asyncio.to_thread(self._journal.record, "display", "saturation", original)
+        await write_saturation(self._env.root, percent)
 
     def _record_lighting(self) -> None:
         # The controller cannot report its lighting, so the original is its own animation (None).

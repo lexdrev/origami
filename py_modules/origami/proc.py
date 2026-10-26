@@ -26,11 +26,13 @@ def system_environment() -> dict[str, str]:
     return env
 
 
-async def run(*args: str) -> str:
+async def run(*args: str, user: tuple[int, int] | None = None) -> str:
     """Run a program without a shell and return its stdout; raise CommandError on failure.
 
-    Callers bound the time with asyncio.timeout(); on cancellation the program is killed.
+    `user` (uid, gid) runs it as another user, which only root can do. Callers bound the time
+    with asyncio.timeout(); on cancellation the program is killed.
     """
+    uid, gid = user if user is not None else (None, None)
     try:
         process = await asyncio.create_subprocess_exec(
             *args,
@@ -38,6 +40,9 @@ async def run(*args: str) -> str:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env=system_environment(),
+            user=uid,
+            group=gid,
+            extra_groups=[] if user is not None else None,
         )
     except OSError as error:
         raise CommandError(f"Cannot start {args[0]}: {error.strerror}") from error

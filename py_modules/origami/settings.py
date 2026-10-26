@@ -11,6 +11,7 @@ from pathlib import Path
 from origami.fsutil import atomic_write_text
 from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
+from origami.saturation import MAX_PERCENT as MAX_SATURATION
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +40,8 @@ class Settings:
     """ORIGAMI opens the quick access menu when Steam misses a press of its button (B16)."""
     lighting: Lighting | None = None
     """Lighting of the stick rings; None until the user sets it, so the controller keeps its own."""
+    saturation: int | None = None
+    """Screen saturation in percent (100 = sRGB); None until the user sets it."""
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
@@ -53,6 +56,8 @@ class Settings:
                     parsed[key] = _tab_position(value)
                 case "lighting":
                     parsed[key] = None if value is None else Lighting.from_json(value)
+                case "saturation":
+                    parsed[key] = _saturation(value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
         return replace(self, **parsed)
@@ -65,7 +70,16 @@ class Settings:
             "qam_tab_before": self.qam_tab_before,
             "qam_assist": self.qam_assist,
             "lighting": None if self.lighting is None else self.lighting.to_json(),
+            "saturation": self.saturation,
         }
+
+
+def _saturation(value: object) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= MAX_SATURATION:
+        return value
+    raise ValueError(f"Saturation must be a percentage from 0 to {MAX_SATURATION}")
 
 
 def _tab_position(value: object) -> int | None:

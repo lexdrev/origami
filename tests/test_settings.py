@@ -66,10 +66,12 @@ def test_own_tab_position(before: int | None) -> None:
         {"qam_tab_before": True},
         {"qam_tab_before": "7"},
         {"qam_assist": "yes"},
+        {"saturation": 201},
+        {"saturation": True},
     ],
 )
 def test_update_rejects_invalid_changes(changes: dict[str, object]) -> None:
-    with pytest.raises(ValueError, match=r"theme|de|qam_tab|position|qam_assist"):
+    with pytest.raises(ValueError, match=r"theme|de|qam_tab|position|qam_assist|Saturation"):
         Settings().updated(changes)
 
 
