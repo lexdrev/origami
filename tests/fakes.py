@@ -42,3 +42,21 @@ class FakeRoot:
         self.hidraw(6, driver="asus_rog_ally", phys="usb-0000:66:00.0-4/input5")
         self.hidraw(7, driver="hid-generic", phys="")
         return node
+
+
+class FakeDisplay:
+    """gamescope's root window as xprop sees it: CARDINAL properties by name, and every call."""
+
+    def __init__(self) -> None:
+        self.properties: dict[str, int] = {}
+        self.calls: list[tuple[tuple[str, ...], tuple[int, int] | None]] = []
+
+    async def run(self, *args: str, user: tuple[int, int] | None = None) -> str:
+        self.calls.append((args, user))
+        if "-set" in args:
+            self.properties[args[-2]] = int(args[-1])
+            return ""
+        atom = args[-1]
+        if atom not in self.properties:
+            return f"{atom}:  not found.\n"
+        return f"{atom}(CARDINAL) = {self.properties[atom]}\n"

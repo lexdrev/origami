@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from fakes import FakeRoot
+from origami import gamescope
+
+from fakes import FakeDisplay, FakeRoot
 
 
 @pytest.fixture
@@ -35,3 +37,13 @@ def ally_x(fake_root: FakeRoot) -> FakeRoot:
         'NAME="Bazzite"\nVERSION_ID="44"\nOSTREE_VERSION=\'44.20261023\'',
     )
     return fake_root
+
+
+@pytest.fixture
+def display(fake_root: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> FakeDisplay:
+    """gamescope's display; its socket belongs to another user than the plugin's root."""
+    fake_root.write("tmp/.X11-unix/X0", "")
+    fake = FakeDisplay()
+    monkeypatch.setattr(gamescope, "run", fake.run)
+    monkeypatch.setattr(gamescope.os, "geteuid", lambda: 0)
+    return fake
