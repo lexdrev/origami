@@ -18,11 +18,11 @@ afterEach(() => {
 });
 
 describe("navigation sounds", () => {
-  it("play Steam's transition sounds into a screen and back", () => {
+  it("click into a screen and play Steam's back sound out of it", () => {
     navigate("settings");
     back();
 
-    expect(playNavSound.mock.calls).toEqual([[UISound.IntoScreen], [UISound.OutOfScreen]]);
+    expect(playNavSound.mock.calls).toEqual([[UISound.Press], [UISound.OutOfScreen]]);
   });
 
   it("stay silent when there is nowhere to go back to", () => {

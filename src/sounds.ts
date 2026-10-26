@@ -10,7 +10,6 @@ const steamSound = (value: number): SteamSound => value;
 // Steam's own interface sounds, the ones its toggles and buttons play. The numbers are
 // Steam's sound enum, read from the Steam client on 2026-10-26.
 export const UISound = {
-  IntoScreen: steamSound(13),
   OutOfScreen: steamSound(14),
   Press: steamSound(21),
 } as const;

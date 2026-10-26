@@ -12,11 +12,12 @@ export function useCurrentScreen(): ScreenId {
   return useStore(stack).at(-1) ?? "main";
 }
 
-// Screen changes play Steam's transition sounds here, so the back button and B sound the same.
+// Screen changes play their sounds here, so the back button and B sound the same. Opening a
+// screen clicks like opening a plugin from the Decky list.
 
 export function navigate(screen: ScreenId): void {
   stack.set([...stack.get(), screen]);
-  playSound(UISound.IntoScreen);
+  playSound(UISound.Press);
 }
 
 export function back(): void {
