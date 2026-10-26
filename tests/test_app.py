@@ -2,14 +2,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import asyncio
+import json
 import os
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 import pytest
 
 from origami import app as app_module
 from origami import versions
-from origami.app import QAM_PRESSED, Emit, Origami
+from origami.app import QAM_PRESSED, Emit, Environment, Origami
+from origami.journal import Change
+from origami.lighting import Lighting, LightMode
 from origami.settings import Language, Settings
 
 from fakes import FakeRoot
@@ -28,14 +32,33 @@ async def no_events(_event: str) -> None:
 
 
 def make_app(root: FakeRoot, tmp_path: Path, emit: Emit = no_events) -> Origami:
-    return Origami(
+    environment = Environment(
         root=root.path,
         settings_dir=tmp_path / "settings",
         data_dir=tmp_path / "data",
+        decky_home=tmp_path / "decky",
         version="0.1.0",
         decky_version="v3.3.0",
-        emit=emit,
     )
+    return Origami(environment, emit=emit)
+
+
+def install_huesync(tmp_path: Path) -> None:
+    manifest = tmp_path / "decky" / "plugins" / "HueSync" / "plugin.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"name": "HueSync"}), encoding="utf-8")
+
+
+@pytest.fixture
+def sent_lighting(monkeypatch: pytest.MonkeyPatch) -> list[Lighting]:
+    """Lighting the app sends to the controller, in order."""
+    sent: list[Lighting] = []
+
+    def apply(_root: Path, lighting: Lighting) -> None:
+        sent.append(lighting)
+
+    monkeypatch.setattr(app_module, "apply_lighting", apply)
+    return sent
 
 
 def test_info_after_start(ally_x: FakeRoot, tmp_path: Path) -> None:
@@ -131,7 +154,7 @@ def test_qam_assist_forwards_presses_while_it_is_on(ally_x: FakeRoot, tmp_path: 
         await asyncio.sleep(0.05)
         assert events == [QAM_PRESSED]
 
-        await app.stop()
+        app.stop()
         os.close(writer)
 
     asyncio.run(scenario())
@@ -152,7 +175,7 @@ def test_qam_assist_starts_with_the_plugin_when_it_was_on(ally_x: FakeRoot, tmp_
         first = make_app(ally_x, tmp_path)
         await first.start()
         await first.update_settings({"qam_assist": True})
-        await first.stop()
+        first.stop()
 
         writer = os.open(node, os.O_RDWR | os.O_NONBLOCK)
         app = make_app(ally_x, tmp_path, emit)
@@ -162,7 +185,123 @@ def test_qam_assist_starts_with_the_plugin_when_it_was_on(ally_x: FakeRoot, tmp_
         async with asyncio.timeout(1):
             await received.wait()
         assert events == [QAM_PRESSED]
-        await app.stop()
+        app.stop()
+        os.close(writer)
+
+    asyncio.run(scenario())
+
+
+RAINBOW = {"mode": "rainbow", "left": 0xFF0000, "right": 0xFF0000, "speed": "fast"}
+
+
+def test_lighting_is_sent_kept_and_journaled(
+    ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert sent_lighting == []
+
+        settings = await app.update_settings({"lighting": RAINBOW})
+
+        assert sent_lighting == [Lighting.from_json(RAINBOW)]
+        assert settings.lighting is not None and settings.lighting.mode is LightMode.RAINBOW
+        assert await app.changes() == [Change("lighting", "rings", None)]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_lighting_is_left_alone_while_huesync_runs(
+    ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting]
+) -> None:
+    install_huesync(tmp_path)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert (await app.conflicts()).lighting == "HueSync"
+
+        with pytest.raises(RuntimeError, match="HueSync"):
+            await app.update_settings({"lighting": RAINBOW})
+
+        assert sent_lighting == []
+        assert (await app.settings()).lighting is None
+        assert await app.changes() == []
+
+    asyncio.run(scenario())
+
+
+def test_saved_lighting_comes_back_at_start_and_after_sleep(
+    ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    woke = asyncio.Event()
+
+    async def one_resume() -> AsyncGenerator[None]:
+        yield
+        woke.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(app_module, "resumes", one_resume)
+    monkeypatch.setattr(app_module, "RESUME_SETTLE_SECONDS", 0)
+
+    async def scenario() -> None:
+        first = make_app(ally_x, tmp_path)
+        await first.start()
+        await first.update_settings({"lighting": RAINBOW})
+        first.stop()
+        sent_lighting.clear()
+
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        async with asyncio.timeout(1):
+            await woke.wait()
+
+        assert sent_lighting == [Lighting.from_json(RAINBOW)] * 2
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_previewed_lighting_is_shown_but_not_kept(
+    ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        preview = Lighting(mode=LightMode.STATIC, left=0x8CFFE2, right=0x8CFFE2)
+
+        await app.preview_lighting(preview)
+
+        assert sent_lighting == [preview]
+        assert (await app.settings()).lighting is None
+
+    asyncio.run(scenario())
+
+
+def test_stop_cancels_background_work_without_waiting(ally_x: FakeRoot, tmp_path: Path) -> None:
+    press = bytes.fromhex("5a9300000000")
+    node = ally_x.hidraw(5, driver="asus_rog_ally", phys="usb-0000:66:00.0-4/input2")
+
+    async def scenario() -> None:
+        events: list[str] = []
+
+        async def emit(event: str) -> None:
+            events.append(event)
+
+        writer = os.open(node, os.O_RDWR | os.O_NONBLOCK)
+        app = make_app(ally_x, tmp_path, emit)
+        await app.start()
+        await app.update_settings({"qam_assist": True})
+        await asyncio.sleep(0.05)
+
+        # Decky unloads synchronously: the call returns at once, the work stops on the next turn.
+        assert app.stop() is None
+        await asyncio.sleep(0)
+        os.write(writer, press)
+        await asyncio.sleep(0.05)
+
+        assert events == []
         os.close(writer)
 
     asyncio.run(scenario())

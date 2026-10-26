@@ -13,3 +13,10 @@ def parse_object(text: str) -> dict[str, JsonValue]:
     if not isinstance(data, dict):
         raise ValueError("expected a JSON object")
     return data
+
+
+def expect_bool(key: str, value: object) -> bool:
+    """Return a JSON boolean; raise ValueError for anything else, numbers included."""
+    if not isinstance(value, bool):
+        raise ValueError(f"{key} must be true or false")
+    return value

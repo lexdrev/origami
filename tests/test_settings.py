@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from origami.lighting import Lighting, LightMode
 from origami.settings import FIRST_TAB, SOUNDTRACKS_TAB, Language, Settings, SettingsStore
 
 
@@ -88,3 +89,17 @@ def test_qam_assist_is_off_until_switched_on(tmp_path: Path) -> None:
     store.save(Settings().updated({"qam_assist": True}))
 
     assert store.load() == Settings(qam_assist=True)
+
+
+def test_lighting_is_unset_until_chosen_and_then_saved(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    assert Settings().lighting is None
+
+    store.save(Settings().updated({"lighting": {"mode": "breathing", "left": 0xFF0000}}))
+
+    assert store.load() == Settings(lighting=Lighting(mode=LightMode.BREATHING, left=0xFF0000))
+
+
+def test_bad_lighting_is_rejected() -> None:
+    with pytest.raises(ValueError, match="mode"):
+        Settings().updated({"lighting": {"mode": "disco"}})

@@ -9,7 +9,8 @@ from enum import StrEnum
 from pathlib import Path
 
 from origami.fsutil import atomic_write_text
-from origami.jsonio import parse_object
+from origami.jsonio import expect_bool, parse_object
+from origami.lighting import Lighting
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ class Settings:
     """Steam tab that ORIGAMI's tab stands before; FIRST_TAB puts it on top, None at the end."""
     qam_assist: bool = False
     """ORIGAMI opens the quick access menu when Steam misses a press of its button (B16)."""
+    lighting: Lighting | None = None
+    """Lighting of the stick rings; None until the user sets it, so the controller keeps its own."""
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
@@ -45,9 +48,11 @@ class Settings:
                 case "language":
                     parsed[key] = Language(value)
                 case "qam_tab" | "qam_assist":
-                    parsed[key] = _boolean(key, value)
+                    parsed[key] = expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
+                case "lighting":
+                    parsed[key] = None if value is None else Lighting.from_json(value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
         return replace(self, **parsed)
@@ -59,13 +64,8 @@ class Settings:
             "qam_tab": self.qam_tab,
             "qam_tab_before": self.qam_tab_before,
             "qam_assist": self.qam_assist,
+            "lighting": None if self.lighting is None else self.lighting.to_json(),
         }
-
-
-def _boolean(key: str, value: object) -> bool:
-    if not isinstance(value, bool):
-        raise ValueError(f"{key} must be true or false")
-    return value
 
 
 def _tab_position(value: object) -> int | None:

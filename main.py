@@ -8,27 +8,30 @@ from typing import cast
 
 import decky
 
-from origami.app import Origami
+from origami.app import Environment, Origami
 from origami.jsonio import JsonValue
+from origami.lighting import Lighting
 from origami.wire import from_wire, to_wire
 
 
 class Plugin:
     def __init__(self) -> None:
-        self._app = Origami(
+        environment = Environment(
             root=Path("/"),
             settings_dir=Path(decky.DECKY_PLUGIN_SETTINGS_DIR),
             data_dir=Path(decky.DECKY_PLUGIN_RUNTIME_DIR),
+            decky_home=Path(decky.DECKY_HOME),
             version=decky.DECKY_PLUGIN_VERSION,
             decky_version=decky.DECKY_VERSION or None,
-            emit=decky.emit,
         )
+        self._app = Origami(environment, emit=decky.emit)
 
     async def _main(self) -> None:
         await self._app.start()
 
     async def _unload(self) -> None:
-        await self._app.stop()
+        # Must not await anything: see Origami.stop.
+        self._app.stop()
 
     async def get_info(self) -> JsonValue:
         return to_wire(await self._app.info())
@@ -45,5 +48,15 @@ class Plugin:
         settings = await self._app.update_settings(from_wire(cast("dict[str, object]", changes)))
         return to_wire(settings)
 
+    async def preview_lighting(self, lighting: object) -> None:
+        if not isinstance(lighting, dict):
+            raise TypeError("Lighting must be an object")
+        await self._app.preview_lighting(
+            Lighting.from_json(from_wire(cast("dict[str, object]", lighting)))
+        )
+
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
+
+    async def get_conflicts(self) -> JsonValue:
+        return to_wire(await self._app.conflicts())

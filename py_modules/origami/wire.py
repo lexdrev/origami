@@ -23,8 +23,14 @@ def to_wire(value: object) -> JsonValue:
 
 
 def from_wire(changes: dict[str, object]) -> dict[str, object]:
-    """Keys sent by the frontend (camelCase) as the backend's field names."""
-    return {_snake(key): value for key, value in changes.items()}
+    """Keys sent by the frontend (camelCase), nested ones too, as the backend's field names."""
+    return {_snake(key): _from_wire_value(value) for key, value in changes.items()}
+
+
+def _from_wire_value(value: object) -> object:
+    if isinstance(value, dict):
+        return from_wire(cast("dict[str, object]", value))
+    return value
 
 
 def _camel(name: str) -> str:

@@ -44,3 +44,9 @@ def test_frontend_keys_become_field_names() -> None:
 def test_unknown_types_are_rejected() -> None:
     with pytest.raises(TypeError, match="set"):
         to_wire({1, 2})
+
+
+def test_nested_frontend_objects_get_field_names_too() -> None:
+    assert from_wire({"lighting": {"mode": "static", "someFlag": True}}) == {
+        "lighting": {"mode": "static", "some_flag": True},
+    }
