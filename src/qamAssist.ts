@@ -4,8 +4,6 @@
 import { addEventListener, removeEventListener } from "@decky/api";
 import { Router } from "@decky/ui";
 
-import { createStore } from "./store";
-
 // While a game runs, Steam misses up to half of the quick access presses: the button sends a
 // 16–20 ms pulse, and a press Steam misses leaves no trace in it (BUGS.md, B16). The backend
 // reports every press; if Steam has not registered it shortly after, ORIGAMI does what Steam
@@ -31,9 +29,6 @@ export interface SteamMenuState {
 }
 
 export type Rescue = "open" | "close" | null;
-
-/** Presses Steam missed and ORIGAMI made up for since the plugin started. */
-export const rescuedPresses = createStore(0);
 
 /**
  * What to do about a press reported at `reportedAt`, from Steam's state then (`before`) and
@@ -78,7 +73,6 @@ export function watchQuickAccessButton(): () => void {
       // OpenQuickAccessMenu would switch to the first one.
       if (rescue === "open") menus.OpenQuickAccessMenu(menus.GetQuickAccessTab());
       if (rescue === "close") menus.CloseSideMenus();
-      if (rescue) rescuedPresses.set(rescuedPresses.get() + 1);
     }, STEAM_REACTION_MS);
     pending.add(check);
   };

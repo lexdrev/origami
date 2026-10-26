@@ -57,10 +57,7 @@ export const en: Messages = {
     title: "Gamepad",
     qamAssist: "QAM assist",
     qamAssistOff: "In games, Steam misses up to half of the presses",
-    qamAssistOn: (rescued) =>
-      rescued === 0
-        ? "On · no presses caught yet"
-        : `Caught ${rescued} missed ${pluralForm(locale, rescued, { one: "press", other: "presses" })}`,
+    qamAssistOn: "Library button presses no longer get lost",
   },
   tabs: {
     notifications: "Notifications",

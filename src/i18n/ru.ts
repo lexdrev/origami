@@ -60,15 +60,8 @@ export const ru: Messages = {
   gamepad: {
     title: "Геймпад",
     qamAssist: "Подстраховка QAM",
-    qamAssistOff: "В игре Steam теряет до половины нажатий",
-    qamAssistOn: (rescued) =>
-      rescued === 0
-        ? "Включено · подхвачено 0 нажатий"
-        : `Подхвачено ${rescued} ${pluralForm(locale, rescued, {
-            one: "пропущенное нажатие",
-            few: "пропущенных нажатия",
-            other: "пропущенных нажатий",
-          })}`,
+    qamAssistOff: "В игре Steam теряет до\u00a0половины нажатий",
+    qamAssistOn: "Нажатия кнопки Library больше не\u00a0теряются",
   },
   tabs: {
     notifications: "Уведомления",

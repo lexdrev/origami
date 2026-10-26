@@ -58,7 +58,8 @@ export interface Messages {
     qamAssist: string;
     /** The problem QAM assist solves, shown while it is off. */
     qamAssistOff: string;
-    qamAssistOn(rescued: number): string;
+    /** What QAM assist does, shown while it is on. */
+    qamAssistOn: string;
   };
   /** Names of the quick access tabs, as Steam calls them. */
   tabs: {

@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   EARLY_PRESS_MS,
-  rescuedPresses,
   rescueFor,
   STEAM_REACTION_MS,
   watchQuickAccessButton,
@@ -89,10 +88,9 @@ describe("watching the button", () => {
     vi.useRealTimers();
     steam.open.mockClear();
     steam.close.mockClear();
-    rescuedPresses.set(0);
   });
 
-  it("opens the menu after a press Steam missed, on the tab it was left on, and counts it", () => {
+  it("opens the menu after a press Steam missed, on the tab it was left on", () => {
     press();
     vi.advanceTimersByTime(STEAM_REACTION_MS - 1);
     expect(steam.open).not.toHaveBeenCalled();
@@ -100,7 +98,6 @@ describe("watching the button", () => {
     vi.advanceTimersByTime(1);
 
     expect(steam.open).toHaveBeenCalledExactlyOnceWith(QUICK_SETTINGS_TAB);
-    expect(rescuedPresses.get()).toBe(1);
   });
 
   it("closes the menu after a press Steam missed while it was open", () => {
@@ -122,7 +119,6 @@ describe("watching the button", () => {
 
     expect(steam.open).not.toHaveBeenCalled();
     expect(steam.close).not.toHaveBeenCalled();
-    expect(rescuedPresses.get()).toBe(0);
   });
 
   it("stops listening and drops pending checks when stopped", () => {
