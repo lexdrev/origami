@@ -6,6 +6,7 @@ import type { ComponentType } from "react";
 import { I18nProvider, useMessages } from "./i18n";
 import { useCurrentScreen, type ScreenId } from "./navigation";
 import { ChangesScreen } from "./screens/ChangesScreen";
+import { GamepadScreen } from "./screens/GamepadScreen";
 import { MainScreen } from "./screens/MainScreen";
 import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
@@ -16,6 +17,7 @@ import { styles } from "./ui/styles";
 
 const screens: Record<ScreenId, ComponentType> = {
   main: MainScreen,
+  gamepad: GamepadScreen,
   settings: SettingsScreen,
   qamTab: QamTabScreen,
   changes: ChangesScreen,

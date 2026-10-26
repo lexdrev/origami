@@ -5,6 +5,7 @@ import { definePlugin } from "@decky/api";
 
 import { App } from "./App";
 import { PluginTitle } from "./PluginTitle";
+import { watchQuickAccessButton } from "./qamAssist";
 import { createOwnTab } from "./qamTab";
 import { loadAll, settings } from "./state";
 import { TabApp } from "./TabApp";
@@ -13,6 +14,8 @@ import { FoxGlyph } from "./ui/icons";
 export default definePlugin(() => {
   // Loaded when Decky starts the plugin, so the first opening shows data at once.
   void loadAll();
+  // The backend reports quick access presses only while QAM assist is switched on.
+  const stopQamAssist = watchQuickAccessButton();
   const ownTab = createOwnTab({ title: null, icon: <FoxGlyph />, content: <TabApp /> });
   // The tab follows the settings: it appears once they are loaded and moves when they change.
   const unsubscribe = settings.subscribe(() => {
@@ -27,6 +30,7 @@ export default definePlugin(() => {
     onDismount() {
       unsubscribe();
       ownTab?.dispose();
+      stopQamAssist();
     },
   };
 });

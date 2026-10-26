@@ -16,7 +16,7 @@ const info: Info = {
   },
 };
 
-let settings: Settings = { language: "auto", qamTab: true, qamTabBefore: 7 };
+let settings: Settings = { language: "auto", qamTab: true, qamTabBefore: 7, qamAssist: false };
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {
@@ -46,5 +46,9 @@ export function callable(route: string) {
 }
 
 export const useQuickAccessVisible = () => true;
+
+// The stand has no backend events; QAM assist never hears a press.
+export const addEventListener = <T>(_event: string, listener: T) => listener;
+export const removeEventListener = () => undefined;
 
 export const definePlugin = <T>(factory: () => T) => factory;

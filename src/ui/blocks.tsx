@@ -5,7 +5,7 @@ import { Focusable, type GamepadEvent } from "@decky/ui";
 import type { ReactNode } from "react";
 
 import { useMessages } from "../i18n";
-import { IconButton } from "./controls";
+import { IconButton, Pressable } from "./controls";
 import { BackIcon, WarningIcon } from "./icons";
 
 interface ScreenProps {
@@ -63,16 +63,26 @@ interface TileProps {
   name: string;
   value: string;
   subtitle: string;
+  /** Opens the block's screen; tiles of blocks without one yet only show values. */
+  onOpen?: () => void;
 }
 
-export function Tile({ icon, name, value, subtitle }: TileProps) {
-  return (
-    <div className="og-tile">
+export function Tile({ icon, name, value, subtitle, onOpen }: TileProps) {
+  const t = useMessages();
+  const content = (
+    <>
       <span className="og-tile__icon">{icon}</span>
       <span className="og-tile__name">{name}</span>
       <span className="og-tile__value">{value}</span>
       <span className="og-tile__sub">{subtitle}</span>
-    </div>
+    </>
+  );
+  return onOpen ? (
+    <Pressable className="og-tile" action={t.actions.open} onPress={onOpen}>
+      {content}
+    </Pressable>
+  ) : (
+    <div className="og-tile">{content}</div>
   );
 }
 

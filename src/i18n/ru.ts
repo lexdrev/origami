@@ -57,6 +57,19 @@ export const ru: Messages = {
     toTop: "В начало",
     toBottom: "В конец",
   },
+  gamepad: {
+    title: "Геймпад",
+    qamAssist: "Подстраховка QAM",
+    qamAssistOff: "В игре Steam теряет до половины нажатий",
+    qamAssistOn: (rescued) =>
+      rescued === 0
+        ? "Включено · подхвачено 0 нажатий"
+        : `Подхвачено ${rescued} ${pluralForm(locale, rescued, {
+            one: "пропущенное нажатие",
+            few: "пропущенных нажатия",
+            other: "пропущенных нажатий",
+          })}`,
+  },
   tabs: {
     notifications: "Уведомления",
     remotePlay: "Remote Play Together",

@@ -5,7 +5,7 @@ import { Focusable } from "@decky/ui";
 import type { ReactNode } from "react";
 
 import { playSound, UISound } from "../sounds";
-import { ChevronIcon } from "./icons";
+import { ChevronIcon, WarningIcon } from "./icons";
 
 interface PressableProps {
   className: string;
@@ -91,14 +91,16 @@ interface ToggleRowProps {
   subtitle: string;
   value: boolean;
   action: string;
+  /** The subtitle names a problem the switch fixes (style B2: red frame, triangle and text). */
+  problem?: boolean;
   onChange: (value: boolean) => void;
 }
 
 /** A row with the B2 switch; plays Steam's toggle sounds. */
-export function ToggleRow({ title, subtitle, value, action, onChange }: ToggleRowProps) {
+export function ToggleRow({ title, subtitle, value, action, problem = false, onChange }: ToggleRowProps) {
   return (
     <Pressable
-      className="og-row og-toggle"
+      className={problem ? "og-row og-toggle og-row--problem" : "og-row og-toggle"}
       action={action}
       pressed={value}
       sound={value ? UISound.ToggleOff : UISound.ToggleOn}
@@ -107,7 +109,10 @@ export function ToggleRow({ title, subtitle, value, action, onChange }: ToggleRo
       }}
     >
       <span className="og-row__title">{title}</span>
-      <span className="og-row__sub">{subtitle}</span>
+      <span className="og-row__sub">
+        {problem && <WarningIcon size={12} />}
+        {subtitle}
+      </span>
       <span className={value ? "og-switch og-switch--on" : "og-switch"} aria-hidden="true">
         <span className="og-switch__knob" />
       </span>

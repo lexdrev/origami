@@ -25,7 +25,14 @@ export function MainScreen() {
         <Tile icon={<PowerIcon />} name={t.main.tiles.power} {...tiles.power} />
         <Tile icon={<FansIcon />} name={t.main.tiles.fans} {...tiles.fans} />
         <Tile icon={<DisplayIcon />} name={t.main.tiles.display} {...tiles.display} />
-        <Tile icon={<GamepadIcon />} name={t.main.tiles.gamepad} {...tiles.gamepad} />
+        <Tile
+          icon={<GamepadIcon />}
+          name={t.main.tiles.gamepad}
+          {...tiles.gamepad}
+          onOpen={() => {
+            navigate("gamepad");
+          }}
+        />
       </div>
     </Screen>
   );

@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "../src/App";
 import { I18nProvider, type Language } from "../src/i18n";
 import { ChangesScreen } from "../src/screens/ChangesScreen";
+import { GamepadScreen } from "../src/screens/GamepadScreen";
 import { MainScreen } from "../src/screens/MainScreen";
 import { QamTabScreen } from "../src/screens/QamTabScreen";
 import { SettingsScreen } from "../src/screens/SettingsScreen";
@@ -69,6 +70,11 @@ function Stand() {
         <Frame title="Main · EN">
           <Static language="en">
             <MainScreen />
+          </Static>
+        </Frame>
+        <Frame title="Gamepad · RU">
+          <Static language="ru">
+            <GamepadScreen />
           </Static>
         </Frame>
         <Frame title="Settings · RU">

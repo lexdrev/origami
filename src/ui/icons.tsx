@@ -165,11 +165,11 @@ export const DownIcon = () => <StrokeIcon size={14} width={2.4} d="M5 9l7 7 7-7"
 export const ChevronIcon = () => <StrokeIcon size={16} width={2.2} d="M9 5l7 7-7 7" />;
 export const CheckIcon = () => <StrokeIcon size={12} width={3} d="M4 12l5 5L20 6" />;
 
-export function WarningIcon() {
+export function WarningIcon({ size = 16 }: IconProps) {
   return (
     <svg
-      width={16}
-      height={16}
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

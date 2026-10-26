@@ -53,6 +53,13 @@ export interface Messages {
     toTop: string;
     toBottom: string;
   };
+  gamepad: {
+    title: string;
+    qamAssist: string;
+    /** The problem QAM assist solves, shown while it is off. */
+    qamAssistOff: string;
+    qamAssistOn(rescued: number): string;
+  };
   /** Names of the quick access tabs, as Steam calls them. */
   tabs: {
     notifications: string;

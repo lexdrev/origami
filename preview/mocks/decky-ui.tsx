@@ -62,3 +62,6 @@ export const Focusable = forwardRef<HTMLDivElement, FocusableProps>(function Foc
     </div>
   );
 });
+
+// Steam's window store; the stand has no quick access menu to open.
+export const Router = {};

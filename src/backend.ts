@@ -38,6 +38,8 @@ export interface Settings {
   qamTab: boolean;
   /** Steam tab that ORIGAMI's tab stands before; -1 on top, null at the end. */
   qamTabBefore: number | null;
+  /** ORIGAMI opens the quick access menu when Steam misses a press of its button. */
+  qamAssist: boolean;
 }
 
 export interface Change {
