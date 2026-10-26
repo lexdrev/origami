@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 export function formatNumber(value: number, locale: string, fractionDigits = 0): string {
   return new Intl.NumberFormat(locale, {

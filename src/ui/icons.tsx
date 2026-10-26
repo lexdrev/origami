@@ -52,11 +52,11 @@ export function FoxGlyph() {
 function TileIcon({ children }: { children: ReactNode }) {
   return (
     <svg
-      width={30}
-      height={30}
+      width={24}
+      height={24}
       viewBox="0 0 24 24"
       stroke="currentColor"
-      strokeWidth={1.2}
+      strokeWidth={1.3}
       strokeLinejoin="round"
       strokeLinecap="round"
       aria-hidden="true"
@@ -159,8 +159,8 @@ function StrokeIcon({ size, width, d }: { size: number; width: number; d: string
   );
 }
 
-export const BackIcon = () => <StrokeIcon size={20} width={2.2} d="M15 5l-7 7 7 7" />;
-export const ChevronIcon = () => <StrokeIcon size={18} width={2.2} d="M9 5l7 7-7 7" />;
+export const BackIcon = () => <StrokeIcon size={18} width={2.2} d="M15 5l-7 7 7 7" />;
+export const ChevronIcon = () => <StrokeIcon size={16} width={2.2} d="M9 5l7 7-7 7" />;
 export const CheckIcon = () => <StrokeIcon size={12} width={3} d="M4 12l5 5L20 6" />;
 
 export function WarningIcon() {

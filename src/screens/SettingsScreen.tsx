@@ -26,7 +26,7 @@ export function SettingsScreen() {
 
   return (
     <Screen onBack={back}>
-      <Header onBack={back} icon={<GearIcon size={22} />} title={t.settings.title} />
+      <Header onBack={back} icon={<GearIcon size={18} />} title={t.settings.title} />
 
       <SectionLabel>{t.settings.language}</SectionLabel>
       <ChoiceGroup
@@ -48,7 +48,7 @@ export function SettingsScreen() {
       />
 
       <div className="og-about">
-        <FoxMark size={30} />
+        <FoxMark size={26} />
         <span className="og-about__lines">
           <span className="og-about__name">
             <b>ORIGAMI</b> {plugin.status === "ready" ? plugin.value.version : ""} · {LICENSE}

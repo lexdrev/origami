@@ -8,7 +8,7 @@ import { en } from "../i18n/en";
 import { ru } from "../i18n/ru";
 import { tileTexts } from "./tiles";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 const allyX: Telemetry = {
   power: { tdpLimitW: 17, packagePowerW: 16.94, cpuBoost: false },
@@ -19,7 +19,7 @@ const allyX: Telemetry = {
 describe("tile texts", () => {
   it("show live values in Russian", () => {
     expect(tileTexts(allyX, ru)).toEqual({
-      power: { value: `17${NBSP}Вт`, subtitle: `сейчас 16,9${NBSP}Вт · буст выкл` },
+      power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · буст${NBSP}выкл` },
       fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C` },
       display: { value: "—", subtitle: "Насыщенность" },
       gamepad: { value: "50%", subtitle: "Вибрация ручек" },

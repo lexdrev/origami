@@ -14,8 +14,8 @@ export const ru: Messages = {
   main: {
     settings: "Настройки",
     tiles: { power: "Питание", fans: "Вентиляторы", display: "Дисплей и свет", gamepad: "Геймпад" },
-    powerNow: (watts) => `сейчас ${watts}`,
-    boost: (on) => (on ? "буст вкл" : "буст выкл"),
+    powerNow: (watts) => `сейчас\u00a0${watts}`,
+    boost: (on) => (on ? "буст\u00a0вкл" : "буст\u00a0выкл"),
     displaySub: "Насыщенность",
     gamepadSub: "Вибрация ручек",
   },

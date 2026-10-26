@@ -38,26 +38,22 @@ interface HeaderProps {
   title: string;
   subtitle?: string;
   icon?: ReactNode;
-  brand?: boolean;
-  onBack?: () => void;
-  trailing?: ReactNode;
+  onBack: () => void;
 }
 
-export function Header({ title, subtitle, icon, brand = false, onBack, trailing }: HeaderProps) {
+/** Header of a nested screen; the plugin name lives in the Decky title row. */
+export function Header({ title, subtitle, icon, onBack }: HeaderProps) {
   const t = useMessages();
   return (
     <header className="og-header">
-      {onBack && (
-        <IconButton label={t.actions.back} action={t.actions.back} onPress={onBack}>
-          <BackIcon />
-        </IconButton>
-      )}
+      <IconButton label={t.actions.back} action={t.actions.back} onPress={onBack}>
+        <BackIcon />
+      </IconButton>
       {icon && <span className="og-header__icon">{icon}</span>}
       <span className="og-header__titles">
-        <span className={brand ? "og-header__title og-header__title--brand" : "og-header__title"}>{title}</span>
+        <span className="og-header__title">{title}</span>
         {subtitle && <span className="og-header__subtitle">{subtitle}</span>}
       </span>
-      {trailing}
     </header>
   );
 }

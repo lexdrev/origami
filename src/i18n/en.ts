@@ -14,8 +14,8 @@ export const en: Messages = {
   main: {
     settings: "Settings",
     tiles: { power: "Power", fans: "Fans", display: "Display & Light", gamepad: "Gamepad" },
-    powerNow: (watts) => `now ${watts}`,
-    boost: (on) => (on ? "boost on" : "boost off"),
+    powerNow: (watts) => `now\u00a0${watts}`,
+    boost: (on) => (on ? "boost\u00a0on" : "boost\u00a0off"),
     displaySub: "Saturation",
     gamepadSub: "Handle vibration",
   },

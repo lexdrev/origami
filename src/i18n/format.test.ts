@@ -9,14 +9,14 @@ import { ru } from "./ru";
 
 describe("numbers", () => {
   it("follow the interface language", () => {
-    expect(formatNumber(4600, "ru-RU")).toBe("4 600");
+    expect(formatNumber(4600, "ru-RU")).toBe("4\u00a0600");
     expect(formatNumber(4600, "en-US")).toBe("4,600");
     expect(formatNumber(16.94, "ru-RU", 1)).toBe("16,9");
     expect(formatNumber(16.94, "en-US", 1)).toBe("16.9");
   });
 
   it("keep the unit on the same line", () => {
-    expect(withUnit("17", "Вт")).toBe("17 Вт");
+    expect(withUnit("17", "Вт")).toBe("17\u00a0Вт");
   });
 });
 

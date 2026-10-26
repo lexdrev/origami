@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { backend, type Change, type Info, type Settings, type Telemetry } from "./backend";
-import type { Language } from "./i18n";
+import { resolveLanguage, type Language } from "./i18n";
 import { readSteamLanguage } from "./steam";
-import { createStore, errorMessage, type Loadable, type Store } from "./store";
+import { createStore, errorMessage, useStore, type Loadable, type Store } from "./store";
 
 export const info = createStore<Loadable<Info>>({ status: "loading" });
 export const settings = createStore<Loadable<Settings>>({ status: "loading" });
@@ -32,6 +32,13 @@ export async function loadAll(): Promise<void> {
       console.warn("ORIGAMI: cannot read the Steam language", error);
     }),
   ]);
+}
+
+/** Interface language: the setting, or the Steam language when the setting is "auto". */
+export function useLanguage(): Language {
+  const current = useStore(settings);
+  const steam = useStore(steamLanguage);
+  return resolveLanguage(current.status === "ready" ? current.value.language : "auto", steam);
 }
 
 export function refreshTelemetry(): Promise<void> {
