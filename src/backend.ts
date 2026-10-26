@@ -53,6 +53,19 @@ export interface Vibration {
   right: number;
 }
 
+/** What ORIGAMI does on a press of a button it may drive (origami.buttons.ButtonAction). */
+export type ButtonAction =
+  | "none"
+  | "origami"
+  | "quick_access"
+  | "performance"
+  | "overlay"
+  | "lighting"
+  | "screenshot"
+  | "keyboard"
+  | "magnifier"
+  | "close_game";
+
 export interface Settings {
   language: LanguageSetting;
   /** ORIGAMI has its own quick access tab besides its place inside Decky. */
@@ -67,6 +80,10 @@ export interface Settings {
   saturation: number | null;
   /** Null until the user sets it; the controller keeps its own strength until then. */
   vibration: Vibration | null;
+  /** What a short press of the upper left button does; nothing reaches Steam from it. */
+  armouryCrate: ButtonAction;
+  /** What holding the upper left button does, besides the L5 Steam gets from it. */
+  armouryCrateHold: ButtonAction;
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */

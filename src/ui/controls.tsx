@@ -109,6 +109,49 @@ export function choiceClass(selected: boolean, twoLines: boolean): string {
     .join(" ");
 }
 
+export interface Option<T extends string> {
+  value: T;
+  name: string;
+  detail: string;
+}
+
+interface OptionListProps<T extends string> {
+  label: string;
+  options: readonly Option<T>[];
+  value: T;
+  action: string;
+  onChange: (value: T) => void;
+}
+
+/** One of several choices that need a line of explanation each, in a column (style B2). */
+export function OptionList<T extends string>({ label, options, value, action, onChange }: OptionListProps<T>) {
+  return (
+    <Focusable className="og-options" role="group" aria-label={label}>
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            className={selected ? "og-option og-option--selected" : "og-option"}
+            pressed={selected}
+            sound={UISound.Press}
+            action={action}
+            onPress={() => {
+              onChange(option.value);
+            }}
+          >
+            <span className="og-option__mark" aria-hidden="true" />
+            <span className="og-option__text">
+              <span className="og-option__name">{option.name}</span>
+              <span className="og-option__detail">{option.detail}</span>
+            </span>
+          </Pressable>
+        );
+      })}
+    </Focusable>
+  );
+}
+
 interface ToggleRowProps {
   title: string;
   subtitle: string;
@@ -147,15 +190,20 @@ interface NavRowProps {
   title: string;
   subtitle: string;
   action: string;
+  /** The subtitle names a problem the next screen fixes (style B2: red frame, triangle and text). */
+  problem?: boolean;
   onPress: () => void;
 }
 
 /** A row that opens another screen. */
-export function NavRow({ title, subtitle, action, onPress }: NavRowProps) {
+export function NavRow({ title, subtitle, action, problem = false, onPress }: NavRowProps) {
   return (
-    <Pressable className="og-row" action={action} onPress={onPress}>
+    <Pressable className={problem ? "og-row og-row--problem" : "og-row"} action={action} onPress={onPress}>
       <span className="og-row__title">{title}</span>
-      <span className="og-row__sub">{subtitle}</span>
+      <span className="og-row__sub">
+        {problem && <WarningIcon size={12} />}
+        {subtitle}
+      </span>
       <span className="og-row__chevron">
         <ChevronIcon />
       </span>

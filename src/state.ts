@@ -11,7 +11,8 @@ import {
   type Telemetry,
   type Vibration,
 } from "./backend";
-import { resolveLanguage, type Language } from "./i18n";
+import { messagesFor, resolveLanguage, type Language, type Messages } from "./i18n";
+import { DEFAULT_LIGHTING } from "./lighting";
 import { readSteamLanguage } from "./steam";
 import { createStore, errorMessage, latestOnly, useStore, type Loadable, type Store } from "./store";
 
@@ -44,11 +45,18 @@ export async function loadAll(): Promise<void> {
   ]);
 }
 
+function languageOf(current: Loadable<Settings>, steam: Language): Language {
+  return resolveLanguage(current.status === "ready" ? current.value.language : "auto", steam);
+}
+
 /** Interface language: the setting, or the Steam language when the setting is "auto". */
 export function useLanguage(): Language {
-  const current = useStore(settings);
-  const steam = useStore(steamLanguage);
-  return resolveLanguage(current.status === "ready" ? current.value.language : "auto", steam);
+  return languageOf(useStore(settings), useStore(steamLanguage));
+}
+
+/** The interface messages outside React, such as for notifications. */
+export function currentMessages(): Messages {
+  return messagesFor(languageOf(settings.get(), steamLanguage.get()));
 }
 
 export function refreshTelemetry(): Promise<void> {
@@ -104,4 +112,12 @@ export function setVibration(vibration: Vibration): void {
   if (current.status !== "ready") return;
   settings.set({ status: "ready", value: { ...current.value, vibration } });
   saveVibration.send(vibration);
+}
+
+/** Switches the stick lighting on or off; it comes on as ORIGAMI's default the first time. */
+export function toggleLighting(): Promise<boolean> {
+  const current = settings.get();
+  if (current.status !== "ready") return Promise.resolve(false);
+  const lighting = current.value.lighting;
+  return updateSettings({ lighting: { ...(lighting ?? DEFAULT_LIGHTING), enabled: !(lighting?.enabled ?? false) } });
 }

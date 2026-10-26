@@ -24,6 +24,8 @@ let settings: Settings = {
   lighting: null,
   saturation: null,
   vibration: null,
+  armouryCrate: "none",
+  armouryCrateHold: "none",
 };
 // Steam's value, as gamescope shows it on the console without vibrantDeck.
 const STEAM_SATURATION = 100;

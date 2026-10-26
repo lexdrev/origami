@@ -3,7 +3,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createOwnTab, ORIGAMI_TAB, placeTab, repairDeckyTabs } from "./qamTab";
+import { createOwnTab, placeTab, repairDeckyTabs } from "./qamTab";
+import { ORIGAMI_TAB } from "./quickAccess";
 import type { Store } from "./store";
 import { FIRST_TAB, quickAccessColumn } from "./tabPosition";
 

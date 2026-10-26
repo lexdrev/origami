@@ -3,13 +3,19 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
-import type { LanguageSetting, LightBrightness, LightMode, LightSpeed } from "../backend";
+import type { ButtonAction, LanguageSetting, LightBrightness, LightMode, LightSpeed } from "../backend";
 import type { PaletteColour } from "../lighting";
 import type { VibrationPreset } from "../vibration";
 import { en } from "./en";
 import { ru } from "./ru";
 
 export type Language = "ru" | "en";
+
+/** An action as a choice: its name and what it does. */
+export interface ActionText {
+  name: string;
+  detail: string;
+}
 
 export interface Messages {
   locale: string;
@@ -106,11 +112,33 @@ export interface Messages {
     presets: Record<VibrationPreset["id"], string>;
     vibrationOwnedBy(plugin: string): string;
     vibrationOwnedText(plugin: string): string;
+    armouryCrate: string;
+    armouryCrateUnassigned: string;
     qamAssist: string;
     /** The problem QAM assist solves, shown while it is off. */
     qamAssistOff: string;
     /** What QAM assist does, shown while it is on. */
     qamAssistOn: string;
+  };
+  armouryCrate: {
+    title: string;
+    subtitle: string;
+    press: string;
+    hold: string;
+    actions: Record<Exclude<ButtonAction, "none">, ActionText>;
+    /** A short press left alone: the button does nothing. */
+    nothing: ActionText;
+    /** Holding left alone: Steam gets the L5 it always gets. */
+    l5: ActionText;
+    /** Above the long-press choices: Steam gets L5 whatever ORIGAMI does. */
+    holdHint: string;
+    summary(press: string, hold: string): string;
+  };
+  /** Notifications of button actions, shown while the plugin is closed. */
+  buttonActions: {
+    closeGame: string;
+    holdAgain(game: string): string;
+    noGame: string;
   };
   /** Names of the quick access tabs, as Steam calls them. */
   tabs: {
@@ -145,6 +173,11 @@ const MessagesContext = createContext<Messages>(en);
 
 export function I18nProvider({ language, children }: { language: Language; children: ReactNode }) {
   return <MessagesContext.Provider value={catalogs[language]}>{children}</MessagesContext.Provider>;
+}
+
+/** The messages of a language, for text shown outside React, such as notifications. */
+export function messagesFor(language: Language): Messages {
+  return catalogs[language];
 }
 
 export function useMessages(): Messages {

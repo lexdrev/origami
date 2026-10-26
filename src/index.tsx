@@ -6,6 +6,7 @@ import { definePlugin } from "@decky/api";
 import { backend } from "./backend";
 
 import { App } from "./App";
+import { watchButtonActions } from "./buttonActions";
 import { PluginTitle } from "./PluginTitle";
 import { watchQuickAccessButton } from "./qamAssist";
 import { createOwnTab } from "./qamTab";
@@ -24,6 +25,8 @@ export default definePlugin(() => {
   // The backend reports quick access presses only while QAM assist is switched on.
   const stopQamAssist = watchQuickAccessButton();
   const ownTab = createOwnTab({ title: null, icon: <FoxGlyph />, content: <TabApp /> });
+  // The backend reports presses of the Armoury Crate button only while an action is assigned to it.
+  const stopButtonActions = watchButtonActions(() => ownTab?.shown() ?? false);
   // The tab follows the settings: it appears once they are loaded and moves when they change.
   const unsubscribe = settings.subscribe(() => {
     const current = settings.get();
@@ -38,6 +41,7 @@ export default definePlugin(() => {
       unsubscribe();
       ownTab?.dispose();
       stopQamAssist();
+      stopButtonActions();
     },
   };
 });

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import type { Vibration } from "../backend";
 import { useMessages } from "../i18n";
-import { back } from "../navigation";
+import { back, navigate } from "../navigation";
 import { UISound } from "../sounds";
 import {
   conflicts,
@@ -19,7 +19,7 @@ import {
 } from "../state";
 import { useStore } from "../store";
 import { Card, Header, Improvement, Screen } from "../ui/blocks";
-import { ChoiceGroup, filledTrack, Pressable, Slider, ToggleRow } from "../ui/controls";
+import { ChoiceGroup, filledTrack, NavRow, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { PlayIcon } from "../ui/icons";
 import {
   currentVibration,
@@ -32,6 +32,7 @@ import {
   VIBRATION_PRESETS,
   VIBRATION_STEP,
 } from "../vibration";
+import { armouryCrateSummary } from "./armouryCrate";
 import { OwnedBy } from "./OwnedBy";
 
 export function GamepadScreen() {
@@ -53,6 +54,7 @@ export function GamepadScreen() {
     );
   }
   const vibrationOwner = owners.value.vibration;
+  const buttonSummary = armouryCrateSummary(current.value.armouryCrate, current.value.armouryCrateHold, t);
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={t.gamepad.title} />
@@ -72,6 +74,15 @@ export function GamepadScreen() {
         value={current.value.qamAssist}
         action={t.actions.toggle}
         onChange={(qamAssist) => void updateSettings({ qamAssist })}
+      />
+      <NavRow
+        title={t.gamepad.armouryCrate}
+        subtitle={buttonSummary ?? t.gamepad.armouryCrateUnassigned}
+        problem={buttonSummary === null}
+        action={t.actions.open}
+        onPress={() => {
+          navigate("armouryCrate");
+        }}
       />
     </Screen>
   );

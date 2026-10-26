@@ -11,11 +11,9 @@ import {
 } from "@decky/ui";
 import { createElement, type ElementType, type ReactNode } from "react";
 
+import { ORIGAMI_TAB } from "./quickAccess";
 import { createStore, useStore } from "./store";
 import { FIRST_TAB, quickAccessColumn, type Arranger, type TabPosition } from "./tabPosition";
-
-/** Key of ORIGAMI's own tab in the quick access menu ("ORG" in ASCII). Steam's tabs use 0–7, Decky 999. */
-export const ORIGAMI_TAB = 0x4f5247;
 
 /** Entry of Steam's quick access tab list; Decky marks the entries it adds with `decky`. */
 interface SteamTab {
@@ -33,6 +31,8 @@ export interface TabContent {
 export interface OwnTab {
   /** Shows or hides ORIGAMI's tab and moves it to `position`. */
   apply: (enabled: boolean, position: TabPosition) => void;
+  /** Whether ORIGAMI's tab is in the column now. */
+  shown: () => boolean;
   dispose: () => void;
 }
 
@@ -52,7 +52,7 @@ interface DeckyTabsHook {
 
 declare global {
   interface Window {
-    DeckyPluginLoader?: { tabsHook?: unknown };
+    DeckyPluginLoader?: { tabsHook?: unknown; deckyState?: unknown };
   }
 }
 
@@ -276,6 +276,7 @@ export function createOwnTab(tab: TabContent): OwnTab | null {
       const current = placement.get();
       if (current.enabled !== enabled || current.position !== position) placement.set({ enabled, position });
     },
+    shown: registered,
     dispose() {
       for (const patch of patches) patch.unpatch();
       refreshMountedMenu(renderers);

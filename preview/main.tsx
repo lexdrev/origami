@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "../src/App";
 import { I18nProvider, type Language } from "../src/i18n";
+import { ArmouryCrateScreen } from "../src/screens/ArmouryCrateScreen";
 import { ChangesScreen } from "../src/screens/ChangesScreen";
 import { DisplayScreen } from "../src/screens/DisplayScreen";
 import { GamepadScreen } from "../src/screens/GamepadScreen";
@@ -81,6 +82,11 @@ function Stand() {
         <Frame title="Gamepad · RU">
           <Static language="ru">
             <GamepadScreen />
+          </Static>
+        </Frame>
+        <Frame title="Armoury Crate · RU">
+          <Static language="ru">
+            <ArmouryCrateScreen />
           </Static>
         </Frame>
         <Frame title="Settings · RU">

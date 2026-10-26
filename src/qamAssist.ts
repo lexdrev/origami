@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { addEventListener, removeEventListener } from "@decky/api";
-import { Router } from "@decky/ui";
+
+import { mainWindow, SideMenu } from "./quickAccess";
 
 // While a game runs, Steam misses up to half of the quick access presses: the button sends a
 // 16–20 ms pulse, and a press Steam misses leaves no trace in it (BUGS.md, B16). The backend
@@ -18,9 +19,6 @@ export const STEAM_REACTION_MS = 250;
 
 /** A press Steam registered this shortly before the backend's report is the same press. */
 export const EARLY_PRESS_MS = 150;
-
-// Steam's ESideMenu; @decky/ui has it only as a type.
-const SideMenu = { None: 0, QuickAccess: 2 } as const;
 
 export interface SteamMenuState {
   /** When Steam last registered a press of the button, on the performance.now() clock. */
@@ -44,8 +42,6 @@ export function rescueFor(before: SteamMenuState, after: SteamMenuState, reporte
   if (after.openSideMenu === SideMenu.QuickAccess) return "close";
   return null;
 }
-
-const mainWindow = () => Router.WindowStore.GamepadUIMainWindowInstance;
 
 function readSteamMenuState(): SteamMenuState | null {
   const window = mainWindow();
