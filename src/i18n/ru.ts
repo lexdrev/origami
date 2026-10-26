@@ -9,6 +9,7 @@ const locale = "ru-RU";
 export const ru: Messages = {
   locale,
   unknown: "—",
+  openDeckyPlugins: "Открыть плагины Decky",
   actions: { open: "Открыть", back: "Назад", select: "Выбрать", toggle: "Переключить", less: "Меньше", more: "Больше" },
   units: { watts: "Вт", rpm: "об/мин", celsius: "°C" },
   main: {
@@ -90,7 +91,6 @@ export const ru: Messages = {
     ownedBy: (plugin) => `Подсветкой управляет ${plugin}`,
     ownedText: (plugin) =>
       `У колец может быть только один хозяин, поэтому ORIGAMI их не\u00a0трогает. Выключите или удалите ${plugin} в\u00a0Decky — настройки подсветки появятся здесь.`,
-    openPlugins: "Открыть плагины Decky",
   },
   customColour: {
     title: "Свой цвет",
@@ -106,6 +106,18 @@ export const ru: Messages = {
   },
   gamepad: {
     title: "Геймпад",
+    vibration: "Вибрация ручек",
+    tooStrong: "Слишком сильно · попробуйте\u00a050%",
+    handles: "Ручки",
+    together: "Вместе",
+    separate: "Раздельно",
+    left: "Левая",
+    right: "Правая",
+    test: "Тест",
+    presets: { off: "Выкл", weak: "Слабо", medium: "Средне", strong: "Сильно" },
+    vibrationOwnedBy: (plugin) => `Вибрацией управляет ${plugin}`,
+    vibrationOwnedText: (plugin) =>
+      `Силу моторов задаёт один плагин, поэтому ORIGAMI её не\u00a0трогает. Выключите или удалите ${plugin} в\u00a0Decky — настройки вибрации появятся здесь.`,
     qamAssist: "Подстраховка QAM",
     qamAssistOff: "В игре Steam теряет до\u00a0половины нажатий",
     qamAssistOn: "Нажатия кнопки Library больше не\u00a0теряются",

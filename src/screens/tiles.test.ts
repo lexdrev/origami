@@ -9,6 +9,7 @@ import { ru } from "../i18n/ru";
 import { tileTexts } from "./tiles";
 
 const NBSP = "\u00a0";
+const none = { saturation: null, vibration: null };
 
 const allyX: Telemetry = {
   power: { tdpLimitW: 17, packagePowerW: 16.94, cpuBoost: false },
@@ -18,7 +19,7 @@ const allyX: Telemetry = {
 
 describe("tile texts", () => {
   it("show live values in Russian", () => {
-    expect(tileTexts(allyX, 150, ru)).toEqual({
+    expect(tileTexts(allyX, { saturation: 150, vibration: null }, ru)).toEqual({
       power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · буст${NBSP}выкл` },
       fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C` },
       display: { value: "150%", subtitle: "Насыщенность" },
@@ -29,7 +30,13 @@ describe("tile texts", () => {
   it("show both handles when they differ", () => {
     const telemetry = { ...allyX, gamepad: { vibrationPct: [40, 60] as [number, number] } };
 
-    expect(tileTexts(telemetry, null, en).gamepad.value).toBe("40% / 60%");
+    expect(tileTexts(telemetry, none, en).gamepad.value).toBe("40 / 60%");
+  });
+
+  it("show the strength ORIGAMI keeps, which the driver does not know", () => {
+    const own = { saturation: null, vibration: { left: 25, right: 25 } };
+
+    expect(tileTexts(allyX, own, en).gamepad.value).toBe("25%");
   });
 
   it("show dashes before the first reading and on other hardware", () => {
@@ -40,7 +47,7 @@ describe("tile texts", () => {
     };
 
     for (const telemetry of [null, unknown]) {
-      const texts = tileTexts(telemetry, null, en);
+      const texts = tileTexts(telemetry, none, en);
       expect(texts.power).toEqual({ value: "—", subtitle: "" });
       expect(texts.fans).toEqual({ value: "—", subtitle: "rpm" });
       expect(texts.gamepad.value).toBe("—");

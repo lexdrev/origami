@@ -23,10 +23,11 @@ let settings: Settings = {
   qamAssist: false,
   lighting: null,
   saturation: null,
+  vibration: null,
 };
 // Steam's value, as gamescope shows it on the console without vibrantDeck.
 const STEAM_SATURATION = 100;
-const conflicts: Conflicts = { lighting: null, saturation: null };
+const conflicts: Conflicts = { lighting: null, saturation: null, vibration: null };
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {
@@ -34,7 +35,7 @@ function telemetry(): Telemetry {
   return {
     power: { tdpLimitW: 17, packagePowerW: 16.9 + wobble * 0.3, cpuBoost: false },
     fans: { speedsRpm: [4600 + Math.round(wobble * 80), 4700], cpuTempC: 63.4, gpuTempC: 61 },
-    gamepad: { vibrationPct: [50, 50] },
+    gamepad: { vibrationPct: [100, 100] },
   };
 }
 
@@ -47,6 +48,7 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   get_conflicts: () => conflicts,
   get_saturation: () => settings.saturation ?? STEAM_SATURATION,
   restore_saturation: () => undefined,
+  test_vibration: () => undefined,
 };
 
 export function callable(route: string) {

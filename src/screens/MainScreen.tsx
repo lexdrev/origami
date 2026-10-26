@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
 import { refreshSaturation, saturation } from "../saturation";
-import { info } from "../state";
+import { info, settings } from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
@@ -20,11 +20,16 @@ export function MainScreen() {
   const t = useMessages();
   const telemetry = useTelemetry();
   const level = useStore(saturation);
+  const current = useStore(settings);
   // Steam's own setting, changed from Steam's settings page too.
   useEffect(() => {
     void refreshSaturation();
   }, []);
-  const tiles = tileTexts(telemetry.status === "ready" ? telemetry.value : null, level, t);
+  const tiles = tileTexts(
+    telemetry.status === "ready" ? telemetry.value : null,
+    { saturation: level, vibration: current.status === "ready" ? current.value.vibration : null },
+    t,
+  );
 
   return (
     <Screen>

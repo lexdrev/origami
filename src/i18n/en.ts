@@ -9,6 +9,7 @@ const locale = "en-US";
 export const en: Messages = {
   locale,
   unknown: "—",
+  openDeckyPlugins: "Open Decky plugins",
   actions: { open: "Open", back: "Back", select: "Select", toggle: "Toggle", less: "Less", more: "More" },
   units: { watts: "W", rpm: "rpm", celsius: "°C" },
   main: {
@@ -86,7 +87,6 @@ export const en: Messages = {
     ownedBy: (plugin) => `${plugin} controls the lighting`,
     ownedText: (plugin) =>
       `The rings can have only one owner, so ORIGAMI leaves them alone. Switch off or remove ${plugin} in Decky, and the lighting settings appear here.`,
-    openPlugins: "Open Decky plugins",
   },
   customColour: {
     title: "Custom colour",
@@ -102,6 +102,18 @@ export const en: Messages = {
   },
   gamepad: {
     title: "Gamepad",
+    vibration: "Handle vibration",
+    tooStrong: "Too strong · try\u00a050%",
+    handles: "Handles",
+    together: "Together",
+    separate: "Separate",
+    left: "Left",
+    right: "Right",
+    test: "Test",
+    presets: { off: "Off", weak: "Weak", medium: "Medium", strong: "Strong" },
+    vibrationOwnedBy: (plugin) => `${plugin} controls the vibration`,
+    vibrationOwnedText: (plugin) =>
+      `Only one plugin can set the motor strength, so ORIGAMI leaves it alone. Switch off or remove ${plugin} in Decky, and the vibration settings appear here.`,
     qamAssist: "QAM assist",
     qamAssistOff: "In games, Steam misses up to half of the presses",
     qamAssistOn: "Library button presses no longer get lost",

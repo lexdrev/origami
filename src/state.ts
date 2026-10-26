@@ -9,10 +9,11 @@ import {
   type Lighting,
   type Settings,
   type Telemetry,
+  type Vibration,
 } from "./backend";
 import { resolveLanguage, type Language } from "./i18n";
 import { readSteamLanguage } from "./steam";
-import { createStore, errorMessage, useStore, type Loadable, type Store } from "./store";
+import { createStore, errorMessage, latestOnly, useStore, type Loadable, type Store } from "./store";
 
 export const info = createStore<Loadable<Info>>({ status: "loading" });
 export const settings = createStore<Loadable<Settings>>({ status: "loading" });
@@ -59,21 +60,48 @@ export function refreshConflicts(): Promise<void> {
   return load(conflicts, backend.getConflicts);
 }
 
-/** Shows lighting on the rings without saving it; a failure shows like a failed action. */
-export async function previewLighting(lighting: Lighting): Promise<void> {
+export function reloadSettings(): Promise<void> {
+  return load(settings, backend.getSettings);
+}
+
+/** Runs a user's action; a failure shows until the next action succeeds. False when it failed. */
+async function act(action: () => Promise<unknown>): Promise<boolean> {
   try {
-    await backend.previewLighting(lighting);
+    await action();
     actionError.set(null);
+    return true;
   } catch (error) {
     actionError.set(errorMessage(error));
+    return false;
   }
 }
 
-export async function updateSettings(changes: Partial<Settings>): Promise<void> {
-  try {
+/** Shows lighting on the rings without saving it. */
+export function previewLighting(lighting: Lighting): Promise<boolean> {
+  return act(() => backend.previewLighting(lighting));
+}
+
+/** Rumbles the handles for a moment at the current strength. */
+export function testVibration(): Promise<boolean> {
+  return act(backend.testVibration);
+}
+
+/** Saves settings changes; the backend keeps only what the hardware took. */
+export function updateSettings(changes: Partial<Settings>): Promise<boolean> {
+  return act(async () => {
     settings.set({ status: "ready", value: await backend.updateSettings(changes) });
-    actionError.set(null);
-  } catch (error) {
-    actionError.set(errorMessage(error));
-  }
+  });
+}
+
+// A slider moved quickly saves only its newest strength; a refused one brings the saved settings back.
+const saveVibration = latestOnly(async (vibration: Vibration) => {
+  if (!(await updateSettings({ vibration }))) await reloadSettings();
+});
+
+/** Saves the vibration strength, shown at once so the slider follows a held D-pad. */
+export function setVibration(vibration: Vibration): void {
+  const current = settings.get();
+  if (current.status !== "ready") return;
+  settings.set({ status: "ready", value: { ...current.value, vibration } });
+  saveVibration.send(vibration);
 }

@@ -5,6 +5,7 @@ import { createContext, useContext, type ReactNode } from "react";
 
 import type { LanguageSetting, LightBrightness, LightMode, LightSpeed } from "../backend";
 import type { PaletteColour } from "../lighting";
+import type { VibrationPreset } from "../vibration";
 import { en } from "./en";
 import { ru } from "./ru";
 
@@ -13,6 +14,8 @@ export type Language = "ru" | "en";
 export interface Messages {
   locale: string;
   unknown: string;
+  /** The button under a section another plugin drives. */
+  openDeckyPlugins: string;
   actions: { open: string; back: string; select: string; toggle: string; less: string; more: string };
   units: { watts: string; rpm: string; celsius: string };
   main: {
@@ -76,7 +79,6 @@ export interface Messages {
     levels: Record<LightBrightness, string>;
     ownedBy(plugin: string): string;
     ownedText(plugin: string): string;
-    openPlugins: string;
   };
   customColour: {
     title: string;
@@ -92,6 +94,18 @@ export interface Messages {
   };
   gamepad: {
     title: string;
+    vibration: string;
+    /** Shown at full strength, which the controller has from the factory and after sleep. */
+    tooStrong: string;
+    handles: string;
+    together: string;
+    separate: string;
+    left: string;
+    right: string;
+    test: string;
+    presets: Record<VibrationPreset["id"], string>;
+    vibrationOwnedBy(plugin: string): string;
+    vibrationOwnedText(plugin: string): string;
     qamAssist: string;
     /** The problem QAM assist solves, shown while it is off. */
     qamAssistOff: string;

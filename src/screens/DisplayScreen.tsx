@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Focusable, Navigation } from "@decky/ui";
+import { Focusable } from "@decky/ui";
 import { useEffect } from "react";
 
 import type { Lighting } from "../backend";
@@ -32,12 +32,10 @@ import {
 import { UISound } from "../sounds";
 import { conflicts, refreshConflicts, settings, updateSettings } from "../state";
 import { useStore } from "../store";
-import { Alert, Card, Header, Screen, SectionLabel } from "../ui/blocks";
-import { ChoiceGroup, choiceClass, Pressable, Slider, ToggleRow } from "../ui/controls";
+import { Card, Header, Screen } from "../ui/blocks";
+import { ChoiceGroup, choiceClass, filledTrack, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { Rings } from "../ui/rings";
-
-/** Decky's own list of plugins, where one can be switched off or removed. */
-const DECKY_PLUGINS_ROUTE = "/decky/settings/plugins";
+import { OwnedBy } from "./OwnedBy";
 
 export function DisplayScreen() {
   const t = useMessages();
@@ -82,35 +80,12 @@ export function DisplayScreen() {
   );
 }
 
-/** A section another plugin drives: why ORIGAMI stays out, and the way to that plugin. */
-function OwnedBy({ section, title, text }: { section: string; title: string; text: string }) {
-  const t = useMessages();
-  return (
-    <>
-      <SectionLabel>{section}</SectionLabel>
-      <Alert title={title}>{text}</Alert>
-      <Pressable
-        className="og-button"
-        action={t.actions.open}
-        sound={UISound.Press}
-        onPress={() => {
-          Navigation.Navigate(DECKY_PLUGINS_ROUTE);
-          Navigation.CloseSideMenus();
-        }}
-      >
-        {t.display.openPlugins}
-      </Pressable>
-    </>
-  );
-}
-
-/** Steam's own colour vibrance, shown where Steam has colour management. */
+/** The screen saturation ORIGAMI writes to gamescope. */
 function SaturationSettings() {
   const t = useMessages();
   const value = useStore(saturation);
   if (value === null) return null;
   const preset = presetOf(value);
-  const fill = `${(value / MAX_SATURATION) * 100}%`;
 
   return (
     <>
@@ -125,7 +100,7 @@ function SaturationSettings() {
           min={0}
           max={MAX_SATURATION}
           step={SATURATION_STEP}
-          track={`linear-gradient(90deg, var(--og-accent) ${fill}, var(--og-track) ${fill})`}
+          track={filledTrack(value, 0, MAX_SATURATION)}
           thumb="var(--og-accent)"
           notch={DEFAULT_SATURATION}
           lessLabel={t.actions.less}

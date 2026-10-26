@@ -152,6 +152,16 @@ export function Notice({ icon, children }: { icon: ReactNode; children: ReactNod
   );
 }
 
+/** An amber square before a hint: the setting works but could be better (style B2: "can improve"). */
+export function Improvement({ children }: { children: ReactNode }) {
+  return (
+    <span className="og-improvement">
+      <span className="og-improvement__mark" aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
+
 /** Red block: something is broken right now (style B2: red means a problem or a conflict). */
 export function Alert({ title, children }: { title: string; children: ReactNode }) {
   return (

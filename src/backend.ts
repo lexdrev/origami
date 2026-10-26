@@ -47,6 +47,12 @@ export interface Lighting {
   brightness: LightBrightness;
 }
 
+/** Strength of the handle vibration in percent (origami.vibration.Vibration). */
+export interface Vibration {
+  left: number;
+  right: number;
+}
+
 export interface Settings {
   language: LanguageSetting;
   /** ORIGAMI has its own quick access tab besides its place inside Decky. */
@@ -59,12 +65,15 @@ export interface Settings {
   lighting: Lighting | null;
   /** Screen saturation in percent (100 = sRGB); null until the user sets it. */
   saturation: number | null;
+  /** Null until the user sets it; the controller keeps its own strength until then. */
+  vibration: Vibration | null;
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
 export interface Conflicts {
   lighting: string | null;
   saturation: string | null;
+  vibration: string | null;
 }
 
 export interface Change {
@@ -81,6 +90,7 @@ export const backend = {
   getChanges: callable<[], Change[]>("get_changes"),
   getConflicts: callable<[], Conflicts>("get_conflicts"),
   previewLighting: callable<[lighting: Lighting]>("preview_lighting"),
+  testVibration: callable("test_vibration"),
   getSaturation: callable<[], number | null>("get_saturation"),
   restoreSaturation: callable("restore_saturation"),
 };

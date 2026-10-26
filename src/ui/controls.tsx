@@ -67,7 +67,7 @@ interface ChoiceGroupProps<T extends string> {
   value: T | undefined;
   action: string;
   onChange: (value: T) => void;
-  /** Shown after the choices in the same row, outside the D-pad path. */
+  /** Shown after the choices in the same row: a static cell, or a button of its own. */
   after?: ReactNode;
 }
 
@@ -165,6 +165,8 @@ export function NavRow({ title, subtitle, action, onPress }: NavRowProps) {
 
 interface SliderProps {
   label: string;
+  /** Shown before the slider, when there are several of them. */
+  caption?: string | undefined;
   value: number;
   min: number;
   max: number;
@@ -188,7 +190,8 @@ interface SliderProps {
  * are for the touch screen, so the buttons stay out of the D-pad path.
  */
 export function Slider(props: SliderProps) {
-  const { label, value, min, max, step, wrap = false, track, thumb, notch, lessLabel, moreLabel, onChange } = props;
+  const { label, caption, value, min, max, step, wrap = false, track, thumb, notch, lessLabel, moreLabel, onChange } =
+    props;
   const span = max - min;
   const set = (next: number) => {
     onChange(wrap ? min + ((((next - min) % (span + 1)) + span + 1) % (span + 1)) : Math.min(max, Math.max(min, next)));
@@ -221,6 +224,7 @@ export function Slider(props: SliderProps) {
 
   return (
     <div className="og-slider" role="group" aria-label={label}>
+      {caption !== undefined && <span className="og-slider__caption">{caption}</span>}
       {stepButton(-1, lessLabel)}
       <Focusable
         className="og-slider__track"
@@ -243,4 +247,10 @@ export function Slider(props: SliderProps) {
       {stepButton(1, moreLabel)}
     </div>
   );
+}
+
+/** Track background filled with the accent up to the value. */
+export function filledTrack(value: number, min: number, max: number): string {
+  const fill = `${((value - min) / (max - min)) * 100}%`;
+  return `linear-gradient(90deg, var(--og-accent) ${fill}, var(--og-track) ${fill})`;
 }

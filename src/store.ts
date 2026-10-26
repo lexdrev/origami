@@ -39,7 +39,7 @@ export function useStore<T>(store: Store<T>): T {
  * Sends only the newest value: while one is on its way, later ones replace each other, so a
  * slider moved quickly does not queue up a request for every step.
  */
-export function latestOnly<T>(send: (value: T) => Promise<void>) {
+export function latestOnly<T>(send: (value: T) => Promise<unknown>) {
   let busy = false;
   let pending: { value: T } | null = null;
 
