@@ -1,0 +1,66 @@
+# Tooling for the Python backend. The plugin itself runs on the Python bundled with
+# Decky Loader and has no third-party dependencies.
+
+[dependency-groups]
+dev = [
+    "bandit>=1.8",
+    "pyright>=1.1.400",
+    "pytest>=8.4",
+    "ruff>=0.12",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["node_modules", "dist", "typings"]
+
+[tool.ruff.lint]
+select = [
+    "A", "ARG", "ASYNC", "B", "BLE", "C4", "E", "ERA", "F", "FBT", "FURB", "G", "I", "LOG", "N",
+    "PERF", "PIE", "PL", "PTH", "RET", "RUF", "S", "SIM", "T20", "TID", "TRY", "UP", "W",
+]
+
+ignore = [
+    "TRY003", # exception messages carry the context of the failure
+    "TRY004", # malformed file content is a ValueError, even when detected by its type
+    "TRY400", # expected failures are logged without a traceback
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["origami"]
+known-local-folder = ["fakes"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "FBT"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"urllib".msg = "ORIGAMI makes no network requests."
+"urllib.request".msg = "ORIGAMI makes no network requests."
+"http".msg = "ORIGAMI makes no network requests."
+"http.client".msg = "ORIGAMI makes no network requests."
+"ssl".msg = "ORIGAMI makes no network requests."
+"asyncio.open_connection".msg = "ORIGAMI makes no network requests."
+"socket.create_connection".msg = "ORIGAMI makes no network requests."
+"time.sleep".msg = "Blocking sleep stalls Decky's event loop; use asyncio.sleep."
+"os.system".msg = "Run programs with origami.proc.run, without a shell."
+"os.popen".msg = "Run programs with origami.proc.run, without a shell."
+"shlex".msg = "Not bundled with Decky's Python."
+
+[tool.pyright]
+include = ["main.py", "py_modules", "tests", "scripts"]
+extraPaths = ["py_modules"]
+stubPath = "typings"
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+# decky exists only inside Decky Loader; typings/decky.pyi describes it.
+reportMissingModuleSource = "none"
+
+[tool.pytest.ini_options]
+pythonpath = ["py_modules"]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config", "-ra"]
+filterwarnings = ["error"]
+xfail_strict = true
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "node_modules"]
