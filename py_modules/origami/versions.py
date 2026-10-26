@@ -95,7 +95,7 @@ async def read_inputplumber_version() -> str | None:
                 "get-property",
                 "org.shadowblip.InputPlumber",
                 "/org/shadowblip/InputPlumber/Manager",
-                "org.shadowblip.InputPlumber.Manager",
+                "org.shadowblip.InputManager",
                 "Version",
             )
     except (CommandError, TimeoutError) as error:

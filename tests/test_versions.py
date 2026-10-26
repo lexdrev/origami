@@ -59,7 +59,9 @@ def test_versions(ally_x: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> None:
         inputplumber="0.83.0",
         decky="v3.3.0",
     )
+    # Interface name checked on the console with busctl introspect (InputPlumber 0.83.0).
     assert calls[0][0] == "busctl"
+    assert "org.shadowblip.InputManager" in calls[0]
 
 
 @pytest.mark.parametrize("outcome", [CommandError("busctl exited with 1"), "[]", "garbage"])
