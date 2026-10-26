@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Info } from "../backend";
 import { ru } from "../i18n/ru";
-import { deviceLine, systemFacts } from "./system";
+import { deviceName, systemFacts, systemName } from "./system";
 
 const info: Info = {
   version: "0.1.0",
@@ -20,13 +20,20 @@ const info: Info = {
 
 describe("system information", () => {
   it("names the device and the system", () => {
-    expect(deviceLine(info)).toBe("ROG Xbox Ally X · Bazzite 44");
+    expect(deviceName(info)).toBe("ROG Xbox Ally X");
+    expect(systemName(info)).toBe("Bazzite 44");
   });
 
   it("falls back to the DMI product name on other hardware", () => {
     const other = { ...info, device: { board: "X", product: "Some Handheld", model: null } };
 
-    expect(deviceLine(other)).toBe("Some Handheld · Bazzite 44");
+    expect(deviceName(other)).toBe("Some Handheld");
+  });
+
+  it("has no system name without os-release", () => {
+    const bare = { ...info, versions: { ...info.versions, os: { name: null, versionId: null, imageVersion: null } } };
+
+    expect(systemName(bare)).toBeNull();
   });
 
   it("lists versions, with dashes for what is unknown", () => {

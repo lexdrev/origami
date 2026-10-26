@@ -10,11 +10,15 @@ function present(...parts: (string | null)[]): string[] {
   return parts.filter((part): part is string => part !== null && part !== "");
 }
 
-/** "ROG Xbox Ally X · Bazzite 44" under the plugin name. */
-export function deviceLine(info: Info): string {
-  const { device, versions } = info;
-  const system = present(versions.os.name, versions.os.versionId).join(" ");
-  return present(device.model ?? device.product, system).join(SEPARATOR);
+/** The console name: the known model, or what DMI reports on other hardware. */
+export function deviceName(info: Info): string | null {
+  return info.device.model ?? info.device.product;
+}
+
+/** "Bazzite 44". */
+export function systemName(info: Info): string | null {
+  const name = present(info.versions.os.name, info.versions.os.versionId).join(" ");
+  return name === "" ? null : name;
 }
 
 export function systemFacts(info: Info, t: Messages): [string, string][] {

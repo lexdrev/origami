@@ -5,7 +5,6 @@ import { definePlugin } from "@decky/api";
 
 import { App } from "./App";
 import { loadAll } from "./state";
-import { TitleBar } from "./TitleBar";
 import { FoxGlyph } from "./ui/icons";
 
 export default definePlugin(() => {
@@ -13,7 +12,6 @@ export default definePlugin(() => {
   void loadAll();
   return {
     name: "ORIGAMI",
-    titleView: <TitleBar />,
     icon: <FoxGlyph />,
     content: <App />,
   };

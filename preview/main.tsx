@@ -10,7 +10,6 @@ import { ChangesScreen } from "../src/screens/ChangesScreen";
 import { MainScreen } from "../src/screens/MainScreen";
 import { SettingsScreen } from "../src/screens/SettingsScreen";
 import { loadAll } from "../src/state";
-import { TitleBar } from "../src/TitleBar";
 import { styles } from "../src/ui/styles";
 
 // Steam reports its interface language through SteamClient; the stand pretends to be Russian.
@@ -27,7 +26,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** Decky's frame around an open plugin: its title row with the back button, then the content. */
+/** Decky's frame around an open plugin: its title row with the back button and the name, then the content. */
 function DeckyPluginView({ children }: { children: ReactNode }) {
   return (
     <>
@@ -35,7 +34,7 @@ function DeckyPluginView({ children }: { children: ReactNode }) {
         <span className="decky-back" aria-hidden="true">
           ←
         </span>
-        <TitleBar />
+        <span>ORIGAMI</span>
       </div>
       <div className="decky-content">{children}</div>
     </>

@@ -30,14 +30,13 @@ const tokens = `
 export const styles = `
 ${fontFaces}
 
-.og-root, .og-title {
+.og-root {
   ${tokens}
   color: var(--og-text);
   font-family: var(--og-sans);
   line-height: 1.3;
 }
-.og-root *, .og-root *::before, .og-root *::after,
-.og-title *, .og-title *::before, .og-title *::after { box-sizing: border-box; }
+.og-root *, .og-root *::before, .og-root *::after { box-sizing: border-box; }
 
 .og-root {
   display: flex;
@@ -48,28 +47,6 @@ ${fontFaces}
 }
 
 .og-screen { display: flex; flex-direction: column; gap: 10px; }
-
-/* Decky's title row already puts 10 px between its back button and this block. */
-.og-title {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.og-title__icon { display: flex; color: var(--og-accent); }
-.og-title__texts { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
-.og-title__name { font-size: 13px; font-weight: 700; letter-spacing: 0.2em; }
-.og-title__sub {
-  overflow: hidden;
-  color: var(--og-muted);
-  font: 500 9px var(--og-mono);
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-/* Same height as Decky's own buttons in this row. */
-.og-title .og-icon-button { width: 28px; height: 28px; }
 
 .og-header {
   display: flex;
