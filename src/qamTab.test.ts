@@ -1,34 +1,63 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { installQamTab, ORIGAMI_TAB, placeTab, SOUNDTRACKS_TAB, type SteamTab } from "./qamTab";
+
+type TreeHandler = (args: unknown[], tree: unknown) => unknown;
+
+// Stand-ins for the parts of @decky/ui that only work inside Steam.
+const decky = vi.hoisted(() => ({
+  unpatch: vi.fn(),
+  menuHandler: null as TreeHandler | null,
+  renderer: { type: () => "QuickAccessMenuBrowserView" },
+}));
+
+vi.mock("@decky/ui", () => ({
+  afterPatch: vi.fn(() => ({ unpatch: decky.unpatch })),
+  createReactTreePatcher: vi.fn((_steps: unknown, handler: TreeHandler) => {
+    decky.menuHandler = handler;
+    return handler;
+  }),
+  findInReactTree: (tree: { props?: unknown } | null, filter: (node: unknown) => boolean) =>
+    tree !== null && filter(tree) ? tree : undefined,
+  findModuleByExport: () => ({ renderer: decky.renderer }),
+  getReactRoot: () => null,
+}));
 
 // Steam's column on the console (2026-10-26): Notifications, Friends, Quick settings,
 // Performance, Soundtracks, Help, then Decky.
 const steamColumn = () => [0, 3, 4, 5, 7, 6, 999].map((key) => ({ key }));
 const keys = (tabs: SteamTab[]) => tabs.map((tab) => tab.key);
+const content = { title: "ORIGAMI", icon: null, content: null };
 
-/** Behaves like Decky's tabs hook: appends every added tab to Steam's list once. */
+/** Like Decky's tabs hook: keeps added tabs, which Decky appends to Steam's list on render. */
 function fakeTabsHook() {
   const added: { id: number }[] = [];
   return {
     added,
     add: vi.fn((tab: { id: number }) => added.push(tab)),
     removeById: vi.fn((id: number) => added.splice(added.findIndex((tab) => tab.id === id), 1)),
-    render: (existingTabs: SteamTab[]) => {
-      for (const tab of added) {
-        if (!existingTabs.some((entry) => entry.key === tab.id)) existingTabs.push({ key: tab.id });
-      }
-    },
   };
 }
 
-const content = { title: "ORIGAMI", icon: null, content: null };
+/** One render of the menu: Decky appends its tabs, then ORIGAMI's patch runs. */
+function renderMenu(tabs: SteamTab[], hook: ReturnType<typeof fakeTabsHook>) {
+  for (const tab of hook.added) {
+    if (!tabs.some((entry) => entry.key === tab.id)) tabs.push({ key: tab.id });
+  }
+  decky.menuHandler?.([], { props: { tabs } });
+}
+
+beforeEach(() => {
+  vi.stubGlobal("document", { getElementById: () => null });
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  decky.unpatch.mockClear();
+  decky.menuHandler = null;
 });
 
 describe("placeTab", () => {
@@ -60,38 +89,30 @@ describe("placeTab", () => {
 describe("installQamTab", () => {
   it("adds the tab above Soundtracks and removes it without a trace", () => {
     const hook = fakeTabsHook();
-    const originalRender = hook.render;
     vi.stubGlobal("window", { DeckyPluginLoader: { tabsHook: hook } });
     const tabs = steamColumn();
 
     const remove = installQamTab(content, SOUNDTRACKS_TAB);
-    hook.render(tabs);
+    renderMenu(tabs, hook);
 
+    expect(hook.add).toHaveBeenCalledWith(expect.objectContaining({ id: ORIGAMI_TAB, title: "ORIGAMI" }));
     expect(keys(tabs)).toEqual([0, 3, 4, 5, ORIGAMI_TAB, 7, 6, 999]);
 
     remove?.();
 
-    expect(keys(tabs)).toEqual(keys(steamColumn()));
-    expect(hook.render).toBe(originalRender);
+    expect(decky.unpatch).toHaveBeenCalled();
     expect(hook.added).toEqual([]);
+    expect(keys(tabs)).toEqual(keys(steamColumn()));
   });
 
-  it("keeps a wrapper added after it working", () => {
+  it("leaves Decky's tabs hook itself untouched", () => {
     const hook = fakeTabsHook();
+    const methods = { ...hook };
     vi.stubGlobal("window", { DeckyPluginLoader: { tabsHook: hook } });
-    const remove = installQamTab(content, SOUNDTRACKS_TAB);
-    const ours = hook.render;
-    const theirs = vi.fn(function (this: unknown, existingTabs: SteamTab[]) {
-      ours.call(this, existingTabs);
-    });
-    hook.render = theirs;
 
-    remove?.();
-    const tabs = steamColumn();
-    hook.render(tabs);
+    installQamTab(content, SOUNDTRACKS_TAB);
 
-    expect(hook.render).toBe(theirs);
-    expect(keys(tabs)).toEqual(keys(steamColumn()));
+    expect(hook).toEqual(methods);
   });
 
   it("does nothing when Decky has no tabs hook", () => {
