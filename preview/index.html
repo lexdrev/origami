@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ORIGAMI stand</title>
+    <style>
+      body { margin: 0; background: #0a0c0f; color: #8d98a5; font: 12px ui-monospace, monospace; }
+      .frames { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 32px; padding: 24px; }
+      .frame { margin: 0; }
+      .frame figcaption { margin-bottom: 8px; }
+      /* Panel width of the mockups; replace with the width measured in the QAM. */
+      .panel { width: 400px; min-height: 620px; box-sizing: border-box; padding: 20px 18px 16px; background: #0f1216; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
