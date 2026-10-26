@@ -48,6 +48,9 @@ ${fontFaces}
 
 .og-screen { display: flex; flex-direction: column; gap: 10px; }
 
+/* In ORIGAMI's own tab, the same gap under the title row as Decky leaves under its own. */
+.og-tab-content { padding-top: 16px; }
+
 .og-header {
   display: flex;
   align-items: center;
