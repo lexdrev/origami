@@ -48,25 +48,25 @@ describe("vibration strength", () => {
   it("shows a change at once and saves only the newest of quick ones", async () => {
     loaded();
 
-    setVibration({ left: 55, right: 55 });
-    setVibration({ left: 60, right: 60 });
-    setVibration({ left: 65, right: 65 });
+    setVibration({ enabled: true, left: 55, right: 55 });
+    setVibration({ enabled: true, left: 60, right: 60 });
+    setVibration({ enabled: true, left: 65, right: 65 });
 
-    expect(shown()).toEqual({ left: 65, right: 65 });
+    expect(shown()).toEqual({ enabled: true, left: 65, right: 65 });
     await settle();
     await settle();
     expect(fake.sent).toEqual([
-      { left: 55, right: 55 },
-      { left: 65, right: 65 },
+      { enabled: true, left: 55, right: 55 },
+      { enabled: true, left: 65, right: 65 },
     ]);
-    expect(shown()).toEqual({ left: 65, right: 65 });
+    expect(shown()).toEqual({ enabled: true, left: 65, right: 65 });
   });
 
   it("goes back to the saved strength when the backend refuses a change", async () => {
     loaded();
     fake.refuse = true;
 
-    setVibration({ left: 30, right: 30 });
+    setVibration({ enabled: true, left: 30, right: 30 });
     await settle();
     await settle();
 
@@ -75,7 +75,7 @@ describe("vibration strength", () => {
   });
 
   it("waits for the settings to load", () => {
-    setVibration({ left: 30, right: 30 });
+    setVibration({ enabled: true, left: 30, right: 30 });
 
     expect(settings.get()).toEqual({ status: "loading" });
     expect(fake.sent).toEqual([]);

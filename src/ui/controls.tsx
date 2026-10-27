@@ -51,7 +51,7 @@ export function IconButton(props: Omit<PressableProps, "className">) {
   return <Pressable className="og-icon-button" {...props} />;
 }
 
-// Four and more choices share a narrow row: a smaller font keeps long words off the edges.
+// Four and more cells share a narrow strip: a smaller font keeps long words off the edges.
 const DENSE_CHOICES = 4;
 
 export interface Choice<T extends string> {
@@ -61,49 +61,62 @@ export interface Choice<T extends string> {
   detail?: string;
 }
 
+/** The last cell of the strip, which is no choice: what the control holds off the choices. */
+interface CustomCell {
+  label: string;
+  detail: string;
+  selected: boolean;
+}
+
 interface ChoiceGroupProps<T extends string> {
   label: string;
   choices: readonly Choice<T>[];
   value: T | undefined;
   action: string;
   onChange: (value: T) => void;
-  /** Shown after the choices in the same row: a static cell, or a button of its own. */
+  custom?: CustomCell;
+  /** Beside the strip and as wide as one of its cells: a button of its own, such as a test. */
   after?: ReactNode;
 }
 
+/** The choices as one framed strip of cells (style B2, draft A): the picked one tinted and underlined. */
 export function ChoiceGroup<T extends string>(props: ChoiceGroupProps<T>) {
-  const { label, choices, value, action, onChange, after } = props;
+  const { label, choices, value, action, onChange, custom, after } = props;
+  const cells = choices.length + (custom === undefined ? 0 : 1);
   return (
-    <Focusable
-      className={choices.length >= DENSE_CHOICES ? "og-choices og-choices--dense" : "og-choices"}
-      flow-children="row"
-      role="group"
-      aria-label={label}
-    >
-      {choices.map((choice) => {
-        const selected = choice.value === value;
-        return (
-          <Pressable
-            key={choice.value}
-            className={choiceClass(selected, choice.detail !== undefined)}
-            pressed={selected}
-            sound={UISound.Press}
-            action={action}
-            onPress={() => {
-              onChange(choice.value);
-            }}
-          >
-            {choice.label}
-            {choice.detail !== undefined && <span className="og-choice__detail">{choice.detail}</span>}
-          </Pressable>
-        );
-      })}
+    <Focusable className="og-choices" flow-children="row" role="group" aria-label={label}>
+      <div className={cells >= DENSE_CHOICES ? "og-strip og-strip--dense" : "og-strip"} style={{ flexGrow: cells }}>
+        {choices.map((choice) => {
+          const selected = choice.value === value;
+          return (
+            <Pressable
+              key={choice.value}
+              className={choiceClass(selected, choice.detail !== undefined)}
+              pressed={selected}
+              sound={UISound.Press}
+              action={action}
+              onPress={() => {
+                onChange(choice.value);
+              }}
+            >
+              {choice.label}
+              {choice.detail !== undefined && <span className="og-choice__detail">{choice.detail}</span>}
+            </Pressable>
+          );
+        })}
+        {custom !== undefined && (
+          <span className={`${choiceClass(custom.selected, true)} og-choice--static`}>
+            {custom.label}
+            <span className="og-choice__detail">{custom.detail}</span>
+          </span>
+        )}
+      </div>
       {after}
     </Focusable>
   );
 }
 
-export function choiceClass(selected: boolean, twoLines: boolean): string {
+function choiceClass(selected: boolean, twoLines: boolean): string {
   return ["og-choice", twoLines && "og-choice--two-lines", selected && "og-choice--selected"]
     .filter(Boolean)
     .join(" ");
@@ -164,6 +177,15 @@ interface ToggleRowProps {
   onChange: (value: boolean) => void;
 }
 
+/** The B2 switch itself; the row or the card head around it takes the presses. */
+export function Switch({ on }: { on: boolean }) {
+  return (
+    <span className={on ? "og-switch og-switch--on" : "og-switch"} aria-hidden="true">
+      <span className="og-switch__knob" />
+    </span>
+  );
+}
+
 /** A row with the B2 switch; plays Steam's toggle sounds. */
 export function ToggleRow({ title, subtitle, value, action, problem = false, note, onChange }: ToggleRowProps) {
   return (
@@ -182,9 +204,7 @@ export function ToggleRow({ title, subtitle, value, action, problem = false, not
         {subtitle}
       </span>
       {note !== undefined && <span className="og-row__note">{note}</span>}
-      <span className={value ? "og-switch og-switch--on" : "og-switch"} aria-hidden="true">
-        <span className="og-switch__knob" />
-      </span>
+      <Switch on={value} />
     </Pressable>
   );
 }

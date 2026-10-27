@@ -56,7 +56,7 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
     },
     display: { value: own.saturation !== null ? `${own.saturation}%` : t.unknown, subtitle: t.main.displaySub },
     gamepad: {
-      value: vibration !== null ? formatVibration(vibration) : t.unknown,
+      value: vibration !== null ? formatVibration(vibration, t.gamepad.off) : t.unknown,
       subtitle: t.main.gamepadSub,
     },
   };

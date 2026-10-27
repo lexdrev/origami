@@ -3,7 +3,15 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
-import type { ButtonAction, LanguageSetting, LightBrightness, LightMode, LightSpeed } from "../backend";
+import type {
+  ButtonAction,
+  LanguageSetting,
+  LightBrightness,
+  LightMode,
+  LightSpeed,
+  TriggerLevel,
+  Triggers,
+} from "../backend";
 import type { PaletteColour } from "../lighting";
 import type { VibrationPreset } from "../vibration";
 import { en } from "./en";
@@ -101,17 +109,33 @@ export interface Messages {
   gamepad: {
     title: string;
     vibration: string;
-    /** Shown at full strength, which the controller has from the factory and after sleep. */
-    tooStrong: string;
+    off: string;
+    /** While the handle vibration is on. */
+    vibrationOn: string;
+    /** While it is off: games rumble the handles no more. */
+    vibrationStill: string;
+    strength: string;
     handles: string;
     together: string;
     separate: string;
     left: string;
     right: string;
     test: string;
-    presets: Record<VibrationPreset["id"], string>;
+    presets: Record<VibrationPreset["id"] | "custom", string>;
     vibrationOwnedBy(plugin: string): string;
     vibrationOwnedText(plugin: string): string;
+    triggers: string;
+    /** While the triggers are off: InputPlumber sends their motors nothing. */
+    triggersStill: string;
+    /** What the trigger rumble follows while it is on. */
+    triggersOn: string;
+    triggerChoices: Record<Triggers, string>;
+    triggerStrength: string;
+    triggerLevels: Record<TriggerLevel, string>;
+    /** Under the levels: what their percentages mean. */
+    triggerStrengthNote: string;
+    triggersOwnedBy(plugin: string): string;
+    triggersOwnedText(plugin: string): string;
     armouryCrate: string;
     armouryCrateUnassigned: string;
     qamAssist: string;

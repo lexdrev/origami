@@ -47,11 +47,30 @@ export interface Lighting {
   brightness: LightBrightness;
 }
 
-/** Strength of the handle vibration in percent (origami.vibration.Vibration). */
+/** Handle vibration (origami.vibration.Vibration); strengths in percent. */
 export interface Vibration {
+  /** Off keeps the handles still; the strengths wait for the next time it is on. */
+  enabled: boolean;
   left: number;
   right: number;
 }
+
+/** Which impulse triggers follow a game's rumble (origami.triggers.Triggers). */
+export type Triggers = "right" | "both";
+
+/** How strongly the triggers rumble (origami.triggers.TriggerLevel). */
+export type TriggerLevel = "soft" | "medium" | "strong" | "max";
+
+/** Rumble of the impulse triggers (origami.triggers.TriggerRumble). */
+export interface TriggerRumble {
+  /** Off keeps the motors still; the triggers and the level wait until it is on again. */
+  enabled: boolean;
+  triggers: Triggers;
+  level: TriggerLevel;
+}
+
+/** Whether the triggers here have motors ORIGAMI can rumble (origami.triggers.TriggerState). */
+export type TriggerState = "unavailable" | "available";
 
 /** What ORIGAMI does on a press of a button it may drive (origami.buttons.ButtonAction). */
 export type ButtonAction =
@@ -85,6 +104,8 @@ export interface Settings {
   saturation: number | null;
   /** Null until the user sets it; the controller keeps its own strength until then. */
   vibration: Vibration | null;
+  /** Null until the user chooses; the triggers stay still until then. */
+  triggerRumble: TriggerRumble | null;
   /** What a short press of the upper left button does; nothing reaches Steam from it. */
   armouryCrate: ButtonAction;
   /** What holding the upper left button does, besides the L5 Steam gets from it. */
@@ -96,6 +117,7 @@ export interface Conflicts {
   lighting: string | null;
   saturation: string | null;
   vibration: string | null;
+  triggers: string | null;
 }
 
 export interface Change {
@@ -113,6 +135,8 @@ export const backend = {
   getConflicts: callable<[], Conflicts>("get_conflicts"),
   previewLighting: callable<[lighting: Lighting]>("preview_lighting"),
   testVibration: callable("test_vibration"),
+  getTriggerState: callable<[], TriggerState>("get_trigger_state"),
+  testTriggerRumble: callable("test_trigger_rumble"),
   getGyro: callable<[], GyroState>("get_gyro"),
   getSaturation: callable<[], number | null>("get_saturation"),
   restoreSaturation: callable("restore_saturation"),

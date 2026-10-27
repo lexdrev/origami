@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { Vibration } from "../backend";
+import type { TriggerRumble, Vibration } from "../backend";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
 import { UISound } from "../sounds";
@@ -13,24 +13,31 @@ import {
   refreshConflicts,
   refreshGyro,
   refreshTelemetry,
+  refreshTriggerState,
+  setTriggerRumble,
   setVibration,
   settings,
   telemetry,
+  testTriggerRumble,
   testVibration,
+  triggerState,
   updateSettings,
 } from "../state";
 import { useStore } from "../store";
-import { Alert, Card, Header, Improvement, Screen } from "../ui/blocks";
+import { currentTriggerRumble, separateTriggerOwner, TRIGGER_CHOICES, TRIGGER_LEVELS } from "../triggers";
+import { Alert, Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, NavRow, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { PlayIcon } from "../ui/icons";
 import {
   currentVibration,
+  customDetail,
   FACTORY_VIBRATION,
   formatVibration,
   MAX_VIBRATION,
   presetOf,
+  silent,
   together,
-  tooStrong,
+  VIBRATION_NOTCH,
   VIBRATION_PRESETS,
   VIBRATION_STEP,
 } from "../vibration";
@@ -45,6 +52,7 @@ export function GamepadScreen() {
   useEffect(() => {
     void refreshConflicts();
     void refreshGyro();
+    void refreshTriggerState();
     // What the driver holds, shown until ORIGAMI sets its own strength.
     void refreshTelemetry();
   }, []);
@@ -57,6 +65,7 @@ export function GamepadScreen() {
     );
   }
   const vibrationOwner = owners.value.vibration;
+  const triggerOwner = separateTriggerOwner(owners.value);
   const buttonSummary = armouryCrateSummary(current.value.armouryCrate, current.value.armouryCrateHold, t);
   return (
     <Screen onBack={back}>
@@ -69,6 +78,17 @@ export function GamepadScreen() {
           title={t.gamepad.vibrationOwnedBy(vibrationOwner)}
           text={t.gamepad.vibrationOwnedText(vibrationOwner)}
         />
+      )}
+      {owners.value.triggers === null ? (
+        <TriggerRumbleSettings setting={current.value.triggerRumble} />
+      ) : (
+        triggerOwner !== null && (
+          <OwnedBy
+            section={t.gamepad.triggers}
+            title={t.gamepad.triggersOwnedBy(triggerOwner)}
+            text={t.gamepad.triggersOwnedText(triggerOwner)}
+          />
+        )
       )}
       <ToggleRow
         title={t.gamepad.qamAssist}
@@ -92,6 +112,7 @@ export function GamepadScreen() {
   );
 }
 
+/** One card: the switch in its head, then the scale, the handles with the test and the presets. */
 function VibrationSettings({ setting }: { setting: Vibration | null }) {
   const t = useMessages();
   const readings = useStore(telemetry);
@@ -100,64 +121,68 @@ function VibrationSettings({ setting }: { setting: Vibration | null }) {
   const preset = separate ? undefined : presetOf(vibration);
 
   return (
-    <>
-      <Card
-        title={t.gamepad.vibration}
-        aside={<span className="og-card__value">{formatVibration(vibration)}</span>}
-      >
-        {tooStrong(vibration) && <Improvement>{t.gamepad.tooStrong}</Improvement>}
-        {separate ? (
-          <>
-            <StrengthSlider
-              caption={t.gamepad.left}
-              value={vibration.left}
-              onChange={(left) => {
-                setVibration({ ...vibration, left });
-              }}
-            />
-            <StrengthSlider
-              caption={t.gamepad.right}
-              value={vibration.right}
-              onChange={(right) => {
-                setVibration({ ...vibration, right });
-              }}
-            />
-          </>
-        ) : (
+    <Card
+      title={t.gamepad.vibration}
+      subtitle={vibration.enabled ? t.gamepad.vibrationOn : t.gamepad.vibrationStill}
+      problem={!vibration.enabled}
+      toggle={{
+        value: vibration.enabled,
+        action: t.actions.toggle,
+        onChange: (enabled) => {
+          setVibration({ ...vibration, enabled });
+        },
+      }}
+    >
+      <div className="og-card__head">
+        <span className="og-card__label">{t.gamepad.strength}</span>
+        <span className="og-card__value">{formatVibration(vibration, t.gamepad.off)}</span>
+      </div>
+      {separate ? (
+        <>
           <StrengthSlider
+            caption={t.gamepad.left}
             value={vibration.left}
-            onChange={(strength) => {
-              setVibration({ left: strength, right: strength });
+            onChange={(left) => {
+              setVibration({ ...vibration, left });
             }}
           />
-        )}
-        <ChoiceGroup
-          label={t.gamepad.handles}
-          choices={[
-            { value: "together", label: t.gamepad.together },
-            { value: "separate", label: t.gamepad.separate },
-          ]}
-          value={separate ? "separate" : "together"}
-          action={t.actions.select}
-          onChange={(choice) => {
-            if (choice === "together" && vibration.left !== vibration.right) setVibration(together(vibration));
-            setSeparate(choice === "separate");
+          <StrengthSlider
+            caption={t.gamepad.right}
+            value={vibration.right}
+            onChange={(right) => {
+              setVibration({ ...vibration, right });
+            }}
+          />
+        </>
+      ) : (
+        <StrengthSlider
+          value={vibration.left}
+          onChange={(strength) => {
+            setVibration({ ...vibration, left: strength, right: strength });
           }}
-          after={
-            <Pressable
-              className="og-choice og-choice--action"
-              action={t.gamepad.test}
-              sound={UISound.Press}
-              onPress={() => void testVibration()}
-            >
-              <PlayIcon />
-              {t.gamepad.test}
-            </Pressable>
-          }
         />
-      </Card>
+      )}
+      <div className={separate ? "og-slider__ends og-slider__ends--captioned" : "og-slider__ends"} aria-hidden="true">
+        <span>0</span>
+        <span>{VIBRATION_NOTCH}</span>
+        <span>{MAX_VIBRATION}</span>
+      </div>
       <ChoiceGroup
-        label={t.gamepad.vibration}
+        label={t.gamepad.handles}
+        choices={[
+          { value: "together", label: t.gamepad.together },
+          { value: "separate", label: t.gamepad.separate },
+        ]}
+        value={separate ? "separate" : "together"}
+        action={t.actions.select}
+        onChange={(choice) => {
+          if (choice === "together") setVibration(together(vibration));
+          setSeparate(choice === "separate");
+        }}
+        after={<TestButton disabled={silent(vibration)} onPress={() => void testVibration()} />}
+      />
+      <ChoiceGroup
+        label={t.gamepad.strength}
         choices={VIBRATION_PRESETS.map((choice) => ({
           value: choice.id,
           label: t.gamepad.presets[choice.id],
@@ -168,10 +193,15 @@ function VibrationSettings({ setting }: { setting: Vibration | null }) {
         onChange={(id) => {
           const strength = VIBRATION_PRESETS.find((choice) => choice.id === id)?.value ?? MAX_VIBRATION;
           setSeparate(false);
-          setVibration({ left: strength, right: strength });
+          setVibration({ enabled: true, left: strength, right: strength });
+        }}
+        custom={{
+          label: t.gamepad.presets.custom,
+          detail: customDetail(vibration, preset),
+          selected: preset === undefined,
         }}
       />
-    </>
+    </Card>
   );
 }
 
@@ -194,10 +224,76 @@ function StrengthSlider({ caption, value, onChange }: StrengthSliderProps) {
       step={VIBRATION_STEP}
       track={filledTrack(value, 0, MAX_VIBRATION)}
       thumb="var(--og-accent)"
+      notch={VIBRATION_NOTCH}
       lessLabel={t.actions.less}
       moreLabel={t.actions.more}
       onChange={onChange}
     />
+  );
+}
+
+/** A second of the motors, beside the choices of a vibration card. */
+function TestButton({ disabled = false, onPress }: { disabled?: boolean; onPress: () => void }) {
+  const t = useMessages();
+  return (
+    <Pressable
+      className="og-choice og-choice--action"
+      action={t.gamepad.test}
+      sound={UISound.Press}
+      disabled={disabled}
+      onPress={onPress}
+    >
+      <PlayIcon />
+      {t.gamepad.test}
+    </Pressable>
+  );
+}
+
+/** Shown only on consoles with trigger motors; off, they stay still, which is the problem (as QAM assist). */
+function TriggerRumbleSettings({ setting }: { setting: TriggerRumble | null }) {
+  const t = useMessages();
+  const state = useStore(triggerState);
+  if (state.status !== "ready" || state.value === "unavailable") return null;
+  const rumble = currentTriggerRumble(setting);
+
+  return (
+    <Card
+      title={t.gamepad.triggers}
+      subtitle={rumble.enabled ? t.gamepad.triggersOn : t.gamepad.triggersStill}
+      problem={!rumble.enabled}
+      toggle={{
+        value: rumble.enabled,
+        action: t.actions.toggle,
+        onChange: (enabled) => {
+          setTriggerRumble({ ...rumble, enabled });
+        },
+      }}
+    >
+      <ChoiceGroup
+        label={t.gamepad.triggers}
+        choices={TRIGGER_CHOICES.map((triggers) => ({ value: triggers, label: t.gamepad.triggerChoices[triggers] }))}
+        value={rumble.triggers}
+        action={t.actions.select}
+        onChange={(triggers) => {
+          setTriggerRumble({ ...rumble, triggers });
+        }}
+        after={<TestButton onPress={() => void testTriggerRumble()} />}
+      />
+      <ChoiceGroup
+        label={t.gamepad.triggerStrength}
+        choices={TRIGGER_LEVELS.map((level) => ({
+          value: level.id,
+          label: t.gamepad.triggerLevels[level.id],
+          detail: `${level.value}%`,
+        }))}
+        value={rumble.level}
+        action={t.actions.select}
+        onChange={(level) => {
+          setTriggerRumble({ ...rumble, level });
+        }}
+      />
+      <span className="og-choices__note">{t.gamepad.triggerStrengthNote}</span>
+    </Card>
   );
 }
 

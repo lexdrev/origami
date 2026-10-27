@@ -5,7 +5,8 @@ import { Focusable, type GamepadEvent } from "@decky/ui";
 import type { ReactNode } from "react";
 
 import { useMessages } from "../i18n";
-import { IconButton, Pressable } from "./controls";
+import { UISound } from "../sounds";
+import { IconButton, Pressable, Switch } from "./controls";
 import { BackIcon, ChevronIcon, WarningIcon } from "./icons";
 
 interface ScreenProps {
@@ -89,27 +90,67 @@ export function Tile({ icon, name, value, subtitle, onOpen }: TileProps) {
   );
 }
 
+interface CardSwitch {
+  value: boolean;
+  action: string;
+  onChange: (value: boolean) => void;
+}
+
 /** A framed group of controls with its title, as in the B2 screens; framed amber while focus is inside. */
 interface CardProps {
   title?: string;
-  subtitle?: string;
+  subtitle?: string | undefined;
+  /** The subtitle names a problem the card fixes (style B2: red frame, triangle and text). */
+  problem?: boolean;
   aside?: ReactNode;
+  /** A switch in the head; while it is off the card is only its head, as every feature with one. */
+  toggle?: CardSwitch;
   children: ReactNode;
 }
 
-export function Card({ title, subtitle, aside, children }: CardProps) {
-  return (
-    <section className="og-card">
-      {title && (
-        <div className="og-card__head">
-          <span className="og-card__titles">
-            <span className="og-card__title">{title}</span>
-            {subtitle && <span className="og-card__subtitle">{subtitle}</span>}
-          </span>
-          {aside && <span className="og-card__aside">{aside}</span>}
-        </div>
+export function Card({ title, subtitle, problem = false, aside, toggle, children }: CardProps) {
+  const titles = title && (
+    <span className="og-card__titles">
+      <span className="og-card__title">{title}</span>
+      {subtitle && (
+        <span className="og-card__subtitle">
+          {problem && <WarningIcon size={12} />}
+          {subtitle}
+        </span>
       )}
-      {children}
+    </span>
+  );
+  return (
+    <section className={problem ? "og-card og-card--problem" : "og-card"}>
+      {toggle === undefined ? (
+        titles && (
+          <div className="og-card__head">
+            {titles}
+            {aside && <span className="og-card__aside">{aside}</span>}
+          </div>
+        )
+      ) : (
+        <Pressable
+          className="og-card__head og-card__head--switch"
+          action={toggle.action}
+          pressed={toggle.value}
+          sound={toggle.value ? UISound.ToggleOff : UISound.ToggleOn}
+          onPress={() => {
+            toggle.onChange(!toggle.value);
+          }}
+        >
+          {titles}
+          <Switch on={toggle.value} />
+        </Pressable>
+      )}
+      {toggle === undefined
+        ? children
+        : toggle.value && (
+            <>
+              <span className="og-card__divider" aria-hidden="true" />
+              {children}
+            </>
+          )}
     </section>
   );
 }
@@ -149,16 +190,6 @@ export function Notice({ icon, children }: { icon: ReactNode; children: ReactNod
       {icon}
       {children}
     </div>
-  );
-}
-
-/** An amber square before a hint: the setting works but could be better (style B2: "can improve"). */
-export function Improvement({ children }: { children: ReactNode }) {
-  return (
-    <span className="og-improvement">
-      <span className="og-improvement__mark" aria-hidden="true" />
-      {children}
-    </span>
   );
 }
 

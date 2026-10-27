@@ -4,17 +4,21 @@
 import type { Telemetry, Vibration } from "./backend";
 
 // Strength of the handle vibration (origami.vibration), 0–100% for each handle. The controller
-// comes at 100%, too strong for most, and goes back to it after every sleep without ORIGAMI.
+// comes at 100% and goes back to it after every sleep without ORIGAMI.
 
 export const MAX_VIBRATION = 100;
 export const VIBRATION_STEP = 5;
-export const FACTORY_VIBRATION: Vibration = { left: MAX_VIBRATION, right: MAX_VIBRATION };
+export const FACTORY_VIBRATION: Vibration = { enabled: true, left: MAX_VIBRATION, right: MAX_VIBRATION };
 
+/** The middle of the scale, marked on the track as the saturation's default is. */
+export const VIBRATION_NOTCH = MAX_VIBRATION / 2;
+
+/** Strengths for both handles, as the saturation presets; a custom cell after them shows the rest. */
 export const VIBRATION_PRESETS = [
-  { id: "off", value: 0 },
   { id: "weak", value: 25 },
   { id: "medium", value: 50 },
   { id: "strong", value: 75 },
+  { id: "max", value: 100 },
 ] as const;
 
 export type VibrationPreset = (typeof VIBRATION_PRESETS)[number];
@@ -26,11 +30,12 @@ export type VibrationPreset = (typeof VIBRATION_PRESETS)[number];
 export function currentVibration(setting: Vibration | null, telemetry: Telemetry | null): Vibration | null {
   if (setting !== null) return setting;
   const driver = telemetry?.gamepad.vibrationPct;
-  return driver ? { left: driver[0], right: driver[1] } : null;
+  return driver ? { enabled: true, left: driver[0], right: driver[1] } : null;
 }
 
-/** "50%", or "40 / 60%" when the handles differ. */
-export function formatVibration({ left, right }: Vibration): string {
+/** "50%", "40 / 60%" when the handles differ, or the word for off. */
+export function formatVibration({ enabled, left, right }: Vibration, off: string): string {
+  if (!enabled) return off;
   return left === right ? `${left}%` : `${left} / ${right}%`;
 }
 
@@ -38,13 +43,19 @@ export function presetOf({ left, right }: Vibration): VibrationPreset | undefine
   return left === right ? VIBRATION_PRESETS.find((preset) => preset.value === left) : undefined;
 }
 
-/** Full strength drowns out what a game means by its rumble; the screen suggests half. */
-export function tooStrong({ left, right }: Vibration): boolean {
-  return Math.max(left, right) === MAX_VIBRATION;
+/** The custom cell after the presets: "+" while a preset holds, else the strength off them. */
+export function customDetail({ left, right }: Vibration, preset: VibrationPreset | undefined): string {
+  if (preset !== undefined) return "+";
+  return left === right ? `${left}%` : `${left}/${right}`;
+}
+
+/** Switched off or at zero on both handles: a test would have nothing to show. */
+export function silent({ enabled, left, right }: Vibration): boolean {
+  return !enabled || (left === 0 && right === 0);
 }
 
 /** One strength for both handles: the middle of the two, on the slider's step. */
-export function together({ left, right }: Vibration): Vibration {
-  const strength = Math.round((left + right) / 2 / VIBRATION_STEP) * VIBRATION_STEP;
-  return { left: strength, right: strength };
+export function together(vibration: Vibration): Vibration {
+  const strength = Math.round((vibration.left + vibration.right) / 2 / VIBRATION_STEP) * VIBRATION_STEP;
+  return { ...vibration, left: strength, right: strength };
 }

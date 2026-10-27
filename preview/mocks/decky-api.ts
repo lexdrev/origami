@@ -25,12 +25,13 @@ let settings: Settings = {
   lighting: null,
   saturation: null,
   vibration: null,
+  triggerRumble: null,
   armouryCrate: "none",
   armouryCrateHold: "none",
 };
 // Steam's value, as gamescope shows it on the console without vibrantDeck.
 const STEAM_SATURATION = 100;
-const conflicts: Conflicts = { lighting: null, saturation: null, vibration: null };
+const conflicts: Conflicts = { lighting: null, saturation: null, vibration: null, triggers: null };
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {
@@ -52,6 +53,8 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   get_saturation: () => settings.saturation ?? STEAM_SATURATION,
   restore_saturation: () => undefined,
   test_vibration: () => undefined,
+  get_trigger_state: () => "available",
+  test_trigger_rumble: () => undefined,
   get_gyro: () => (settings.gyroFix ? "fixed" : "wrong"),
 };
 

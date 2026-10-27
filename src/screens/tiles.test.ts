@@ -34,7 +34,7 @@ describe("tile texts", () => {
   });
 
   it("show the strength ORIGAMI keeps, which the driver does not know", () => {
-    const own = { saturation: null, vibration: { left: 25, right: 25 } };
+    const own = { saturation: null, vibration: { enabled: true, left: 25, right: 25 } };
 
     expect(tileTexts(allyX, own, en).gamepad.value).toBe("25%");
   });
