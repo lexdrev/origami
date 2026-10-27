@@ -33,6 +33,10 @@ class Plugin:
         # Must not await anything: see Origami.stop.
         self._app.stop()
 
+    async def _uninstall(self) -> None:
+        # Runs right after _unload, under the same rule.
+        self._app.uninstall()
+
     async def get_info(self) -> JsonValue:
         return to_wire(await self._app.info())
 
@@ -54,6 +58,9 @@ class Plugin:
         await self._app.preview_lighting(
             Lighting.from_json(from_wire(cast("dict[str, object]", lighting)))
         )
+
+    async def get_gyro(self) -> JsonValue:
+        return (await self._app.gyro()).value
 
     async def test_vibration(self) -> None:
         await self._app.test_vibration()

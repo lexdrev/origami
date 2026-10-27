@@ -17,6 +17,7 @@ from origami.decky_plugins import (
     enabled_plugins,
 )
 from origami.device import Device, read_device
+from origami.gyro import GyroState, read_gyro_state, remove_fix, restart_inputplumber, write_fix
 from origami.inputplumber import SteamChord, press_chord
 from origami.journal import Change, ChangeJournal
 from origami.jsonio import JsonValue
@@ -128,6 +129,7 @@ class Origami:
         finally:
             self._ready.set()
         await self._restore_controller()
+        await self._restore_gyro()
         await self._follow_settings()
 
     async def info(self) -> Info:
@@ -156,6 +158,8 @@ class Origami:
                 await self._send_saturation(updated.saturation)
             if updated.vibration is not None and updated.vibration != self._settings.vibration:
                 await self._send_vibration(updated.vibration)
+            if updated.gyro_fix != self._settings.gyro_fix:
+                await self._set_gyro(on=updated.gyro_fix)
             await asyncio.to_thread(self._settings_store.save, updated)
             self._settings = updated
             await self._follow_settings()
@@ -168,6 +172,11 @@ class Origami:
         """
         await self._started()
         await self._send_lighting(lighting)
+
+    async def gyro(self) -> GyroState:
+        """Whether the gyroscope's axes need ORIGAMI here, and what ORIGAMI has done about them."""
+        info = await self.info()
+        return await asyncio.to_thread(read_gyro_state, self._env.root, info.device.board)
 
     async def test_vibration(self) -> None:
         """Rumble the handles for a second, so the strength can be felt without a game.
@@ -217,6 +226,16 @@ class Origami:
             saturation=owner(SATURATION_OWNERS),
             vibration=owner(VIBRATION_OWNERS),
         )
+
+    def uninstall(self) -> None:
+        """Give the system back as it was, when Decky removes the plugin; the settings stay.
+
+        Decky also removes and installs the plugin to update it. Nothing here may wait (see stop),
+        so InputPlumber is not restarted: it takes the stock axes when it starts next.
+        """
+        if remove_fix(self._env.root):
+            self._journal.forget("gamepad", "gyro")
+        log.info("ORIGAMI uninstalled")
 
     def stop(self) -> None:
         """Cancel background work before Decky unloads the plugin, without waiting for it.
@@ -312,6 +331,31 @@ class Origami:
             async for _ in wakes:
                 await asyncio.sleep(RESUME_SETTLE_SECONDS)
                 await self._restore_controller()
+
+    async def _set_gyro(self, *, on: bool) -> None:
+        """Make the gyroscope's axes follow the setting; InputPlumber restarts for a new file."""
+        state = await self.gyro()
+        match on, state:
+            case True, GyroState.WRONG | GyroState.OUTDATED:
+                await asyncio.to_thread(self._journal.record, "gamepad", "gyro", None)
+                await asyncio.to_thread(write_fix, self._env.root)
+            case False, GyroState.FIXED | GyroState.OUTDATED:
+                await asyncio.to_thread(remove_fix, self._env.root)
+                await asyncio.to_thread(self._journal.forget, "gamepad", "gyro")
+            case True, GyroState.FIXED:
+                return
+            case True, _:
+                raise RuntimeError(f"ORIGAMI cannot fix the gyroscope here ({state})")
+            case _:
+                return
+        await restart_inputplumber()
+
+    async def _restore_gyro(self) -> None:
+        """Keep the axes as set: InputPlumber may have been updated, or the file may be gone."""
+        try:
+            await self._set_gyro(on=self._settings.gyro_fix)
+        except (CommandError, OSError, RuntimeError, TimeoutError) as error:
+            log.warning("Gyroscope not restored: %s", error)
 
     async def _forward_buttons(self) -> None:
         async with aclosing(button_presses(self._env.root, self._buttons_read)) as presses:

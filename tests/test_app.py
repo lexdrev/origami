@@ -10,9 +10,11 @@ from pathlib import Path
 import pytest
 
 from origami import app as app_module
+from origami import gyro as gyro_module
 from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
 from origami.buttons import ButtonAction
+from origami.gyro import GyroState
 from origami.inputplumber import SteamChord
 from origami.journal import Change
 from origami.jsonio import JsonValue
@@ -645,5 +647,109 @@ def test_the_magnifier_is_switched_through_gamescope(
         assert switched == [ally_x.path]
         app.stop()
         os.close(writer)
+
+    asyncio.run(scenario())
+
+
+@pytest.fixture
+def inputplumber(ally_x: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """InputPlumber's stock device file on the console; restarts of InputPlumber are counted."""
+    stock = ally_x.path / gyro_module.STOCK
+    stock.parent.mkdir(parents=True)
+    stock.write_text("source_devices:\n  - group: imu\n          z: [0, 1, 0]\n", encoding="utf-8")
+    (ally_x.path / gyro_module.OVERRIDE).parent.mkdir(parents=True)
+    restarts: list[str] = []
+
+    async def restart() -> None:
+        restarts.append("inputplumber")
+
+    monkeypatch.setattr(app_module, "restart_inputplumber", restart)
+    return restarts
+
+
+def test_the_gyroscope_fix_is_written_and_taken_back(
+    ally_x: FakeRoot, tmp_path: Path, inputplumber: list[str]
+) -> None:
+    override = ally_x.path / gyro_module.OVERRIDE
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert await app.gyro() is GyroState.WRONG
+        assert inputplumber == []
+
+        settings = await app.update_settings({"gyro_fix": True})
+
+        assert settings.gyro_fix is True
+        assert override.exists()
+        assert await app.gyro() is GyroState.FIXED
+        assert await app.changes() == [Change("gamepad", "gyro", None)]
+        assert inputplumber == ["inputplumber"]
+
+        await app.update_settings({"gyro_fix": False})
+
+        assert not override.exists()
+        assert await app.changes() == []
+        assert inputplumber == ["inputplumber"] * 2
+
+    asyncio.run(scenario())
+
+
+def test_the_gyroscope_fix_follows_inputplumber_updates_at_start(
+    ally_x: FakeRoot, tmp_path: Path, inputplumber: list[str]
+) -> None:
+    async def scenario() -> None:
+        first = make_app(ally_x, tmp_path)
+        await first.start()
+        await first.update_settings({"gyro_fix": True})
+        first.stop()
+        stock = ally_x.path / gyro_module.STOCK
+        stock.write_text(stock.read_text(encoding="utf-8") + "# 0.84\n", encoding="utf-8")
+
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+
+        assert await app.gyro() is GyroState.FIXED
+        assert inputplumber == ["inputplumber"] * 2
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_uninstalling_removes_the_gyroscope_fix_without_waiting(
+    ally_x: FakeRoot, tmp_path: Path, inputplumber: list[str]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"gyro_fix": True})
+        app.stop()
+
+        assert app.uninstall() is None
+
+        assert not (ally_x.path / gyro_module.OVERRIDE).exists()
+        assert await app.changes() == []
+        # InputPlumber takes the stock axes when it starts next; the settings stay for an update.
+        assert inputplumber == ["inputplumber"]
+        assert (await app.settings()).gyro_fix is True
+
+    asyncio.run(scenario())
+
+
+def test_another_programs_gyroscope_file_is_left_alone(
+    ally_x: FakeRoot, tmp_path: Path, inputplumber: list[str]
+) -> None:
+    (ally_x.path / gyro_module.OVERRIDE).write_text("# Ally Fix\n", encoding="utf-8")
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert await app.gyro() is GyroState.FOREIGN
+
+        with pytest.raises(RuntimeError, match="gyroscope"):
+            await app.update_settings({"gyro_fix": True})
+
+        assert (await app.settings()).gyro_fix is False
+        assert inputplumber == []
 
     asyncio.run(scenario())

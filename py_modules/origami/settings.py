@@ -40,6 +40,8 @@ class Settings:
     """Steam tab that ORIGAMI's tab stands before; FIRST_TAB puts it on top, None at the end."""
     qam_assist: bool = False
     """ORIGAMI opens the quick access menu when Steam misses a press of its button (B16)."""
+    gyro_fix: bool = False
+    """ORIGAMI turns the gyroscope's yaw the right way for Steam (B08)."""
     lighting: Lighting | None = None
     """Lighting of the stick rings; None until the user sets it, so the controller keeps its own."""
     saturation: int | None = None
@@ -58,7 +60,7 @@ class Settings:
             match key:
                 case "language":
                     parsed[key] = Language(value)
-                case "qam_tab" | "qam_assist":
+                case "qam_tab" | "qam_assist" | "gyro_fix":
                     parsed[key] = expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
@@ -81,6 +83,7 @@ class Settings:
             "qam_tab": self.qam_tab,
             "qam_tab_before": self.qam_tab_before,
             "qam_assist": self.qam_assist,
+            "gyro_fix": self.gyro_fix,
             "lighting": None if self.lighting is None else self.lighting.to_json(),
             "saturation": self.saturation,
             "vibration": None if self.vibration is None else self.vibration.to_json(),
