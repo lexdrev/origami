@@ -159,11 +159,13 @@ interface ToggleRowProps {
   action: string;
   /** The subtitle names a problem the switch fixes (style B2: red frame, triangle and text). */
   problem?: boolean;
+  /** A grey line under the subtitle about what switching does, problem or not. */
+  note?: string;
   onChange: (value: boolean) => void;
 }
 
 /** A row with the B2 switch; plays Steam's toggle sounds. */
-export function ToggleRow({ title, subtitle, value, action, problem = false, onChange }: ToggleRowProps) {
+export function ToggleRow({ title, subtitle, value, action, problem = false, note, onChange }: ToggleRowProps) {
   return (
     <Pressable
       className={problem ? "og-row og-toggle og-row--problem" : "og-row og-toggle"}
@@ -179,6 +181,7 @@ export function ToggleRow({ title, subtitle, value, action, problem = false, onC
         {problem && <WarningIcon size={12} />}
         {subtitle}
       </span>
+      {note !== undefined && <span className="og-row__note">{note}</span>}
       <span className={value ? "og-switch og-switch--on" : "og-switch"} aria-hidden="true">
         <span className="og-switch__knob" />
       </span>

@@ -119,6 +119,13 @@ export const en: Messages = {
     qamAssist: "QAM assist",
     qamAssistOff: "In games, Steam misses up to half of the presses",
     qamAssistOn: "Library button presses no longer get lost",
+    gyroFix: "Gyro fix",
+    gyroFixOn: "Steam's \"Invert X\" box is not needed",
+    gyroFixOff: "The horizontal axis is inverted",
+    gyroFixRestart: "Switching restarts the controller for a few seconds",
+    gyroForeign: "Another file sets the gyro axes",
+    gyroForeignText:
+      "Someone else's axis setting lies in\u00a0/etc/inputplumber (Ally Fix, for one), so ORIGAMI leaves it alone. Remove it, and the fix appears here.",
   },
   armouryCrate: {
     title: "Armoury Crate button",

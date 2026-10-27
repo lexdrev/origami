@@ -9,7 +9,9 @@ import { back, navigate } from "../navigation";
 import { UISound } from "../sounds";
 import {
   conflicts,
+  gyro,
   refreshConflicts,
+  refreshGyro,
   refreshTelemetry,
   setVibration,
   settings,
@@ -18,7 +20,7 @@ import {
   updateSettings,
 } from "../state";
 import { useStore } from "../store";
-import { Card, Header, Improvement, Screen } from "../ui/blocks";
+import { Alert, Card, Header, Improvement, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, NavRow, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { PlayIcon } from "../ui/icons";
 import {
@@ -42,6 +44,7 @@ export function GamepadScreen() {
 
   useEffect(() => {
     void refreshConflicts();
+    void refreshGyro();
     // What the driver holds, shown until ORIGAMI sets its own strength.
     void refreshTelemetry();
   }, []);
@@ -75,6 +78,7 @@ export function GamepadScreen() {
         action={t.actions.toggle}
         onChange={(qamAssist) => void updateSettings({ qamAssist })}
       />
+      <GyroFix enabled={current.value.gyroFix} />
       <NavRow
         title={t.gamepad.armouryCrate}
         subtitle={buttonSummary ?? t.gamepad.armouryCrateUnassigned}
@@ -195,4 +199,35 @@ function StrengthSlider({ caption, value, onChange }: StrengthSliderProps) {
       onChange={onChange}
     />
   );
+}
+
+/** Shown only where ORIGAMI knows the axes are wrong: on other devices and fixed systems there is nothing to do. */
+function GyroFix({ enabled }: { enabled: boolean }) {
+  const t = useMessages();
+  const state = useStore(gyro);
+  if (state.status !== "ready") return null;
+  switch (state.value) {
+    case "foreign":
+      return <Alert title={t.gamepad.gyroForeign}>{t.gamepad.gyroForeignText}</Alert>;
+    case "wrong":
+    case "fixed":
+    case "outdated":
+      return (
+        <ToggleRow
+          title={t.gamepad.gyroFix}
+          subtitle={enabled ? t.gamepad.gyroFixOn : t.gamepad.gyroFixOff}
+          problem={!enabled}
+          note={t.gamepad.gyroFixRestart}
+          value={enabled}
+          action={t.actions.toggle}
+          onChange={(gyroFix) => {
+            // InputPlumber restarts to take the new axes; the screen then shows what it took.
+            void updateSettings({ gyroFix }).then(refreshGyro);
+          }}
+        />
+      );
+    case "unavailable":
+    case "fixed_in_system":
+      return null;
+  }
 }

@@ -119,6 +119,15 @@ export interface Messages {
     qamAssistOff: string;
     /** What QAM assist does, shown while it is on. */
     qamAssistOn: string;
+    gyroFix: string;
+    /** Under the switch while the fix is on: Steam's own fix in each layout would turn it back. */
+    gyroFixOn: string;
+    /** The problem the fix solves, shown while it is off. */
+    gyroFixOff: string;
+    /** InputPlumber restarts to take the axes; the controller is away for a few seconds. */
+    gyroFixRestart: string;
+    gyroForeign: string;
+    gyroForeignText: string;
   };
   armouryCrate: {
     title: string;

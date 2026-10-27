@@ -5,6 +5,7 @@ import {
   backend,
   type Change,
   type Conflicts,
+  type GyroState,
   type Info,
   type Lighting,
   type Settings,
@@ -21,6 +22,7 @@ export const settings = createStore<Loadable<Settings>>({ status: "loading" });
 export const changes = createStore<Loadable<Change[]>>({ status: "loading" });
 export const telemetry = createStore<Loadable<Telemetry>>({ status: "loading" });
 export const conflicts = createStore<Loadable<Conflicts>>({ status: "loading" });
+export const gyro = createStore<Loadable<GyroState>>({ status: "loading" });
 export const steamLanguage = createStore<Language>("en");
 /** The last failed action, shown until the next one succeeds. */
 export const actionError = createStore<string | null>(null);
@@ -61,6 +63,11 @@ export function currentMessages(): Messages {
 
 export function refreshTelemetry(): Promise<void> {
   return load(telemetry, backend.getTelemetry);
+}
+
+/** InputPlumber's device files change with updates and other programs, so this is read when the screen opens. */
+export function refreshGyro(): Promise<void> {
+  return load(gyro, backend.getGyro);
 }
 
 /** Other plugins can be switched on and off at any time, so this is read when a screen opens. */

@@ -123,6 +123,13 @@ export const ru: Messages = {
     qamAssist: "Подстраховка QAM",
     qamAssistOff: "В игре Steam теряет до\u00a0половины нажатий",
     qamAssistOn: "Нажатия кнопки Library больше не\u00a0теряются",
+    gyroFix: "Исправление гироскопа",
+    gyroFixOn: "Галка «Инверсия\u00a0X» в\u00a0Steam не\u00a0нужна",
+    gyroFixOff: "Горизонталь инвертирована",
+    gyroFixRestart: "Переключение перезапустит контроллер на\u00a0пару секунд",
+    gyroForeign: "Оси гироскопа задаёт другой файл",
+    gyroForeignText:
+      "В\u00a0/etc/inputplumber лежит чужая настройка осей (например, от\u00a0Ally Fix), поэтому ORIGAMI её не\u00a0трогает. Уберите её — исправление появится здесь.",
   },
   armouryCrate: {
     title: "Кнопка Armoury Crate",

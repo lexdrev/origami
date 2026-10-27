@@ -21,6 +21,7 @@ let settings: Settings = {
   qamTab: true,
   qamTabBefore: 7,
   qamAssist: false,
+  gyroFix: false,
   lighting: null,
   saturation: null,
   vibration: null,
@@ -51,6 +52,7 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   get_saturation: () => settings.saturation ?? STEAM_SATURATION,
   restore_saturation: () => undefined,
   test_vibration: () => undefined,
+  get_gyro: () => (settings.gyroFix ? "fixed" : "wrong"),
 };
 
 export function callable(route: string) {

@@ -66,6 +66,9 @@ export type ButtonAction =
   | "magnifier"
   | "close_game";
 
+/** What the gyroscope's axes need here (origami.gyro.GyroState). */
+export type GyroState = "unavailable" | "fixed_in_system" | "foreign" | "wrong" | "fixed" | "outdated";
+
 export interface Settings {
   language: LanguageSetting;
   /** ORIGAMI has its own quick access tab besides its place inside Decky. */
@@ -74,6 +77,8 @@ export interface Settings {
   qamTabBefore: number | null;
   /** ORIGAMI opens the quick access menu when Steam misses a press of its button. */
   qamAssist: boolean;
+  /** ORIGAMI turns the gyroscope's yaw the right way for Steam. */
+  gyroFix: boolean;
   /** Null until the user sets it; the controller keeps its own lighting until then. */
   lighting: Lighting | null;
   /** Screen saturation in percent (100 = sRGB); null until the user sets it. */
@@ -108,6 +113,7 @@ export const backend = {
   getConflicts: callable<[], Conflicts>("get_conflicts"),
   previewLighting: callable<[lighting: Lighting]>("preview_lighting"),
   testVibration: callable("test_vibration"),
+  getGyro: callable<[], GyroState>("get_gyro"),
   getSaturation: callable<[], number | null>("get_saturation"),
   restoreSaturation: callable("restore_saturation"),
 };

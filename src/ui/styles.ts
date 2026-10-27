@@ -180,6 +180,7 @@ ${fontFaces}
 .og-row.og-focused { border-color: var(--og-accent); }
 .og-row__title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .og-row__sub { color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
+.og-row__note { color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
 .og-row__chevron { position: absolute; top: 50%; right: 10px; display: flex; margin-top: -8px; color: var(--og-dim); }
 .og-row.og-focused .og-row__chevron { color: var(--og-accent); }
 
