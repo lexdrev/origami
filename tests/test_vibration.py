@@ -25,7 +25,16 @@ def test_strength_goes_to_the_mcu_as_command_6() -> None:
 
 
 def test_half_strength_by_default() -> None:
-    assert Vibration() == Vibration(left=50, right=50)
+    assert Vibration() == Vibration(enabled=True, left=50, right=50)
+
+
+def test_off_keeps_the_strength_for_later_and_sends_zero() -> None:
+    off = Vibration(enabled=False, left=40, right=60)
+
+    assert strength_report(off) == bytes.fromhex("5ad10602 00 00")
+    assert Vibration.from_json(off.to_json()) == off
+    # Settings saved before the switch existed have no "enabled": the handles were on.
+    assert Vibration.from_json({"left": 40, "right": 60}) == Vibration(left=40, right=60)
 
 
 def test_vibration_survives_a_round_trip_through_json() -> None:

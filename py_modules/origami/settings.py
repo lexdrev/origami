@@ -13,6 +13,7 @@ from origami.fsutil import atomic_write_text
 from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
 from origami.saturation import MAX_PERCENT as MAX_SATURATION
+from origami.triggers import TriggerRumble
 from origami.vibration import Vibration
 
 log = logging.getLogger(__name__)
@@ -48,6 +49,8 @@ class Settings:
     """Screen saturation in percent (100 = sRGB); None until the user sets it."""
     vibration: Vibration | None = None
     """Handle vibration strength; None until the user sets it, so the controller keeps its own."""
+    trigger_rumble: TriggerRumble | None = None
+    """Rumble of the impulse triggers (B19); None until the user chooses, and they stay still."""
     armoury_crate: ButtonAction = ButtonAction.NONE
     """What a short press of the upper left button does; nothing reaches Steam from it (B17)."""
     armoury_crate_hold: ButtonAction = ButtonAction.NONE
@@ -72,6 +75,8 @@ class Settings:
                     parsed[key] = ButtonAction(value)
                 case "vibration":
                     parsed[key] = None if value is None else Vibration.from_json(value)
+                case "trigger_rumble":
+                    parsed[key] = None if value is None else TriggerRumble.from_json(value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
         return replace(self, **parsed)
@@ -87,6 +92,9 @@ class Settings:
             "lighting": None if self.lighting is None else self.lighting.to_json(),
             "saturation": self.saturation,
             "vibration": None if self.vibration is None else self.vibration.to_json(),
+            "trigger_rumble": (
+                None if self.trigger_rumble is None else self.trigger_rumble.to_json()
+            ),
             "armoury_crate": self.armoury_crate.value,
             "armoury_crate_hold": self.armoury_crate_hold.value,
         }

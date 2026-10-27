@@ -21,6 +21,7 @@ class Plugin:
             settings_dir=Path(decky.DECKY_PLUGIN_SETTINGS_DIR),
             data_dir=Path(decky.DECKY_PLUGIN_RUNTIME_DIR),
             decky_home=Path(decky.DECKY_HOME),
+            plugin_dir=Path(decky.DECKY_PLUGIN_DIR),
             version=decky.DECKY_PLUGIN_VERSION,
             decky_version=decky.DECKY_VERSION or None,
         )
@@ -61,6 +62,12 @@ class Plugin:
 
     async def get_gyro(self) -> JsonValue:
         return (await self._app.gyro()).value
+
+    async def get_trigger_state(self) -> JsonValue:
+        return (await self._app.trigger_state()).value
+
+    async def test_trigger_rumble(self) -> None:
+        await self._app.test_trigger_rumble()
 
     async def test_vibration(self) -> None:
         await self._app.test_vibration()

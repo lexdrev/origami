@@ -19,10 +19,12 @@ from origami.inputplumber import SteamChord
 from origami.journal import Change
 from origami.jsonio import JsonValue
 from origami.lighting import Lighting, LightMode
+from origami.rumble import SETTINGS_MAP
 from origami.settings import Language, Settings
+from origami.triggers import TriggerLevel, TriggerRumble, Triggers, TriggerState
 from origami.vibration import Vibration
 
-from fakes import FakeRoot
+from fakes import FakeHidBpf, FakeRoot
 
 
 @pytest.fixture(autouse=True)
@@ -37,16 +39,19 @@ async def no_events(_event: str, *_args: JsonValue) -> None:
     pass
 
 
-def make_app(root: FakeRoot, tmp_path: Path, emit: Emit = no_events) -> Origami:
+def make_app(
+    root: FakeRoot, tmp_path: Path, emit: Emit = no_events, bpf: FakeHidBpf | None = None
+) -> Origami:
     environment = Environment(
         root=root.path,
         settings_dir=tmp_path / "settings",
         data_dir=tmp_path / "data",
         decky_home=tmp_path / "decky",
+        plugin_dir=tmp_path / "plugin",
         version="0.1.0",
         decky_version="v3.3.0",
     )
-    return Origami(environment, emit=emit)
+    return Origami(environment, emit=emit, attach_bpf=bpf or FakeHidBpf())
 
 
 def install_plugin(tmp_path: Path, name: str) -> None:
@@ -384,6 +389,40 @@ def test_saturation_is_written_kept_journaled_and_restored(
     asyncio.run(scenario())
 
 
+def test_saturation_comes_back_after_sleep(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    screen: dict[str, list[int] | int],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    woke = asyncio.Event()
+
+    async def one_resume() -> AsyncGenerator[None]:
+        yield
+        woke.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(app_module, "resumes", one_resume)
+    monkeypatch.setattr(app_module, "RESUME_SETTLE_SECONDS", 0)
+
+    async def scenario() -> None:
+        first = make_app(ally_x, tmp_path)
+        await first.start()
+        await first.update_settings({"saturation": 150})
+        first.stop()
+        screen["now"] = 100  # the property is back at sRGB right after a resume
+
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        async with asyncio.timeout(1):
+            await woke.wait()
+
+        assert screen["written"] == [150, 150]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
 def test_saturation_is_left_alone_while_vibrantdeck_runs(
     ally_x: FakeRoot, tmp_path: Path, screen: dict[str, list[int] | int]
 ) -> None:
@@ -493,6 +532,163 @@ def rumbles(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return told
 
 
+def test_trigger_rumble_attaches_the_program_and_keeps_the_setting(
+    ally_x: FakeRoot, tmp_path: Path
+) -> None:
+    ally_x.ally_controller()
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+        assert await app.trigger_state() is TriggerState.AVAILABLE
+        assert bpf.programs == []
+
+        settings = await app.update_settings(
+            {"trigger_rumble": {"enabled": True, "triggers": "right"}}
+        )
+
+        assert settings.trigger_rumble == TriggerRumble(True, Triggers.RIGHT, TriggerLevel.MEDIUM)
+        [program] = bpf.attached()
+        assert program.path == tmp_path / "plugin/bin/rumble.bpf.o"
+        assert program.maps[SETTINGS_MAP] == [bytes([0, 60, 0])]
+        # Nothing stays in the system: the program goes with the plugin.
+        assert await app.changes() == []
+
+        app.stop()
+        assert bpf.attached() == []
+
+    asyncio.run(scenario())
+
+
+def test_saved_trigger_rumble_comes_back_at_start(ally_x: FakeRoot, tmp_path: Path) -> None:
+    ally_x.ally_controller()
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        first = make_app(ally_x, tmp_path, bpf=bpf)
+        await first.start()
+        await first.update_settings(
+            {"trigger_rumble": {"enabled": True, "triggers": "both", "level": "max"}}
+        )
+        first.stop()
+
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+
+        [program] = bpf.attached()
+        assert program.maps[SETTINGS_MAP] == [bytes([100, 100, 0])]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_ally_fix_owns_the_triggers(ally_x: FakeRoot, tmp_path: Path) -> None:
+    ally_x.ally_controller()
+    install_plugin(tmp_path, "Ally Fix")
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+        assert (await app.conflicts()).triggers == "Ally Fix"
+
+        with pytest.raises(RuntimeError, match="Ally Fix"):
+            await app.update_settings({"trigger_rumble": {"enabled": True, "triggers": "right"}})
+
+        assert bpf.programs == []
+        assert (await app.settings()).trigger_rumble is None
+
+    asyncio.run(scenario())
+
+
+def test_grips_are_lifted_under_origamis_own_strength(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    ally_x.ally_controller()
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+        assert bpf.programs == []  # before the user sets a strength, games rumble as before
+
+        await app.update_settings({"vibration": {"left": 80, "right": 80}})
+        await app.update_settings({"trigger_rumble": {"enabled": True, "triggers": "right"}})
+
+        assert sent_vibration == [Vibration(left=80, right=80)]
+        [program] = bpf.attached()
+        assert program.maps[SETTINGS_MAP] == [bytes([0, 0, 70]), bytes([0, 60, 70])]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_switched_off_handles_get_zero_and_no_lift(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    ally_x.ally_controller()
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+        await app.update_settings({"vibration": {"left": 80, "right": 80}})
+
+        settings = await app.update_settings(
+            {"vibration": {"enabled": False, "left": 80, "right": 80}}
+        )
+
+        assert settings.vibration == Vibration(enabled=False, left=80, right=80)
+        assert bpf.attached() == []
+        app.stop()
+
+    asyncio.run(scenario())
+    assert sent_vibration == [
+        Vibration(left=80, right=80),
+        Vibration(enabled=False, left=80, right=80),
+    ]
+
+
+def test_grips_are_left_alone_while_another_plugin_sets_the_strength(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    ally_x.ally_controller()
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        first = make_app(ally_x, tmp_path, bpf=bpf)
+        await first.start()
+        await first.update_settings({"vibration": {"left": 80, "right": 80}})
+        first.stop()
+        install_plugin(tmp_path, "Ally Vibe Control")
+
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+
+        assert bpf.attached() == []
+        app.stop()
+
+    asyncio.run(scenario())
+    assert sent_vibration == [Vibration(left=80, right=80)]
+
+
+def test_the_strength_is_kept_when_the_grips_cannot_be_lifted(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    # Without the controller's gamepad interface the program has nowhere to go.
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+
+        settings = await app.update_settings({"vibration": {"left": 80, "right": 80}})
+
+        assert settings.vibration == Vibration(left=80, right=80)
+
+    asyncio.run(scenario())
+    assert sent_vibration == [Vibration(left=80, right=80)]
+
+
 def test_vibration_test_is_a_pulse_that_ends_with_a_stop(
     ally_x: FakeRoot, tmp_path: Path, rumbles: list[str]
 ) -> None:
@@ -506,6 +702,58 @@ def test_vibration_test_is_a_pulse_that_ends_with_a_stop(
     asyncio.run(scenario())
 
     assert rumbles == ["pulse", "stop"]
+
+
+def test_the_handle_test_keeps_the_triggers_still(
+    ally_x: FakeRoot, tmp_path: Path, rumbles: list[str]
+) -> None:
+    ally_x.ally_controller()
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+        await app.update_settings({"trigger_rumble": {"enabled": True, "triggers": "right"}})
+
+        await app.test_vibration()
+
+        assert bpf.attached()[0].maps[SETTINGS_MAP] == [
+            bytes([0, 60, 0]),
+            bytes(3),
+            bytes([0, 60, 0]),
+        ]
+        app.stop()
+
+    asyncio.run(scenario())
+    assert rumbles == ["pulse", "stop"]
+
+
+def test_trigger_test_is_a_pulse_of_the_chosen_triggers(
+    ally_x: FakeRoot, tmp_path: Path, rumbles: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ally_x.ally_controller()
+    pulses: list[TriggerRumble] = []
+
+    def pulse(_root: Path, trigger_rumble: TriggerRumble) -> None:
+        pulses.append(trigger_rumble)
+
+    monkeypatch.setattr(app_module, "start_trigger_pulse", pulse)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.test_trigger_rumble()  # the triggers are off: nothing to feel
+        await app.update_settings(
+            {"trigger_rumble": {"enabled": True, "triggers": "both", "level": "soft"}}
+        )
+
+        await app.test_trigger_rumble()
+
+        app.stop()
+
+    asyncio.run(scenario())
+    assert pulses == [TriggerRumble(True, Triggers.BOTH, TriggerLevel.SOFT)]
+    assert rumbles == ["stop"]
 
 
 def test_a_cancelled_or_unloaded_vibration_test_still_stops_the_motors(

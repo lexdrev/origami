@@ -13,7 +13,8 @@ for Decky's "Install plugin from ZIP".
 
 Every change ORIGAMI makes can be undone: from its settings or by removing the plugin.
 
-License: GPL-3.0-or-later. Copyright (C) 2026 lexdrev.
+License: GPL-3.0-or-later; the HID-BPF program in `bpf/`, which runs in the kernel, is GPL-2.0-or-later.
+Copyright (C) 2026 lexdrev.
 
 ## Русский
 
@@ -26,4 +27,5 @@ ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomeb
 
 Любое изменение ORIGAMI можно отменить: в его настройках или удалив плагин.
 
-Лицензия: GPL-3.0-or-later. Copyright (C) 2026 lexdrev.
+Лицензия: GPL-3.0-or-later; программа HID-BPF в `bpf/`, которая работает в ядре, — GPL-2.0-or-later.
+Copyright (C) 2026 lexdrev.

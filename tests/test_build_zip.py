@@ -33,6 +33,8 @@ def project(tmp_path: Path) -> Path:
         "LICENSE": "GPL",
         "README.md": "",
         "dist/index.js": "",
+        "bin/rumble.bpf.o": "",
+        "bpf/rumble.bpf.c": "",
         "py_modules/origami/__init__.py": "",
         "py_modules/origami/app.py": "",
         "py_modules/origami/__pycache__/app.cpython-314.pyc": "",
@@ -52,6 +54,7 @@ def test_archive_has_one_folder_with_plugin_files_only(project: Path, tmp_path: 
         assert zf.namelist() == [
             "Origami/LICENSE",
             "Origami/README.md",
+            "Origami/bin/rumble.bpf.o",
             "Origami/dist/index.js",
             "Origami/main.py",
             "Origami/package.json",

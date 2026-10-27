@@ -20,6 +20,8 @@ SATURATION_OWNERS = ("vibrantDeck",)
 """Plugins that write gamescope's colour gamut themselves, past Steam's own saturation setting."""
 VIBRATION_OWNERS = ("Ally Vibe Control", "Ally Fix")
 """Plugins that set the strength of the handle vibration."""
+TRIGGER_OWNERS = ("Ally Fix",)
+"""Plugins that rumble the impulse triggers with a HID-BPF program of their own."""
 
 
 def enabled_plugins(decky_home: Path) -> frozenset[str]:

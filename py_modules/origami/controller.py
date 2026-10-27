@@ -13,6 +13,7 @@ is the controller's keyboard: held buttons arrive there as keys.
 import fcntl
 import os
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 from origami.sysfs import read_text
@@ -26,25 +27,58 @@ VENDOR_REPORT = 0x5A
 REPORT_SIZE = 64
 
 
-def find_hidraw(root: Path, interface: str) -> Path | None:
-    """Find the node of one of the controller's interfaces; hidrawN changes between boots.
+@dataclass(frozen=True, slots=True)
+class HidDevice:
+    """One of the controller's HID interfaces as the kernel lists it."""
 
-    The configuration interface is the one hid-asus-ally binds; the others are those of the same
-    USB device, whichever driver binds them.
-    """
+    id: int
+    """The kernel's number for it, after the dot in 0003:0B05:1B4C.0007; HID-BPF attaches by it."""
+    path: Path
+    """Its sysfs folder, with report_descriptor."""
+
+
+@dataclass(frozen=True, slots=True)
+class _Hidraw:
+    node: str
+    driver: str
+    phys: str
+    device: Path
+
+
+def find_hidraw(root: Path, interface: str) -> Path | None:
+    """Find the node of one of the controller's interfaces; hidrawN changes between boots."""
+    found = _find(root, interface)
+    return None if found is None else root / "dev" / found.node
+
+
+def find_hid_device(root: Path, interface: str) -> HidDevice | None:
+    """Find the HID device of one of the controller's interfaces; its number changes too."""
+    found = _find(root, interface)
+    if found is None:
+        return None
+    _, _, number = found.device.name.rpartition(".")
+    try:
+        return HidDevice(id=int(number, 16), path=found.device)
+    except ValueError:
+        return None
+
+
+def _find(root: Path, interface: str) -> _Hidraw | None:
+    # The configuration interface is the one hid-asus-ally binds; the others are those of the
+    # same USB device, whichever driver binds them.
     devices = _hid_devices(root)
     config = next(
         (
-            phys
-            for _, driver, phys in devices
-            if driver == DRIVER and phys.endswith(f"/{CONFIG_INTERFACE}")
+            device.phys
+            for device in devices
+            if device.driver == DRIVER and device.phys.endswith(f"/{CONFIG_INTERFACE}")
         ),
         None,
     )
     if config is None:
         return None
     wanted = config.removesuffix(CONFIG_INTERFACE) + interface
-    return next((root / "dev" / node for node, _, phys in devices if phys == wanted), None)
+    return next((device for device in devices if device.phys == wanted), None)
 
 
 def configure(root: Path, reports: Iterable[bytes]) -> None:
@@ -67,16 +101,24 @@ def rumble(root: Path, report: bytes) -> None:
         os.close(fd)
 
 
-def _hid_devices(root: Path) -> list[tuple[str, str, str]]:
+def _hid_devices(root: Path) -> list[_Hidraw]:
     """Every hidraw node with its driver and physical path, such as `usb-0000:66:00.0-4/input2`."""
     try:
         nodes = sorted((root / HIDRAW).iterdir())
     except OSError:
         return []
-    devices: list[tuple[str, str, str]] = []
+    devices: list[_Hidraw] = []
     for node in nodes:
         uevent = _parse_uevent(read_text(node / "device" / "uevent") or "")
-        devices.append((node.name, uevent.get("DRIVER", ""), uevent.get("HID_PHYS", "")))
+        devices.append(
+            _Hidraw(
+                node=node.name,
+                driver=uevent.get("DRIVER", ""),
+                phys=uevent.get("HID_PHYS", ""),
+                # A link to the HID device's folder, named like 0003:0B05:1B4C.0007.
+                device=(node / "device").resolve(),
+            )
+        )
     return devices
 
 

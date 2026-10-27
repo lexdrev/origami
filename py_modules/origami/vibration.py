@@ -4,10 +4,14 @@
 """Strength of the handle vibration.
 
 The MCU scales every rumble by its own strength, 0-100 for each handle; from the factory it is
-100, which is too strong. The hid-asus-ally driver on kernel 7.2.9-ogc3 takes only 0-64 through
+100. The hid-asus-ally driver on kernel 7.2.9-ogc3 takes only 0-64 through
 vibration_intensity (it compares with 64 where 0x64 was meant), so ORIGAMI sends the MCU command
 itself. In sleep the MCU loses power and wakes at 100 again, and the driver does not send the
 strength back, so ORIGAMI sends it after every resume (BUGS.md, B01).
+
+Steam asks for every rumble at -5 dB, so a game's full rumble reaches a grip as only about 32 of
+100, and even at 100 the handles felt weak in games. The rumble program (origami.rumble) lifts the
+grips to GRIP_AT_GAME_FULL; the MCU's strength then scales that, so the whole scale reaches games.
 """
 
 from dataclasses import dataclass
@@ -15,17 +19,21 @@ from pathlib import Path
 from typing import cast
 
 from origami.controller import VENDOR_REPORT, configure, rumble
-from origami.jsonio import JsonValue
+from origami.jsonio import JsonValue, expect_bool
 from origami.sysfs import read_text
 
 MAX_STRENGTH = 100
 DEFAULT_STRENGTH = 50
+GRIP_AT_GAME_FULL = 70
+"""Strength of a grip at a game's full rumble before the MCU's strength; 32 without the lift."""
 DRIVER_STRENGTH = Path("sys/module/hid_asus_ally/drivers/hid:asus_rog_ally")
 """Holds one device folder per controller with vibration_intensity, the driver's copy."""
 
 
 @dataclass(frozen=True, slots=True)
 class Vibration:
+    enabled: bool = True
+    """Off keeps the handles still; the strengths wait for the next time it is on."""
     left: int = DEFAULT_STRENGTH
     """Strength of the left handle's motor in percent."""
     right: int = DEFAULT_STRENGTH
@@ -38,12 +46,17 @@ class Vibration:
         data = cast("dict[str, object]", value)
         defaults = cls()
         return cls(
+            enabled=expect_bool("enabled", data.get("enabled", defaults.enabled)),
             left=_strength("left", data.get("left", defaults.left)),
             right=_strength("right", data.get("right", defaults.right)),
         )
 
     def to_json(self) -> dict[str, JsonValue]:
-        return {"left": self.left, "right": self.right}
+        return {"enabled": self.enabled, "left": self.left, "right": self.right}
+
+    def strengths(self) -> tuple[int, int]:
+        """What the MCU gets for the left and the right handle."""
+        return (self.left, self.right) if self.enabled else (0, 0)
 
 
 def _strength(key: str, value: object) -> int:
@@ -57,7 +70,7 @@ STRENGTH = bytes([VENDOR_REPORT, 0xD1, 0x06, 0x02])
 
 
 def strength_report(vibration: Vibration) -> bytes:
-    return STRENGTH + bytes([vibration.left, vibration.right])
+    return STRENGTH + bytes(vibration.strengths())
 
 
 def apply_vibration(root: Path, vibration: Vibration) -> None:
@@ -70,7 +83,9 @@ def apply_vibration(root: Path, vibration: Vibration) -> None:
 # The last three bytes are times in the Xbox format, but the Ally's MCU ignores them: a rumble
 # runs until the next report, so a pulse has to be stopped with a report of zeros.
 PULSE_MAGNITUDE = 32
-"""The strongest rumble of a game: InputPlumber passes it on at Steam's -5 dB, about 32 of 100."""
+"""The strongest rumble of a game as InputPlumber passes it on: about 32 of 100 at Steam's -5 dB.
+
+The rumble program lifts the test pulse as it lifts a game's rumble."""
 PULSE_SECONDS = 1.0
 
 

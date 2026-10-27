@@ -8,7 +8,10 @@ import pytest
 from origami import controller
 from origami.controller import (
     CONFIG_INTERFACE,
+    GAMEPAD_INTERFACE,
     KEYBOARD_INTERFACE,
+    HidDevice,
+    find_hid_device,
     find_hidraw,
     send_feature_reports,
 )
@@ -35,6 +38,14 @@ def test_no_controller(fake_root: FakeRoot) -> None:
 
     assert find_hidraw(fake_root.path, CONFIG_INTERFACE) is None
     assert find_hidraw(fake_root.path, KEYBOARD_INTERFACE) is None
+    assert find_hid_device(fake_root.path, GAMEPAD_INTERFACE) is None
+
+
+def test_hid_device_of_an_interface_carries_the_kernels_number(fake_root: FakeRoot) -> None:
+    fake_root.ally_controller()
+    folder = fake_root.path / "sys/devices/hid/0003:0B05:1B4C.0007"
+
+    assert find_hid_device(fake_root.path, GAMEPAD_INTERFACE) == HidDevice(id=7, path=folder)
 
 
 def test_reports_go_out_as_64_byte_feature_reports(

@@ -5,7 +5,7 @@
 
 The archive is reproducible: entries are sorted, timestamps come from
 SOURCE_DATE_EPOCH (or the zip epoch, 1980-01-01) and permissions are fixed.
-Run `npm run build` first.
+Run `npm run build` and scripts/build_bpf.sh first.
 """
 
 import hashlib
@@ -17,7 +17,15 @@ import zipfile
 from pathlib import Path
 
 FOLDER = "Origami"
-FILES = ("plugin.json", "package.json", "main.py", "LICENSE", "README.md", "dist/index.js")
+FILES = (
+    "plugin.json",
+    "package.json",
+    "main.py",
+    "LICENSE",
+    "README.md",
+    "dist/index.js",
+    "bin/rumble.bpf.o",
+)
 PACKAGES = ("py_modules",)
 ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
 
