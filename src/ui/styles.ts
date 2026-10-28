@@ -243,7 +243,9 @@ ${fontFaces}
 /* A switch in the card head: the card frame shows the focus is inside, a ring that it is on the switch. */
 .og-card__head--switch { align-items: center; }
 .og-card__head--switch .og-switch { position: relative; top: auto; right: auto; flex-shrink: 0; margin-top: 0; }
-.og-card__head--switch.og-focused .og-switch { box-shadow: 0 0 0 2px var(--og-surface), 0 0 0 4px var(--og-accent); }
+/* Focused, a switch rings itself as well as its frame, in a card's head and in a row of its own. */
+.og-card__head--switch.og-focused .og-switch,
+.og-toggle.og-focused .og-switch { box-shadow: 0 0 0 2px var(--og-surface), 0 0 0 4px var(--og-accent); }
 .og-card__divider { height: 1px; margin: 2px -10px; background: var(--og-divider); }
 .og-card__title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .og-card__aside { color: var(--og-muted); font: 500 10px var(--og-mono); text-transform: uppercase; white-space: nowrap; }
