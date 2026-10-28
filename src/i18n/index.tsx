@@ -63,6 +63,8 @@ export interface Messages {
     changes: string;
     changesSummary(count: number): string;
     slogan: readonly [string, string];
+    /** The action of the About block: the project's page in Steam's browser. */
+    openProject: string;
   };
   qamTab: {
     title: string;

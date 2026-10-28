@@ -18,19 +18,23 @@ interface PressableProps {
   sound?: UISound;
   /** Stays focusable, so the D-pad path does not jump, but does nothing. */
   disabled?: boolean;
+  /** Takes the focus when it comes into the panel, from the quick access tabs for one. */
+  preferredFocus?: boolean;
   style?: CSSProperties;
   children?: ReactNode;
 }
 
 /** Base of every interactive element: reachable with the D-pad, activated with A or a tap. */
 export function Pressable(props: PressableProps) {
-  const { className, onPress, action, label, pressed, sound, disabled = false, style, children } = props;
+  const { className, onPress, action, label, pressed, sound, disabled = false, preferredFocus = false } = props;
+  const { style, children } = props;
   return (
     <Focusable
       className={disabled ? `${className} og-disabled` : className}
       style={style}
       focusClassName="og-focused"
       noFocusRing
+      preferredFocus={preferredFocus}
       role="button"
       aria-label={label}
       aria-pressed={pressed}

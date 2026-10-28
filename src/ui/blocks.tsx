@@ -5,6 +5,7 @@ import { Focusable, type GamepadEvent } from "@decky/ui";
 import type { ReactNode } from "react";
 
 import { useMessages } from "../i18n";
+import { ENTER_PREFERRED_CHILD } from "../quickAccess";
 import { UISound } from "../sounds";
 import { IconButton, Pressable, Switch } from "./controls";
 import { BackIcon, ChevronIcon, WarningIcon } from "./icons";
@@ -18,7 +19,12 @@ interface ScreenProps {
 export function Screen({ onBack, children }: ScreenProps) {
   const t = useMessages();
   if (onBack === undefined) {
-    return <div className="og-screen">{children}</div>;
+    // Coming into the panel, the focus goes to the child marked preferredFocus, else the first.
+    return (
+      <Focusable className="og-screen" navEntryPreferPosition={ENTER_PREFERRED_CHILD}>
+        {children}
+      </Focusable>
+    );
   }
   return (
     <Focusable
@@ -66,9 +72,11 @@ interface TileProps {
   subtitle: string;
   /** Opens the block's screen; tiles of blocks without one yet only show values. */
   onOpen?: () => void;
+  /** Takes the focus when it comes into the panel. */
+  preferredFocus?: boolean;
 }
 
-export function Tile({ icon, name, value, subtitle, onOpen }: TileProps) {
+export function Tile({ icon, name, value, subtitle, onOpen, preferredFocus = false }: TileProps) {
   const t = useMessages();
   const content = (
     <>
@@ -79,7 +87,7 @@ export function Tile({ icon, name, value, subtitle, onOpen }: TileProps) {
     </>
   );
   return onOpen ? (
-    <Pressable className="og-tile" action={t.actions.open} onPress={onOpen}>
+    <Pressable className="og-tile" action={t.actions.open} preferredFocus={preferredFocus} onPress={onOpen}>
       <span className="og-tile__chevron">
         <ChevronIcon />
       </span>

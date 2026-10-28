@@ -476,15 +476,17 @@ ${fontFaces}
 .og-alert__title { color: var(--og-danger-text); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .og-alert__text { color: var(--og-text-soft); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
 
-.og-about {
+.og-about { margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--og-divider); }
+.og-about__card {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 2px;
-  padding-top: 10px;
-  border-top: 1px solid var(--og-divider);
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 2px;
   color: var(--og-accent);
 }
+.og-about__card.og-focused { border-color: var(--og-accent); }
 .og-about__lines {
   display: flex;
   flex-direction: column;

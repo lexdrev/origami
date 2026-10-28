@@ -70,7 +70,11 @@ export const GamepadButton = { DIR_LEFT: 11, DIR_RIGHT: 12 } as const;
 
 // Steam's window store and navigation; the stand has no quick access menu or routes.
 export const Router = {};
-export const Navigation = { Navigate: () => undefined, CloseSideMenus: () => undefined };
+export const Navigation = {
+  Navigate: () => undefined,
+  NavigateToExternalWeb: () => undefined,
+  CloseSideMenus: () => undefined,
+};
 
 // Steam's webpack modules; the stand has none, so Steam's stores read as missing.
 export const findModuleByExport = () => undefined;

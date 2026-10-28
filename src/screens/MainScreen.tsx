@@ -6,6 +6,7 @@ import { useEffect } from "react";
 
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
+import { ENTER_PREFERRED_CHILD } from "../quickAccess";
 import { refreshSaturation, saturation } from "../saturation";
 import { heldPower, info, settings } from "../state";
 import { useStore } from "../store";
@@ -40,11 +41,18 @@ export function MainScreen() {
     <Screen>
       <DeviceHeader />
       {telemetry.status === "failed" && <Alert title={t.errors.backend}>{telemetry.error}</Alert>}
-      {/* Steam moves focus up and down a screen by default; the tiles go every way. */}
-      <Focusable className="og-tiles" flow-children="grid">
+      {/* Steam moves focus up and down a screen by default; the tiles go every way. Coming in from
+          the quick access tabs, the focus lands on the Power tile beside them, not on the gear. */}
+      <Focusable
+        className="og-tiles"
+        flow-children="grid"
+        preferredFocus
+        navEntryPreferPosition={ENTER_PREFERRED_CHILD}
+      >
         <Tile
           icon={<PowerIcon />}
           name={t.main.tiles.power}
+          preferredFocus
           {...tiles.power}
           onOpen={() => {
             navigate("power");

@@ -41,6 +41,7 @@ export const en: Messages = {
         ? "ORIGAMI has changed nothing"
         : `${count} ${pluralForm(locale, count, { one: "change", other: "changes" })} · restore all`,
     slogan: ["Every fold unfolds.", "Fold your handheld your way."],
+    openProject: "Project page",
   },
   qamTab: {
     title: "ORIGAMI tab",

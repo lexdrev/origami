@@ -1,13 +1,16 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Navigation } from "@decky/ui";
+
 import type { LanguageSetting } from "../backend";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
 import { changes, info, settings, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Header, Screen, SectionLabel } from "../ui/blocks";
-import { ChoiceGroup, NavRow, ToggleRow, type Choice } from "../ui/controls";
+import { UISound } from "../sounds";
+import { ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
 import { FoxMark, GearIcon } from "../ui/icons";
 import { ownTabSummary, quickAccessColumn } from "../tabPosition";
 
@@ -72,16 +75,27 @@ export function SettingsScreen() {
         }}
       />
 
+      {/* The last stop of the D-pad: Steam scrolls only to the focus, so the block shows whole. */}
       <div className="og-about">
-        <FoxMark size={26} />
-        <span className="og-about__lines">
-          <span className="og-about__name">
-            <b>ORIGAMI</b> {plugin.status === "ready" ? plugin.value.version : ""} · {LICENSE}
+        <Pressable
+          className="og-about__card"
+          action={t.settings.openProject}
+          sound={UISound.Press}
+          onPress={() => {
+            Navigation.NavigateToExternalWeb(`https://${REPOSITORY}`);
+            Navigation.CloseSideMenus();
+          }}
+        >
+          <FoxMark size={26} />
+          <span className="og-about__lines">
+            <span className="og-about__name">
+              <b>ORIGAMI</b> {plugin.status === "ready" ? plugin.value.version : ""} · {LICENSE}
+            </span>
+            <span>{t.settings.slogan[0]}</span>
+            <span>{t.settings.slogan[1]}</span>
+            <span>{REPOSITORY}</span>
           </span>
-          <span>{t.settings.slogan[0]}</span>
-          <span>{t.settings.slogan[1]}</span>
-          <span>{REPOSITORY}</span>
-        </span>
+        </Pressable>
       </div>
     </Screen>
   );
