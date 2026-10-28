@@ -117,17 +117,7 @@ interface CardProps {
 }
 
 export function Card({ title, subtitle, problem = false, aside, toggle, children }: CardProps) {
-  const titles = title && (
-    <span className="og-card__titles">
-      <span className="og-card__title">{title}</span>
-      {subtitle && (
-        <span className="og-card__subtitle">
-          {problem && <WarningIcon size={12} />}
-          {subtitle}
-        </span>
-      )}
-    </span>
-  );
+  const titles = title && <CardTitles title={title} subtitle={subtitle} problem={problem} />;
   return (
     <section className={problem ? "og-card og-card--problem" : "og-card"}>
       {toggle === undefined ? (
@@ -160,6 +150,27 @@ export function Card({ title, subtitle, problem = false, aside, toggle, children
             </>
           )}
     </section>
+  );
+}
+
+interface CardTitlesProps {
+  title: string;
+  subtitle?: string | undefined;
+  problem?: boolean;
+}
+
+/** A card's title and subtitle; a card without a head places them itself, as the TDP card beside its dial. */
+export function CardTitles({ title, subtitle, problem = false }: CardTitlesProps) {
+  return (
+    <span className="og-card__titles">
+      <span className="og-card__title">{title}</span>
+      {subtitle && (
+        <span className="og-card__subtitle">
+          {problem && <WarningIcon size={12} />}
+          {subtitle}
+        </span>
+      )}
+    </span>
   );
 }
 

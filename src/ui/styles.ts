@@ -295,9 +295,7 @@ ${fontFaces}
 /* The Power screen's dial: a tick a watt from 7 to 35 W on a 240° arc, every fifth one longer. */
 .og-dial {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  justify-content: center;
   padding: 10px 12px;
   border: 1px solid var(--og-border);
   border-radius: 2px;
@@ -320,20 +318,26 @@ ${fontFaces}
 .og-dial__end--high { right: 0; }
 .og-dial__readout {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
+  flex-direction: column;
+  gap: 4px;
   color: var(--og-muted);
-  font: 500 10px var(--og-mono);
+  font: 500 10px/1.35 var(--og-mono);
   text-transform: uppercase;
-  white-space: nowrap;
 }
-.og-dial__readout--split { justify-content: space-between; }
 .og-dial__readout b { color: var(--og-text); }
-.og-dial__status { display: flex; align-items: center; gap: 5px; }
-.og-dial__status::before { content: ""; width: 7px; height: 7px; background: var(--og-dim); }
+.og-dial__status { display: flex; align-items: flex-start; gap: 5px; }
+.og-dial__status::before { content: ""; flex-shrink: 0; width: 7px; height: 7px; margin-top: 4px; background: var(--og-dim); }
 .og-dial__status--problem { color: var(--og-danger-text); }
 .og-dial__status--problem::before { background: var(--og-danger); }
+
+/* The TDP card: the dial on the left, the title and the power drawn beside it, a size larger than
+   in other cards, as the dial beside them is large. They start a little over the middle and stay
+   there as the status line comes and goes. */
+.og-tdp { display: flex; align-items: flex-start; gap: 6px; }
+.og-tdp .og-dial__face { flex-shrink: 0; margin-left: -8px; }
+.og-tdp__side { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding-top: 10px; }
+.og-tdp__side .og-card__title { font-size: 12px; }
+.og-tdp__side .og-card__subtitle, .og-tdp__side .og-dial__readout { font-size: 11px; }
 
 .og-limits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .og-limit { display: flex; flex-direction: column; gap: 2px; padding: 6px 7px; border: 1px solid var(--og-track); background: var(--og-panel); }

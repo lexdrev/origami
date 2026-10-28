@@ -24,9 +24,9 @@ import { UISound } from "../sounds";
 import { conflicts, heldPower, refreshConflicts, setPower, updateSettings } from "../state";
 import { settings } from "../state";
 import { useStore } from "../store";
-import { Alert, Card, Header, Screen } from "../ui/blocks";
+import { Alert, Card, CardTitles, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, Pressable, Slider, ToggleRow } from "../ui/controls";
-import { Dial, type DialStatus } from "../ui/dial";
+import { Dial, DialFace, DialReadout, type DialStatus } from "../ui/dial";
 import { useTelemetry } from "../useTelemetry";
 import { OwnedBy } from "./OwnedBy";
 
@@ -76,7 +76,7 @@ export function PowerScreen() {
   );
 }
 
-/** ORIGAMI holds the TDP: its limit on the dial, then the TDP, the headroom and the switches. */
+/** ORIGAMI holds the TDP: the TDP card with its dial, then the headroom and the switches. */
 function OwnPower({ setting, power }: { setting: Settings; power: PowerReadings | null }) {
   const t = useMessages();
   const held = useStore(heldPower);
@@ -100,16 +100,7 @@ function OwnPower({ setting, power }: { setting: Settings; power: PowerReadings 
     <>
       {steamSlider && <SteamSliderPlate />}
       {holding?.contested && <Alert title={t.power.contested}>{t.power.contestedText}</Alert>}
-      <Dial
-        value={String(shown)}
-        unit={t.units.watts}
-        label={t.power.limit}
-        fill={{ watts: shown, kind: "on" }}
-        locked={highest < MAX_TDP ? highest : undefined}
-        now={drawn === null ? undefined : { label: t.power.now, value: formatWatts(drawn, t) }}
-        status={status}
-      />
-      <TdpCard power={setting.power} highest={highest} />
+      <TdpCard power={setting.power} highest={highest} drawn={drawn} status={status} />
       <HeadroomCard power={setting.power} limits={limits} />
       <BoostRow power={setting.power} readings={power} />
       <ToggleRow
@@ -142,14 +133,37 @@ function DrawnDial({ power }: { power: PowerReadings | null }) {
   );
 }
 
-/** The sustained limit: the scale up to its top and the presets in one card, as the saturation. */
-function TdpCard({ power, highest }: { power: Power; highest: number }) {
+interface TdpCardProps {
+  power: Power;
+  highest: number;
+  drawn: number | null;
+  status: DialStatus | null;
+}
+
+/**
+ * The sustained limit in one card: the dial with the title and the power drawn beside it, then the
+ * scale up to its top and the presets, as the saturation. The dial shows the scale's ends.
+ */
+function TdpCard({ power, highest, drawn, status }: TdpCardProps) {
   const t = useMessages();
   const tdp = Math.min(power.tdp, highest);
   const preset = presetOf(tdp);
   const watts = (value: number) => withUnit(String(value), t.units.watts);
   return (
-    <Card title={t.power.tdp} subtitle={t.power.tdpSub} aside={<span className="og-card__value">{watts(tdp)}</span>}>
+    <Card>
+      <div className="og-tdp">
+        <DialFace
+          value={String(tdp)}
+          unit={t.units.watts}
+          label={t.power.limit}
+          fill={{ watts: tdp, kind: "on" }}
+          locked={highest < MAX_TDP ? highest : undefined}
+        />
+        <div className="og-tdp__side">
+          <CardTitles title={t.power.tdp} subtitle={t.power.tdpSub} />
+          {drawn !== null && <DialReadout now={{ label: t.power.now, value: formatWatts(drawn, t) }} status={status} />}
+        </div>
+      </div>
       <Slider
         label={t.power.tdp}
         value={tdp}
@@ -164,10 +178,6 @@ function TdpCard({ power, highest }: { power: Power; highest: number }) {
           setPower({ ...power, tdp });
         }}
       />
-      <div className="og-slider__ends" aria-hidden="true">
-        <span>{MIN_TDP}</span>
-        <span>{highest}</span>
-      </div>
       <ChoiceGroup
         label={t.power.tdp}
         choices={TDP_PRESETS.map((choice) => ({
