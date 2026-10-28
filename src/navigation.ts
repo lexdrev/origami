@@ -7,6 +7,8 @@ import { createStore, useStore } from "./store";
 export type ScreenId =
   | "main"
   | "power"
+  | "gameProfiles"
+  | "gameProfile"
   | "display"
   | "customColour"
   | "gamepad"

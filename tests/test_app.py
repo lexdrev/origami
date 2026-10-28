@@ -148,7 +148,9 @@ def test_settings_are_saved(ally_x: FakeRoot, tmp_path: Path) -> None:
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
         await app.start()
-        assert await app.update_settings({"language": "en"}) == Settings(language=Language.EN, vibration=None)
+        assert await app.update_settings({"language": "en"}) == Settings(
+            language=Language.EN, vibration=None
+        )
 
         restarted = make_app(ally_x, tmp_path)
         await restarted.start()
@@ -1281,6 +1283,38 @@ def test_origami_keeps_the_tdp_over_steams_slider_while_it_manages_it(
         powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", 15)
         await asyncio.sleep(0.05)
         assert written_limits(powered)[0] == 15
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_a_running_game_gets_its_own_power_while_its_profile_is_active(
+    powered: FakeRoot, tmp_path: Path
+) -> None:
+    game = {"app_id": 1920490, "name": "The Outer Worlds", "power": {"tdp": 13, "headroom": False}}
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"tdp": 20}, "game_power": [game]})
+        await asyncio.sleep(0.05)
+        assert written_limits(powered) == [20, 24, 29]
+
+        await app.set_game(1920490)
+        await asyncio.sleep(0.05)
+        # The firmware keeps the short limits above its minimums.
+        assert written_limits(powered) == [13, 13, 19]
+
+        # Back on the general settings, the profile waits.
+        await app.update_settings({"game_power": [{**game, "active": False}]})
+        await asyncio.sleep(0.05)
+        assert written_limits(powered) == [20, 24, 29]
+
+        await app.update_settings({"game_power": [game]})
+        await app.set_game(None)
+        await asyncio.sleep(0.05)
+        assert written_limits(powered) == [20, 24, 29]
         app.stop()
 
     asyncio.run(scenario())

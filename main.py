@@ -83,6 +83,13 @@ class Plugin:
             raise TypeError("Steam's TDP slider is on or off")
         await self._app.set_steam_tdp_limit(on=on)
 
+    async def set_game(self, app_id: object) -> None:
+        if app_id is not None and (
+            not isinstance(app_id, int) or isinstance(app_id, bool) or app_id <= 0
+        ):
+            raise TypeError("The running game is a Steam app id or none")
+        await self._app.set_game(app_id)
+
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
 

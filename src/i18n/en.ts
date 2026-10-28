@@ -97,6 +97,23 @@ export const en: Messages = {
     ownedBy: (plugin) => `${plugin} controls the power`,
     ownedText: (plugin) =>
       `The TDP and the CPU can listen to one plugin only, so ORIGAMI leaves them alone. Switch off or remove ${plugin} in Decky, and the power settings appear here.`,
+    gameLimit: "Game limit",
+    profile: "Profile",
+    general: "General",
+    gameOnly: "Settings for this game only",
+    chooseGame: "Pick the game to set it apart",
+    profileWaits: "The game runs the general · its profile is kept",
+    differs: (general) => (general === undefined ? "≠\u00a0general" : `≠\u00a0general\u00a0${general}`),
+    profiles: "Game profiles",
+    profilesSub: "No game running · general applies",
+    profilesTitleSub: "Power · settings of games",
+    profilesHint:
+      "To add a game, start it and pick its name at the top of the Power screen. Its profile starts as a copy of the general one.",
+    profileSub: "Game profile · the game is not running",
+    tdpBoost: (on) => (on ? "TDP\u00a0boost\u00a0on" : "TDP\u00a0boost\u00a0off"),
+    profileWaiting: "General applies",
+    removeProfile: "Remove",
+    removeAgain: "Press again to remove",
   },
   display: {
     title: "Display & Light",

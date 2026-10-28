@@ -120,6 +120,30 @@ export interface Messages {
     steamSetsText: string;
     ownedBy(plugin: string): string;
     ownedText(plugin: string): string;
+    /** Under the TDP on the dial while a game's own settings are shown. */
+    gameLimit: string;
+    /** The strip of a game: its own settings or the general ones. */
+    profile: string;
+    general: string;
+    /** Under the strip: what the screen sets now. */
+    gameOnly: string;
+    chooseGame: string;
+    profileWaits: string;
+    /** Beside a setting a game sets otherwise, with the general value where it is short. */
+    differs(general?: string): string;
+    profiles: string;
+    /** Under the row of game profiles while no game runs. */
+    profilesSub: string;
+    /** Under the title of the list of game profiles. */
+    profilesTitleSub: string;
+    profilesHint: string;
+    /** Under a game's name when its profile is opened from the list and the game is not running. */
+    profileSub: string;
+    /** The headroom in a profile's summary, by its other name. */
+    tdpBoost(on: boolean): string;
+    profileWaiting: string;
+    removeProfile: string;
+    removeAgain: string;
   };
   display: {
     title: string;

@@ -7,12 +7,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, replace
 from enum import StrEnum
 from pathlib import Path
+from typing import cast
 
 from origami.buttons import ButtonAction
 from origami.fsutil import atomic_write_text
 from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
-from origami.power import Power
+from origami.power import GamePower, Power
 from origami.saturation import MAX_PERCENT as MAX_SATURATION
 from origami.triggers import TriggerRumble
 from origami.vibration import Vibration
@@ -20,6 +21,8 @@ from origami.vibration import Vibration
 log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
+
+MAX_GAME_PROFILES = 200
 
 # Keys of Steam's quick access tabs (QuickAccessTab): ORIGAMI's own tab stands before one of them.
 SOUNDTRACKS_TAB = 7
@@ -63,6 +66,15 @@ class Settings:
     """TDP, its headroom and the CPU boost; the factory's limits until the user changes them."""
     battery_high_tdp: bool = False
     """The TDP may go over 25 W on the battery too."""
+    game_power: tuple[GamePower, ...] = ()
+    """Games with power settings of their own, one profile each."""
+
+    def power_for(self, game: int | None) -> Power:
+        """The power a game runs with: its own profile while that is active, else the general."""
+        for profile in self.game_power:
+            if profile.app_id == game and profile.active:
+                return profile.power
+        return self.power
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
@@ -75,20 +87,18 @@ class Settings:
                     parsed[key] = expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
-                case "lighting":
-                    parsed[key] = None if value is None else Lighting.from_json(value)
+                case "lighting" | "vibration" | "trigger_rumble":
+                    parsed[key] = None if value is None else _OPTIONAL[key].from_json(value)
                 case "saturation":
                     parsed[key] = _saturation(value)
                 case "armoury_crate":
                     parsed[key] = ButtonAction(value)
                 case "armoury_crate_hold":
                     parsed[key] = _hold_action(value)
-                case "vibration":
-                    parsed[key] = None if value is None else Vibration.from_json(value)
-                case "trigger_rumble":
-                    parsed[key] = None if value is None else TriggerRumble.from_json(value)
                 case "power":
                     parsed[key] = Power.from_json(value)
+                case "game_power":
+                    parsed[key] = _game_power(value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
         return replace(self, **parsed)
@@ -112,7 +122,16 @@ class Settings:
             "manage_tdp": self.manage_tdp,
             "power": self.power.to_json(),
             "battery_high_tdp": self.battery_high_tdp,
+            "game_power": [profile.to_json() for profile in self.game_power],
         }
+
+
+_OPTIONAL: dict[str, type[Lighting | Vibration | TriggerRumble]] = {
+    "lighting": Lighting,
+    "vibration": Vibration,
+    "trigger_rumble": TriggerRumble,
+}
+"""Settings that stay None until the user sets them, and the parsers of their values."""
 
 
 def _hold_action(value: object) -> ButtonAction:
@@ -128,6 +147,17 @@ def _saturation(value: object) -> int | None:
     if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= MAX_SATURATION:
         return value
     raise ValueError(f"Saturation must be a percentage from 0 to {MAX_SATURATION}")
+
+
+def _game_power(value: object) -> tuple[GamePower, ...]:
+    if not isinstance(value, list):
+        raise ValueError("game_power must be a list")
+    profiles = tuple(GamePower.from_json(item) for item in cast("list[object]", value))
+    if len(profiles) > MAX_GAME_PROFILES:
+        raise ValueError(f"At most {MAX_GAME_PROFILES} games can have their own power")
+    if len({profile.app_id for profile in profiles}) != len(profiles):
+        raise ValueError("A game can have only one power profile")
+    return profiles
 
 
 def _tab_position(value: object) -> int | None:

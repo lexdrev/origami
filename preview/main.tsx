@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "../src/App";
+import { watchRunningGame } from "../src/games";
 import { I18nProvider, type Language } from "../src/i18n";
 import { ArmouryCrateScreen } from "../src/screens/ArmouryCrateScreen";
 import { ChangesScreen } from "../src/screens/ChangesScreen";
@@ -122,6 +123,8 @@ quickAccessColumn.set({
   arranger: null,
 });
 void loadAll();
+// "?game" in the address stands for a game Steam runs (mocks/decky-ui.tsx).
+watchRunningGame();
 const container = document.getElementById("root");
 if (container === null) throw new Error("No #root element");
 createRoot(container).render(<Stand />);

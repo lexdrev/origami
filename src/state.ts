@@ -5,6 +5,7 @@ import {
   backend,
   type Change,
   type Conflicts,
+  type GamePower,
   type GyroState,
   type HeldPower,
   type Info,
@@ -165,6 +166,19 @@ export function setPower(power: Power): void {
   if (current.status !== "ready") return;
   settings.set({ status: "ready", value: { ...current.value, power } });
   savePower.send(power);
+}
+
+const saveGamePower = latestOnly(async (gamePower: GamePower[]) => {
+  if (!(await updateSettings({ gamePower }))) await reloadSettings();
+  await refreshHeldPower();
+});
+
+/** Saves the games' own power settings, shown at once as the general ones are. */
+export function setGamePower(gamePower: GamePower[]): void {
+  const current = settings.get();
+  if (current.status !== "ready") return;
+  settings.set({ status: "ready", value: { ...current.value, gamePower } });
+  saveGamePower.send(gamePower);
 }
 
 /** Switches the stick lighting on or off; it comes on as ORIGAMI's default the first time. */

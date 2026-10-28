@@ -11,7 +11,8 @@ import { CustomColourScreen } from "./screens/CustomColourScreen";
 import { DisplayScreen } from "./screens/DisplayScreen";
 import { GamepadScreen } from "./screens/GamepadScreen";
 import { MainScreen } from "./screens/MainScreen";
-import { PowerScreen } from "./screens/PowerScreen";
+import { GameProfilesScreen } from "./screens/GameProfilesScreen";
+import { GameProfileScreen, PowerScreen } from "./screens/PowerScreen";
 import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { actionError, useLanguage } from "./state";
@@ -23,6 +24,8 @@ import { styles } from "./ui/styles";
 const screens: Record<ScreenId, ComponentType> = {
   main: MainScreen,
   power: PowerScreen,
+  gameProfiles: GameProfilesScreen,
+  gameProfile: GameProfileScreen,
   display: DisplayScreen,
   customColour: CustomColourScreen,
   gamepad: GamepadScreen,

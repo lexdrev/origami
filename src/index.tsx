@@ -8,6 +8,7 @@ import { backend } from "./backend";
 import { App } from "./App";
 import { watchButtonActions } from "./buttonActions";
 import { PluginTitle } from "./PluginTitle";
+import { watchRunningGame } from "./games";
 import { watchGameStarts, watchSteamTdpLimit } from "./power";
 import { watchQuickAccessButton } from "./qamAssist";
 import { createOwnTab } from "./qamTab";
@@ -31,6 +32,8 @@ export default definePlugin(() => {
   // While Steam's own TDP limit is on, ORIGAMI leaves the TDP to it; a game start brings Steam's writes.
   const stopSteamTdpLimit = watchSteamTdpLimit();
   const stopGameStarts = watchGameStarts();
+  // A game with power settings of its own runs with them.
+  const stopRunningGame = watchRunningGame();
   // The tab follows the settings: it appears once they are loaded and moves when they change.
   const unsubscribe = settings.subscribe(() => {
     const current = settings.get();
@@ -48,6 +51,7 @@ export default definePlugin(() => {
       stopButtonActions();
       stopSteamTdpLimit();
       stopGameStarts();
+      stopRunningGame();
     },
   };
 });

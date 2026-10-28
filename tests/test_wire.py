@@ -46,6 +46,12 @@ def test_unknown_types_are_rejected() -> None:
         to_wire({1, 2})
 
 
+def test_objects_in_frontend_lists_get_field_names_too() -> None:
+    assert from_wire({"gamePower": [{"appId": 7, "power": {"cpuBoost": True}}]}) == {
+        "game_power": [{"app_id": 7, "power": {"cpu_boost": True}}]
+    }
+
+
 def test_nested_frontend_objects_get_field_names_too() -> None:
     assert from_wire({"lighting": {"mode": "static", "someFlag": True}}) == {
         "lighting": {"mode": "static", "some_flag": True},

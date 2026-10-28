@@ -139,6 +139,8 @@ class Origami:
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
         self._keeper = PowerKeeper(environment.root)
         self._steam_tdp_limit = False
+        self._game: int | None = None
+        """The game Steam runs now, whose own power applies while it has an active profile."""
         self._look_now = asyncio.Event()
         """Wakes the keeper before its next look: a supply changed, or there is news to write."""
         self._power = BackgroundTask("origami-power", self._hold_power)
@@ -306,6 +308,19 @@ class Origami:
             log.info("Steam's TDP slider is %s", "on: ORIGAMI writes over it" if on else "off")
             await self._follow_power(self._settings)
 
+    async def set_game(self, app_id: int | None) -> None:
+        """Steam runs this game now, or none: the power follows the game's own profile, if any."""
+        await self._started()
+        if app_id != self._game:
+            self._game = app_id
+            own = self._settings.power_for(app_id) is not self._settings.power
+            log.info(
+                "Running game: %s, power: %s",
+                app_id or "none",
+                "its own profile" if own else "general",
+            )
+            await self._follow_power(self._settings)
+
     async def game_started(self) -> None:
         """Steam started a game: it writes its own limits meanwhile, so ORIGAMI writes again."""
         self._keeper.game_started()
@@ -402,7 +417,7 @@ class Origami:
             target = None
         else:
             target = PowerTarget(
-                settings.power,
+                settings.power_for(self._game),
                 tdp=settings.manage_tdp,
                 battery_high_tdp=settings.battery_high_tdp,
                 steam_slider=self._steam_tdp_limit,
@@ -622,7 +637,11 @@ class Origami:
 
 
 def _power_changed(before: Settings, after: Settings) -> bool:
-    return (before.power, before.battery_high_tdp) != (after.power, after.battery_high_tdp)
+    return (before.power, before.battery_high_tdp, before.game_power) != (
+        after.power,
+        after.battery_high_tdp,
+        after.game_power,
+    )
 
 
 def _driven_buttons(settings: Settings) -> frozenset[Button]:

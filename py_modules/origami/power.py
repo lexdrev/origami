@@ -129,6 +129,50 @@ class Power:
         return {"tdp": self.tdp, "headroom": self.headroom, "cpu_boost": self.cpu_boost}
 
 
+MAX_GAME_NAME = 200
+"""Characters of a game's name kept for the list of profiles."""
+
+
+@dataclass(frozen=True, slots=True)
+class GamePower:
+    """A game's own power settings, made as a copy of the general ones when it is first chosen."""
+
+    app_id: int
+    """Steam's app id; non-Steam shortcuts have one as well."""
+    name: str
+    """The game's name as Steam showed it, for the list while the game is not running."""
+    power: Power
+    active: bool = True
+    """The game runs with this profile; off, it runs with the general settings and this waits."""
+
+    @classmethod
+    def from_json(cls, value: object) -> GamePower:
+        """Parse a game's profile sent by the frontend or saved; raise ValueError on bad input."""
+        if not isinstance(value, dict):
+            raise ValueError("a game's power must be an object")
+        data = cast("dict[str, object]", value)
+        app_id = data.get("app_id")
+        if not isinstance(app_id, int) or isinstance(app_id, bool) or app_id <= 0:
+            raise ValueError("app_id must be a positive Steam app id")
+        name = data.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("a game's power needs the game's name")
+        return cls(
+            app_id=app_id,
+            name=name.strip()[:MAX_GAME_NAME],
+            power=Power.from_json(data.get("power")),
+            active=expect_bool("active", data.get("active", True)),
+        )
+
+    def to_json(self) -> dict[str, JsonValue]:
+        return {
+            "app_id": self.app_id,
+            "name": self.name,
+            "power": self.power.to_json(),
+            "active": self.active,
+        }
+
+
 @dataclass(frozen=True, slots=True)
 class PowerTarget:
     """What the keeper holds: the power settings, and whether ORIGAMI owns the TDP."""

@@ -114,6 +114,17 @@ export interface Power {
   cpuBoost: boolean | null;
 }
 
+/** A game's own power settings, made as a copy of the general ones (origami.power.GamePower). */
+export interface GamePower {
+  /** Steam's app id; non-Steam shortcuts have one as well. */
+  appId: number;
+  /** The game's name as Steam showed it, for the list while the game is not running. */
+  name: string;
+  power: Power;
+  /** The game runs with this profile; off, it runs with the general settings and this waits. */
+  active: boolean;
+}
+
 /** The SoC's three power limits in watts (origami.tdp.Limits). */
 export interface Limits {
   spl: number;
@@ -161,6 +172,8 @@ export interface Settings {
   power: Power;
   /** The TDP may go over 25 W on the battery too. */
   batteryHighTdp: boolean;
+  /** Games with power settings of their own, one profile each. */
+  gamePower: GamePower[];
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
@@ -194,5 +207,6 @@ export const backend = {
   restoreSaturation: callable("restore_saturation"),
   getPower: callable<[], HeldPower>("get_power"),
   gameStarted: callable("game_started"),
+  setGame: callable<[appId: number | null]>("set_game"),
   setSteamTdpLimit: callable<[on: boolean]>("set_steam_tdp_limit"),
 };

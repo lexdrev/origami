@@ -175,6 +175,7 @@ ${fontFaces}
   text-transform: uppercase;
 }
 .og-choice--two-lines { flex-direction: column; gap: 2px; height: 46px; }
+.og-choice__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .og-choice__detail { font: 500 10px var(--og-mono); letter-spacing: 0; }
 .og-choice--static { pointer-events: none; }
 .og-choice.og-choice--action { gap: 6px; border-style: dashed; border-color: var(--og-dim); background: transparent; color: var(--og-text); }
@@ -201,6 +202,18 @@ ${fontFaces}
 .og-row__title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .og-row__sub { color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
 .og-row__note { color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
+.og-row__count { margin-left: 8px; color: var(--og-accent); font: 700 11px var(--og-mono); }
+.og-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 4px;
+  background: var(--og-muted);
+  color: var(--og-panel);
+  font: 500 10px var(--og-mono);
+  letter-spacing: 0;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
 .og-row__chevron { position: absolute; top: 50%; right: 10px; display: flex; margin-top: -8px; color: var(--og-dim); }
 .og-row.og-focused .og-row__chevron { color: var(--og-accent); }
 

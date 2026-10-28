@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { useMessages } from "../i18n";
 import { ENTER_PREFERRED_CHILD } from "../quickAccess";
 import { UISound } from "../sounds";
-import { IconButton, Pressable, Switch } from "./controls";
+import { Badge, IconButton, Pressable, Switch } from "./controls";
 import { BackIcon, ChevronIcon, WarningIcon } from "./icons";
 
 interface ScreenProps {
@@ -43,7 +43,7 @@ export function Screen({ onBack, children }: ScreenProps) {
 
 interface HeaderProps {
   title: string;
-  subtitle?: string;
+  subtitle?: string | undefined;
   icon?: ReactNode;
   onBack: () => void;
 }
@@ -107,6 +107,8 @@ interface CardSwitch {
 /** A framed group of controls with its title, as in the B2 screens; framed amber while focus is inside. */
 interface CardProps {
   title?: string;
+  /** Beside the title, such as how a game's setting differs from the general one. */
+  badge?: string | undefined;
   subtitle?: string | undefined;
   /** The subtitle names a problem the card fixes (style B2: red frame, triangle and text). */
   problem?: boolean;
@@ -116,8 +118,8 @@ interface CardProps {
   children: ReactNode;
 }
 
-export function Card({ title, subtitle, problem = false, aside, toggle, children }: CardProps) {
-  const titles = title && <CardTitles title={title} subtitle={subtitle} problem={problem} />;
+export function Card({ title, badge, subtitle, problem = false, aside, toggle, children }: CardProps) {
+  const titles = title && <CardTitles title={title} badge={badge} subtitle={subtitle} problem={problem} />;
   return (
     <section className={problem ? "og-card og-card--problem" : "og-card"}>
       {toggle === undefined ? (
@@ -128,7 +130,7 @@ export function Card({ title, subtitle, problem = false, aside, toggle, children
           </div>
         )
       ) : (
-        <SwitchLine title={title ?? ""} subtitle={subtitle} problem={problem} {...toggle} />
+        <SwitchLine title={title ?? ""} badge={badge} subtitle={subtitle} problem={problem} {...toggle} />
       )}
       {toggle === undefined
         ? children
@@ -144,12 +146,13 @@ export function Card({ title, subtitle, problem = false, aside, toggle, children
 
 interface SwitchLineProps extends CardSwitch {
   title: string;
+  badge?: string | undefined;
   subtitle?: string | undefined;
   problem?: boolean;
 }
 
 /** A title with a switch: a card's head, or an option inside a card that has no switch of its own. */
-export function SwitchLine({ title, subtitle, problem = false, value, action, onChange }: SwitchLineProps) {
+export function SwitchLine({ title, badge, subtitle, problem = false, value, action, onChange }: SwitchLineProps) {
   return (
     <Pressable
       className="og-card__head og-card__head--switch"
@@ -160,7 +163,7 @@ export function SwitchLine({ title, subtitle, problem = false, value, action, on
         onChange(!value);
       }}
     >
-      <CardTitles title={title} subtitle={subtitle} problem={problem} />
+      <CardTitles title={title} badge={badge} subtitle={subtitle} problem={problem} />
       <Switch on={value} />
     </Pressable>
   );
@@ -168,15 +171,19 @@ export function SwitchLine({ title, subtitle, problem = false, value, action, on
 
 interface CardTitlesProps {
   title: string;
+  badge?: string | undefined;
   subtitle?: string | undefined;
   problem?: boolean;
 }
 
 /** A card's title and subtitle; a card without a head places them itself, as the TDP card beside its dial. */
-export function CardTitles({ title, subtitle, problem = false }: CardTitlesProps) {
+export function CardTitles({ title, badge, subtitle, problem = false }: CardTitlesProps) {
   return (
     <span className="og-card__titles">
-      <span className="og-card__title">{title}</span>
+      <span className="og-card__title">
+        {title}
+        {badge !== undefined && <Badge text={badge} />}
+      </span>
       {subtitle && (
         <span className="og-card__subtitle">
           {problem && <WarningIcon size={12} />}

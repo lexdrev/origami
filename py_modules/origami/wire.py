@@ -30,6 +30,8 @@ def from_wire(changes: dict[str, object]) -> dict[str, object]:
 def _from_wire_value(value: object) -> object:
     if isinstance(value, dict):
         return from_wire(cast("dict[str, object]", value))
+    if isinstance(value, list):
+        return [_from_wire_value(item) for item in cast("list[object]", value)]
     return value
 
 

@@ -8,7 +8,7 @@ import pytest
 
 from origami.buttons import ButtonAction
 from origami.lighting import Lighting, LightMode
-from origami.power import Power
+from origami.power import GamePower, Power
 from origami.settings import FIRST_TAB, SOUNDTRACKS_TAB, Language, Settings, SettingsStore
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers
 from origami.vibration import Vibration
@@ -180,6 +180,41 @@ def test_origami_owns_the_tdp_at_the_factorys_limits_until_changed(tmp_path: Pat
     assert store.load() == Settings(
         manage_tdp=False, power=Power(25, headroom=False, cpu_boost=False), battery_high_tdp=True
     )
+
+
+def test_games_keep_their_own_power_through_a_save(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    game = {
+        "app_id": 1920490,
+        "name": "  The Outer Worlds  ",
+        "power": {"tdp": 15, "cpu_boost": True},
+    }
+    waiting = {"app_id": 7, "name": "Other", "power": {"tdp": 25}, "active": False}
+
+    store.save(Settings(power=Power(20)).updated({"game_power": [game, waiting]}))
+    loaded = store.load()
+
+    assert loaded.game_power == (
+        GamePower(1920490, "The Outer Worlds", Power(15, headroom=True, cpu_boost=True)),
+        GamePower(7, "Other", Power(25), active=False),
+    )
+    assert loaded.power_for(1920490) == Power(15, headroom=True, cpu_boost=True)
+    # A game whose profile waits, a game without one and no game at all run the general settings.
+    assert loaded.power_for(7) == loaded.power_for(42) == loaded.power_for(None) == Power(20)
+
+
+def test_bad_game_power_is_rejected() -> None:
+    game = {"app_id": 1, "name": "Game", "power": {"tdp": 15}}
+    with pytest.raises(ValueError, match="list"):
+        Settings().updated({"game_power": game})
+    with pytest.raises(ValueError, match="only one"):
+        Settings().updated({"game_power": [game, game]})
+    with pytest.raises(ValueError, match="app id"):
+        Settings().updated({"game_power": [{**game, "app_id": True}]})
+    with pytest.raises(ValueError, match="name"):
+        Settings().updated({"game_power": [{**game, "name": " "}]})
+    with pytest.raises(ValueError, match="tdp"):
+        Settings().updated({"game_power": [{**game, "power": {"tdp": 50}}]})
 
 
 def test_bad_power_settings_are_rejected() -> None:

@@ -31,6 +31,16 @@ let settings: Settings = {
   manageTdp: true,
   power: { tdp: 17, headroom: true, cpuBoost: null },
   batteryHighTdp: false,
+  gamePower: [
+    {
+      appId: 1920490,
+      name: "The Outer Worlds: Spacer's Choice Edition",
+      power: { tdp: 15, headroom: true, cpuBoost: true },
+      active: true,
+    },
+    { appId: 1091500, name: "Cyberpunk 2077", power: { tdp: 25, headroom: true, cpuBoost: null }, active: true },
+    { appId: 990080, name: "Hogwarts Legacy", power: { tdp: 20, headroom: false, cpuBoost: false }, active: false },
+  ],
 };
 // Steam's value, as gamescope shows it on the console without vibrantDeck.
 const STEAM_SATURATION = 100;
@@ -67,6 +77,7 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   get_gyro: () => (settings.gyroFix ? "fixed" : "wrong"),
   get_power: heldPower,
   game_started: () => undefined,
+  set_game: () => undefined,
   set_steam_tdp_limit: () => undefined,
 };
 

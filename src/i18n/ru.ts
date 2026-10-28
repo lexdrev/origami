@@ -101,6 +101,23 @@ export const ru: Messages = {
     ownedBy: (plugin) => `Питанием управляет ${plugin}`,
     ownedText: (plugin) =>
       `TDP и\u00a0процессор могут слушаться только одного плагина, поэтому ORIGAMI их не\u00a0трогает. Выключите или удалите ${plugin} в\u00a0Decky\u00a0— настройки питания появятся здесь.`,
+    gameLimit: "Предел игры",
+    profile: "Профиль",
+    general: "Общий",
+    gameOnly: "Настройки только для этой игры",
+    chooseGame: "Выберите игру, чтобы настроить её отдельно",
+    profileWaits: "Игра на\u00a0общих · её профиль сохранён",
+    differs: (general) => (general === undefined ? "≠\u00a0общий" : `≠\u00a0общий\u00a0${general}`),
+    profiles: "Профили игр",
+    profilesSub: "Игра не\u00a0запущена · действует общий",
+    profilesTitleSub: "Питание · свои настройки для\u00a0игр",
+    profilesHint:
+      "Чтобы добавить игру, запустите её и\u00a0выберите её название вверху экрана «Питание». Профиль создастся копией общего.",
+    profileSub: "Профиль игры · игра не\u00a0запущена",
+    tdpBoost: (on) => (on ? "буст\u00a0TDP\u00a0вкл" : "буст\u00a0TDP\u00a0выкл"),
+    profileWaiting: "Действует общий",
+    removeProfile: "Удалить",
+    removeAgain: "Нажмите ещё раз, чтобы удалить",
   },
   display: {
     title: "Дисплей и свет",

@@ -20,14 +20,21 @@ interface PressableProps {
   disabled?: boolean;
   /** Takes the focus when it comes into the panel, from the quick access tabs for one. */
   preferredFocus?: boolean;
+  /** What the X button does while the element has focus, shown by Steam next to it. */
+  secondary?: SecondaryAction;
   style?: CSSProperties;
   children?: ReactNode;
+}
+
+interface SecondaryAction {
+  action: string;
+  onPress: () => void;
 }
 
 /** Base of every interactive element: reachable with the D-pad, activated with A or a tap. */
 export function Pressable(props: PressableProps) {
   const { className, onPress, action, label, pressed, sound, disabled = false, preferredFocus = false } = props;
-  const { style, children } = props;
+  const { secondary, style, children } = props;
   return (
     <Focusable
       className={disabled ? `${className} og-disabled` : className}
@@ -45,6 +52,10 @@ export function Pressable(props: PressableProps) {
         onPress();
       }}
       onOKActionDescription={action}
+      {...(secondary !== undefined && {
+        onSecondaryButton: secondary.onPress,
+        onSecondaryActionDescription: secondary.action,
+      })}
     >
       {children}
     </Focusable>
@@ -103,7 +114,7 @@ export function ChoiceGroup<T extends string>(props: ChoiceGroupProps<T>) {
                 onChange(choice.value);
               }}
             >
-              {choice.label}
+              <span className="og-choice__label">{choice.label}</span>
               {choice.detail !== undefined && <span className="og-choice__detail">{choice.detail}</span>}
             </Pressable>
           );
@@ -171,6 +182,8 @@ export function OptionList<T extends string>({ label, options, value, action, on
 
 interface ToggleRowProps {
   title: string;
+  /** Beside the title, such as how a game's setting differs from the general one. */
+  badge?: string | undefined;
   subtitle: string;
   value: boolean;
   action: string;
@@ -191,7 +204,8 @@ export function Switch({ on }: { on: boolean }) {
 }
 
 /** A row with the B2 switch; plays Steam's toggle sounds. */
-export function ToggleRow({ title, subtitle, value, action, problem = false, note, onChange }: ToggleRowProps) {
+export function ToggleRow(props: ToggleRowProps) {
+  const { title, badge, subtitle, value, action, problem = false, note, onChange } = props;
   return (
     <Pressable
       className={problem ? "og-row og-toggle og-row--problem" : "og-row og-toggle"}
@@ -202,7 +216,10 @@ export function ToggleRow({ title, subtitle, value, action, problem = false, not
         onChange(!value);
       }}
     >
-      <span className="og-row__title">{title}</span>
+      <span className="og-row__title">
+        {title}
+        {badge !== undefined && <Badge text={badge} />}
+      </span>
       <span className="og-row__sub">
         {problem && <WarningIcon size={12} />}
         {subtitle}
@@ -215,27 +232,47 @@ export function ToggleRow({ title, subtitle, value, action, problem = false, not
 
 interface NavRowProps {
   title: string;
+  /** Beside the title in amber: how many things the next screen holds. */
+  count?: number;
   subtitle: string;
+  /** A grey line under the subtitle. */
+  note?: string | undefined;
   action: string;
   /** The subtitle names a problem the next screen fixes (style B2: red frame, triangle and text). */
   problem?: boolean;
+  secondary?: SecondaryAction;
   onPress: () => void;
 }
 
 /** A row that opens another screen. */
-export function NavRow({ title, subtitle, action, problem = false, onPress }: NavRowProps) {
+export function NavRow(props: NavRowProps) {
+  const { title, count, subtitle, note, action, problem = false, secondary, onPress } = props;
   return (
-    <Pressable className={problem ? "og-row og-row--problem" : "og-row"} action={action} onPress={onPress}>
-      <span className="og-row__title">{title}</span>
+    <Pressable
+      className={problem ? "og-row og-row--problem" : "og-row"}
+      action={action}
+      {...(secondary !== undefined && { secondary })}
+      onPress={onPress}
+    >
+      <span className="og-row__title">
+        {title}
+        {count !== undefined && <span className="og-row__count">{count}</span>}
+      </span>
       <span className="og-row__sub">
         {problem && <WarningIcon size={12} />}
         {subtitle}
       </span>
+      {note !== undefined && <span className="og-row__note">{note}</span>}
       <span className="og-row__chevron">
         <ChevronIcon />
       </span>
     </Pressable>
   );
+}
+
+/** A grey tag beside a title, such as "≠ general" in a game's settings. */
+export function Badge({ text }: { text: string }) {
+  return <span className="og-badge">{text}</span>;
 }
 
 interface SliderProps {
