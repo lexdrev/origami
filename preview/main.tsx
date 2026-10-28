@@ -11,6 +11,7 @@ import { ChangesScreen } from "../src/screens/ChangesScreen";
 import { DisplayScreen } from "../src/screens/DisplayScreen";
 import { GamepadScreen } from "../src/screens/GamepadScreen";
 import { MainScreen } from "../src/screens/MainScreen";
+import { PowerScreen } from "../src/screens/PowerScreen";
 import { QamTabScreen } from "../src/screens/QamTabScreen";
 import { SettingsScreen } from "../src/screens/SettingsScreen";
 import { PluginTitle } from "../src/PluginTitle";
@@ -72,6 +73,11 @@ function Stand() {
         <Frame title="Main · EN">
           <Static language="en">
             <MainScreen />
+          </Static>
+        </Frame>
+        <Frame title="Power · RU">
+          <Static language="ru">
+            <PowerScreen />
           </Static>
         </Frame>
         <Frame title="Display & Light · RU">

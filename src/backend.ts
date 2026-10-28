@@ -24,8 +24,24 @@ export interface Info {
   versions: Versions;
 }
 
+export interface BatteryTelemetry {
+  percent: number | null;
+  charging: boolean;
+  /** Until empty at the power drawn now; null on the charger or while nothing is drawn. */
+  minutesLeft: number | null;
+  /** Full charge now against the design's: the battery's wear. */
+  capacityPct: number | null;
+}
+
 export interface Telemetry {
-  power: { tdpLimitW: number | null; packagePowerW: number | null; cpuBoost: boolean | null };
+  power: {
+    /** What asus-armoury shows for the supply in use: what was written last, not what the firmware applies. */
+    tdpLimitW: number | null;
+    packagePowerW: number | null;
+    cpuBoost: boolean | null;
+    onBattery: boolean;
+    battery: BatteryTelemetry | null;
+  };
   fans: { speedsRpm: number[]; cpuTempC: number | null; gpuTempC: number | null };
   gamepad: { vibrationPct: [number, number] | null };
 }
@@ -86,6 +102,33 @@ export type ButtonAction =
   | "magnifier"
   | "close_game";
 
+/** What the user chose on the Power screen (origami.power.Power). */
+export interface Power {
+  /** The sustained limit in watts, 7–35. */
+  tdp: number;
+  /** Short boosts above the TDP, as from the factory; off, all three limits are the TDP. */
+  headroom: boolean;
+  /** Null until the user chooses; ORIGAMI leaves the boost flag alone until then. */
+  cpuBoost: boolean | null;
+}
+
+/** The SoC's three power limits in watts (origami.tdp.Limits). */
+export interface Limits {
+  spl: number;
+  sppt: number;
+  fppt: number;
+}
+
+/** What ORIGAMI holds now (origami.power.HeldPower). */
+export interface HeldPower {
+  /** ORIGAMI's limits for the supply in use; null while it does not write the TDP. */
+  limits: Limits | null;
+  /** On the battery the TDP is held at 25 W instead of the one chosen. */
+  batteryCapped: boolean;
+  /** Something else keeps writing the TDP, so ORIGAMI stopped until the settings change. */
+  contested: boolean;
+}
+
 /** What the gyroscope's axes need here (origami.gyro.GyroState). */
 export type GyroState = "unavailable" | "fixed_in_system" | "foreign" | "wrong" | "fixed" | "outdated";
 
@@ -111,6 +154,11 @@ export interface Settings {
   armouryCrate: ButtonAction;
   /** What holding the upper left button does, besides the L5 Steam gets from it. */
   armouryCrateHold: ButtonAction;
+  /** ORIGAMI owns the TDP and writes it again whenever it drops; off, Steam sets it. */
+  manageTdp: boolean;
+  power: Power;
+  /** The TDP may go over 25 W on the battery too. */
+  batteryHighTdp: boolean;
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
@@ -119,6 +167,7 @@ export interface Conflicts {
   saturation: string | null;
   vibration: string | null;
   triggers: string | null;
+  power: string | null;
 }
 
 export interface Change {
@@ -141,4 +190,7 @@ export const backend = {
   getGyro: callable<[], GyroState>("get_gyro"),
   getSaturation: callable<[], number | null>("get_saturation"),
   restoreSaturation: callable("restore_saturation"),
+  getPower: callable<[], HeldPower>("get_power"),
+  gameStarted: callable("game_started"),
+  setSteamTdpLimit: callable<[on: boolean, watts: number | null]>("set_steam_tdp_limit"),
 };

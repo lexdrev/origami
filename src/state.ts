@@ -6,8 +6,10 @@ import {
   type Change,
   type Conflicts,
   type GyroState,
+  type HeldPower,
   type Info,
   type Lighting,
+  type Power,
   type Settings,
   type Telemetry,
   type TriggerRumble,
@@ -26,6 +28,7 @@ export const telemetry = createStore<Loadable<Telemetry>>({ status: "loading" })
 export const conflicts = createStore<Loadable<Conflicts>>({ status: "loading" });
 export const gyro = createStore<Loadable<GyroState>>({ status: "loading" });
 export const triggerState = createStore<Loadable<TriggerState>>({ status: "loading" });
+export const heldPower = createStore<Loadable<HeldPower>>({ status: "loading" });
 export const steamLanguage = createStore<Language>("en");
 /** The last failed action, shown until the next one succeeds. */
 export const actionError = createStore<string | null>(null);
@@ -66,6 +69,11 @@ export function currentMessages(): Messages {
 
 export function refreshTelemetry(): Promise<void> {
   return load(telemetry, backend.getTelemetry);
+}
+
+/** The limits ORIGAMI holds follow the charger and other writers, so they are read with the telemetry. */
+export function refreshHeldPower(): Promise<void> {
+  return load(heldPower, backend.getPower);
 }
 
 /** InputPlumber's device files change with updates and other programs, so this is read when the screen opens. */
@@ -144,6 +152,19 @@ export function setTriggerRumble(triggerRumble: TriggerRumble): void {
   if (current.status !== "ready") return;
   settings.set({ status: "ready", value: { ...current.value, triggerRumble } });
   saveTriggerRumble.send(triggerRumble);
+}
+
+const savePower = latestOnly(async (power: Power) => {
+  if (!(await updateSettings({ power }))) await reloadSettings();
+  await refreshHeldPower();
+});
+
+/** Saves the power settings, shown at once so the TDP slider follows a held D-pad. */
+export function setPower(power: Power): void {
+  const current = settings.get();
+  if (current.status !== "ready") return;
+  settings.set({ status: "ready", value: { ...current.value, power } });
+  savePower.send(power);
 }
 
 /** Switches the stick lighting on or off; it comes on as ORIGAMI's default the first time. */

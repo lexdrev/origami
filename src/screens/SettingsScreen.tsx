@@ -7,7 +7,7 @@ import { back, navigate } from "../navigation";
 import { changes, info, settings, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Header, Screen, SectionLabel } from "../ui/blocks";
-import { ChoiceGroup, NavRow, type Choice } from "../ui/controls";
+import { ChoiceGroup, NavRow, ToggleRow, type Choice } from "../ui/controls";
 import { FoxMark, GearIcon } from "../ui/icons";
 import { ownTabSummary, quickAccessColumn } from "../tabPosition";
 
@@ -40,6 +40,17 @@ export function SettingsScreen() {
       />
 
       <SectionLabel>{t.settings.system}</SectionLabel>
+      {current.status === "ready" && (
+        <ToggleRow
+          title={t.settings.manageTdp}
+          subtitle={current.value.manageTdp ? t.settings.manageTdpOn : t.settings.manageTdpOff}
+          problem={!current.value.manageTdp}
+          note={t.settings.manageTdpNote}
+          value={current.value.manageTdp}
+          action={t.actions.toggle}
+          onChange={(manageTdp) => void updateSettings({ manageTdp })}
+        />
+      )}
       <NavRow
         title={t.settings.qamTab}
         subtitle={

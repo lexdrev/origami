@@ -5,12 +5,12 @@ import { useQuickAccessVisible } from "@decky/api";
 import { useEffect } from "react";
 
 import type { Telemetry } from "./backend";
-import { refreshTelemetry, telemetry } from "./state";
+import { refreshHeldPower, refreshTelemetry, telemetry } from "./state";
 import { useStore, type Loadable } from "./store";
 
 const POLL_INTERVAL_MS = 1000;
 
-/** Live readings, polled only while the quick access menu is open. */
+/** Live readings and the limits ORIGAMI holds, polled only while the quick access menu is open. */
 export function useTelemetry(): Loadable<Telemetry> {
   const visible = useQuickAccessVisible();
 
@@ -21,7 +21,7 @@ export function useTelemetry(): Loadable<Telemetry> {
     // The next request starts after the previous one finished, so a slow backend
     // never gets a queue of requests.
     const poll = async () => {
-      await refreshTelemetry();
+      await Promise.all([refreshTelemetry(), refreshHeldPower()]);
       if (!stopped) timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
     };
     void poll();

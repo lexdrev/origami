@@ -9,17 +9,17 @@ import { ru } from "../i18n/ru";
 import { tileTexts } from "./tiles";
 
 const NBSP = "\u00a0";
-const none = { saturation: null, vibration: null };
+const none = { saturation: null, vibration: null, tdp: null };
 
 const allyX: Telemetry = {
-  power: { tdpLimitW: 17, packagePowerW: 16.94, cpuBoost: false },
+  power: { tdpLimitW: 35, packagePowerW: 16.94, cpuBoost: false, onBattery: false, battery: null },
   fans: { speedsRpm: [4600, 4700], cpuTempC: 61.6, gpuTempC: 63.2 },
   gamepad: { vibrationPct: [50, 50] },
 };
 
 describe("tile texts", () => {
   it("show live values in Russian", () => {
-    expect(tileTexts(allyX, { saturation: 150, vibration: null }, ru)).toEqual({
+    expect(tileTexts(allyX, { saturation: 150, vibration: null, tdp: 17 }, ru)).toEqual({
       power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · буст${NBSP}выкл` },
       fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C` },
       display: { value: "150%", subtitle: "Насыщенность" },
@@ -34,14 +34,18 @@ describe("tile texts", () => {
   });
 
   it("show the strength ORIGAMI keeps, which the driver does not know", () => {
-    const own = { saturation: null, vibration: { enabled: true, left: 25, right: 25 } };
+    const own = { saturation: null, vibration: { enabled: true, left: 25, right: 25 }, tdp: null };
 
     expect(tileTexts(allyX, own, en).gamepad.value).toBe("25%");
   });
 
+  it("show what asus-armoury shows while ORIGAMI holds no TDP", () => {
+    expect(tileTexts(allyX, none, en).power.value).toBe(`35${NBSP}W`);
+  });
+
   it("show dashes before the first reading and on other hardware", () => {
     const unknown: Telemetry = {
-      power: { tdpLimitW: null, packagePowerW: null, cpuBoost: null },
+      power: { tdpLimitW: null, packagePowerW: null, cpuBoost: null, onBattery: false, battery: null },
       fans: { speedsRpm: [], cpuTempC: null, gpuTempC: null },
       gamepad: { vibrationPct: null },
     };

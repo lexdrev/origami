@@ -8,6 +8,7 @@ import { backend } from "./backend";
 import { App } from "./App";
 import { watchButtonActions } from "./buttonActions";
 import { PluginTitle } from "./PluginTitle";
+import { watchGameStarts, watchSteamTdpLimit } from "./power";
 import { watchQuickAccessButton } from "./qamAssist";
 import { createOwnTab } from "./qamTab";
 import { loadAll, settings } from "./state";
@@ -27,6 +28,9 @@ export default definePlugin(() => {
   const ownTab = createOwnTab({ title: null, icon: <FoxGlyph />, content: <TabApp /> });
   // The backend reports presses of the Armoury Crate button only while an action is assigned to it.
   const stopButtonActions = watchButtonActions(() => ownTab?.shown() ?? false);
+  // While Steam's own TDP limit is on, ORIGAMI leaves the TDP to it; a game start brings Steam's writes.
+  const stopSteamTdpLimit = watchSteamTdpLimit();
+  const stopGameStarts = watchGameStarts();
   // The tab follows the settings: it appears once they are loaded and moves when they change.
   const unsubscribe = settings.subscribe(() => {
     const current = settings.get();
@@ -42,6 +46,8 @@ export default definePlugin(() => {
       ownTab?.dispose();
       stopQamAssist();
       stopButtonActions();
+      stopSteamTdpLimit();
+      stopGameStarts();
     },
   };
 });

@@ -13,6 +13,7 @@ import type {
   Triggers,
 } from "../backend";
 import type { PaletteColour } from "../lighting";
+import type { TdpPreset } from "../power";
 import type { VibrationPreset } from "../vibration";
 import { en } from "./en";
 import { ru } from "./ru";
@@ -45,6 +46,13 @@ export interface Messages {
     language: string;
     languages: Record<LanguageSetting, string>;
     system: string;
+    manageTdp: string;
+    /** What ORIGAMI does while it manages the TDP. */
+    manageTdpOn: string;
+    /** The problem left while it does not: Steam sets the TDP, and it drops. */
+    manageTdpOff: string;
+    /** When to switch it off. */
+    manageTdpNote: string;
     qamTab: string;
     qamTabOff: string;
     qamTabFirst: string;
@@ -70,6 +78,44 @@ export interface Messages {
     down: string;
     toTop: string;
     toBottom: string;
+  };
+  power: {
+    title: string;
+    /** Under the TDP on the dial. */
+    limit: string;
+    /** The power drawn now: on the dial where ORIGAMI does not set the TDP, under it where it does. */
+    now: string;
+    /** The SoC draws far less than the limit: nothing runs that needs it. */
+    noLoad: string;
+    /** Steam's own TDP limit is on and writes over ORIGAMI's. */
+    steamOverrides: string;
+    tdp: string;
+    tdpSub: string;
+    presets: Record<TdpPreset["id"] | "custom", string>;
+    headroom: string;
+    headroomOn: string;
+    headroomOff: string;
+    limits: { spl: string; sppt: string; fppt: string };
+    cpuBoost: string;
+    cpuBoostOn: string;
+    cpuBoostOff: string;
+    batteryHigh: string;
+    batteryHighOn: string;
+    batteryHighOff: string;
+    battery: string;
+    charging: string;
+    timeLeft(hours: number, minutes: number): string;
+    capacity: string;
+    steamLimit: string;
+    /** Steam's own watts, when known, over ORIGAMI's. */
+    steamLimitText(steam: number | null, own: number): string;
+    openPerformance: string;
+    contested: string;
+    contestedText: string;
+    steamSets: string;
+    steamSetsText: string;
+    ownedBy(plugin: string): string;
+    ownedText(plugin: string): string;
   };
   display: {
     title: string;

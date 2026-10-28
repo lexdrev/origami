@@ -24,6 +24,8 @@ export interface OwnValues {
   saturation: number | null;
   /** The saved strength; until there is one, the tile shows the driver's. */
   vibration: Vibration | null;
+  /** The sustained limit ORIGAMI holds; while it holds none, the tile shows what asus-armoury shows. */
+  tdp: number | null;
 }
 
 const SEPARATOR = " · ";
@@ -34,6 +36,7 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
   const power = telemetry?.power;
   const fans = telemetry?.fans;
   const vibration = currentVibration(own.vibration, telemetry);
+  const tdp = own.tdp ?? power?.tdpLimitW ?? null;
 
   const powerParts = [
     power?.packagePowerW != null && t.main.powerNow(withUnit(number(power.packagePowerW, 1), t.units.watts)),
@@ -45,7 +48,7 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
 
   return {
     power: {
-      value: power?.tdpLimitW != null ? withUnit(number(power.tdpLimitW), t.units.watts) : t.unknown,
+      value: tdp !== null ? withUnit(number(tdp), t.units.watts) : t.unknown,
       subtitle: powerParts.filter((part) => part !== false).join(SEPARATOR),
     },
     fans: {

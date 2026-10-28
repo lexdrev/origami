@@ -249,7 +249,7 @@ interface SliderProps {
   /** CSS colour of the thumb. */
   thumb: string;
   /** A tick on the track at this value, such as the default. */
-  notch?: number;
+  notch?: number | undefined;
   lessLabel: string;
   moreLabel: string;
   onChange: (value: number) => void;

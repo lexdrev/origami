@@ -3,7 +3,7 @@
 
 // Browser stand-in for @decky/api with readings taken from the console (HARDWARE.md).
 
-import type { Change, Conflicts, Info, Settings, Telemetry } from "../../src/backend";
+import type { Change, Conflicts, HeldPower, Info, Settings, Telemetry } from "../../src/backend";
 
 const info: Info = {
   version: "0.1.0",
@@ -28,16 +28,25 @@ let settings: Settings = {
   triggerRumble: null,
   armouryCrate: "none",
   armouryCrateHold: "none",
+  manageTdp: true,
+  power: { tdp: 17, headroom: true, cpuBoost: null },
+  batteryHighTdp: false,
 };
 // Steam's value, as gamescope shows it on the console without vibrantDeck.
 const STEAM_SATURATION = 100;
-const conflicts: Conflicts = { lighting: null, saturation: null, vibration: null, triggers: null };
+const conflicts: Conflicts = { lighting: null, saturation: null, vibration: null, triggers: null, power: null };
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {
   const wobble = Math.sin(Date.now() / 4000);
   return {
-    power: { tdpLimitW: 17, packagePowerW: 16.9 + wobble * 0.3, cpuBoost: false },
+    power: {
+      tdpLimitW: settings.power.tdp,
+      packagePowerW: settings.power.tdp - 0.1 + wobble * 0.3,
+      cpuBoost: settings.power.cpuBoost ?? false,
+      onBattery: false,
+      battery: { percent: 68, charging: true, minutesLeft: null, capacityPct: 93 },
+    },
     fans: { speedsRpm: [4600 + Math.round(wobble * 80), 4700], cpuTempC: 63.4, gpuTempC: 61 },
     gamepad: { vibrationPct: [100, 100] },
   };
@@ -56,7 +65,19 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   get_trigger_state: () => "available",
   test_trigger_rumble: () => undefined,
   get_gyro: () => (settings.gyroFix ? "fixed" : "wrong"),
+  get_power: heldPower,
+  game_started: () => undefined,
+  set_steam_tdp_limit: () => undefined,
 };
+
+// The limits as asus-armoury takes them on the charger: the boost from 14 W, the peak from 19 W.
+function heldPower(): HeldPower {
+  const { tdp, headroom } = settings.power;
+  if (!settings.manageTdp) return { limits: null, batteryCapped: false, contested: false };
+  const sppt = Math.min(Math.max(headroom ? tdp + 4 : tdp, 14), 45);
+  const fppt = Math.min(Math.max(headroom ? tdp + 9 : tdp, 19), 55);
+  return { limits: { spl: tdp, sppt, fppt }, batteryCapped: false, contested: false };
+}
 
 export function callable(route: string) {
   return async (...args: never[]): Promise<unknown> => {

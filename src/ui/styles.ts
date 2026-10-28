@@ -292,6 +292,70 @@ ${fontFaces}
 .og-choices__note { margin-top: -4px; color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-align: center; text-transform: uppercase; }
 .og-card__aside--accent { color: var(--og-accent); }
 
+/* The Power screen's dial: a tick a watt from 7 to 35 W on a 240° arc, every fifth one longer. */
+.og-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--og-border);
+  border-radius: 2px;
+  background: var(--og-surface);
+}
+.og-dial__face { position: relative; width: 140px; height: 124px; }
+.og-dial__tick { position: absolute; top: 70px; left: 50%; width: 3px; height: 9px; margin: -7px 0 0 -1.5px; background: #262d36; }
+.og-dial__tick--major { height: 13px; }
+.og-dial__tick--on { background: var(--og-accent); }
+.og-dial__tick--over { background: var(--og-danger-line); }
+.og-dial__tick--drawn { background: var(--og-dim); }
+.og-dial__tick--locked { background: transparent; box-shadow: inset 0 0 0 1px #3a434e; }
+.og-dial__lock { position: absolute; right: 15px; bottom: 4px; display: flex; color: var(--og-dim); }
+.og-dial__center { position: absolute; top: 44px; right: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.og-dial__reading { display: flex; align-items: baseline; gap: 4px; }
+.og-dial__value { font: 700 36px/1 var(--og-mono); }
+.og-dial__unit { color: var(--og-muted); font: 500 12px var(--og-mono); text-transform: uppercase; }
+.og-dial__label { color: var(--og-muted); font: 500 9px var(--og-mono); text-transform: uppercase; white-space: nowrap; }
+.og-dial__end { position: absolute; bottom: 4px; color: var(--og-muted); font: 500 9px var(--og-mono); }
+.og-dial__end--low { left: 4px; }
+.og-dial__end--high { right: 0; }
+.og-dial__readout {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  color: var(--og-muted);
+  font: 500 10px var(--og-mono);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.og-dial__readout--split { justify-content: space-between; }
+.og-dial__readout b { color: var(--og-text); }
+.og-dial__readout b.og-dial__now--problem { color: var(--og-danger-text); }
+.og-dial__status { display: flex; align-items: center; gap: 5px; }
+.og-dial__status::before { content: ""; width: 7px; height: 7px; background: var(--og-dim); }
+.og-dial__status--problem { color: var(--og-danger-text); }
+.og-dial__status--problem::before { background: var(--og-danger); }
+
+.og-limits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.og-limit { display: flex; flex-direction: column; gap: 2px; padding: 6px 7px; border: 1px solid var(--og-track); background: var(--og-panel); }
+.og-limit__value { font: 700 13px var(--og-mono); text-transform: uppercase; white-space: nowrap; }
+.og-limit__value--boost { color: var(--og-accent); }
+.og-limit__code { font: 500 9px var(--og-mono); }
+.og-limit__label { color: var(--og-muted); font: 500 9px var(--og-mono); text-transform: uppercase; }
+
+.og-battery {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 2px 0;
+  border-top: 1px solid var(--og-divider);
+  color: var(--og-muted);
+  font: 500 10px var(--og-mono);
+  text-transform: uppercase;
+}
+.og-battery b { color: var(--og-text); }
+
 .og-colour-value { display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--og-border); }
 .og-colour-value__swatch { width: 18px; height: 18px; border-radius: 2px; }
 .og-colour-value__hex { font: 700 16px var(--og-mono); }

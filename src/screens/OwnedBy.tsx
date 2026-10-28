@@ -12,7 +12,8 @@ import { Pressable } from "../ui/controls";
 const DECKY_PLUGINS_ROUTE = "/decky/settings/plugins";
 
 interface OwnedByProps {
-  section: string;
+  /** The block of the screen the plugin drives; none when it drives the whole screen. */
+  section?: string;
   title: string;
   text: string;
 }
@@ -22,7 +23,7 @@ export function OwnedBy({ section, title, text }: OwnedByProps) {
   const t = useMessages();
   return (
     <>
-      <SectionLabel>{section}</SectionLabel>
+      {section !== undefined && <SectionLabel>{section}</SectionLabel>}
       <Alert title={title}>{text}</Alert>
       <Pressable
         className="og-button"

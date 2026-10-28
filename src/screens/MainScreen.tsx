@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
 import { refreshSaturation, saturation } from "../saturation";
-import { info, settings } from "../state";
+import { heldPower, info, settings } from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
@@ -21,13 +21,18 @@ export function MainScreen() {
   const telemetry = useTelemetry();
   const level = useStore(saturation);
   const current = useStore(settings);
+  const held = useStore(heldPower);
   // Steam's own setting, changed from Steam's settings page too.
   useEffect(() => {
     void refreshSaturation();
   }, []);
   const tiles = tileTexts(
     telemetry.status === "ready" ? telemetry.value : null,
-    { saturation: level, vibration: current.status === "ready" ? current.value.vibration : null },
+    {
+      saturation: level,
+      vibration: current.status === "ready" ? current.value.vibration : null,
+      tdp: held.status === "ready" ? (held.value.limits?.spl ?? null) : null,
+    },
     t,
   );
 
@@ -37,7 +42,14 @@ export function MainScreen() {
       {telemetry.status === "failed" && <Alert title={t.errors.backend}>{telemetry.error}</Alert>}
       {/* Steam moves focus up and down a screen by default; the tiles go every way. */}
       <Focusable className="og-tiles" flow-children="grid">
-        <Tile icon={<PowerIcon />} name={t.main.tiles.power} {...tiles.power} />
+        <Tile
+          icon={<PowerIcon />}
+          name={t.main.tiles.power}
+          {...tiles.power}
+          onOpen={() => {
+            navigate("power");
+          }}
+        />
         <Tile icon={<FansIcon />} name={t.main.tiles.fans} {...tiles.fans} />
         <Tile
           icon={<DisplayIcon />}
