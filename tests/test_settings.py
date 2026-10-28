@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from origami.buttons import ButtonAction
+from origami.fans import FanCurve
 from origami.lighting import Lighting, LightMode
 from origami.power import GamePower, Power
 from origami.settings import FIRST_TAB, SOUNDTRACKS_TAB, Language, Settings, SettingsStore
@@ -215,6 +216,17 @@ def test_bad_game_power_is_rejected() -> None:
         Settings().updated({"game_power": [{**game, "name": " "}]})
     with pytest.raises(ValueError, match="tdp"):
         Settings().updated({"game_power": [{**game, "power": {"tdp": 50}}]})
+
+
+def test_the_fan_curve_stays_off_until_switched_on_and_keeps_its_points(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    assert Settings().fans is None
+
+    store.save(
+        Settings().updated({"fans": {"enabled": False, "points": [20, 30, 45, 60, 75, 90, 100]}})
+    )
+
+    assert store.load().fans == FanCurve(enabled=False, points=(20, 30, 45, 60, 75, 90, 100))
 
 
 def test_bad_power_settings_are_rejected() -> None:

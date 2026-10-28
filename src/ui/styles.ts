@@ -314,6 +314,38 @@ ${fontFaces}
 .og-card__aside--accent { color: var(--og-accent); }
 
 /* The Power screen's dial: a tick a watt from 7 to 35 W on a 240° arc, every fifth one longer. */
+/* Fans: two cards side by side for the fans and for the temperatures, then the curve. */
+.og-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.og-fan { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border: 1px solid var(--og-border); border-radius: 2px; background: var(--og-surface); }
+.og-fan__gauge { position: relative; width: 104px; height: 78px; }
+.og-fan__tick { position: absolute; top: 50px; left: 50%; width: 3px; height: 8px; margin: -6px 0 0 -1.5px; background: #262d36; }
+.og-fan__tick--major { height: 12px; }
+.og-fan__tick--on { background: var(--og-accent); }
+.og-fan__reading { position: absolute; top: 36px; right: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.og-fan__rpm { font: 700 17px/1 var(--og-mono); white-space: nowrap; }
+.og-fan__unit { color: var(--og-muted); font: 500 9px var(--og-mono); text-transform: uppercase; }
+.og-fan__name { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.og-fan__part { margin-top: -2px; color: var(--og-muted); font: 500 10px var(--og-mono); text-transform: uppercase; white-space: nowrap; }
+.og-fan__spark { width: 108px; height: 30px; margin-top: 4px; }
+.og-fan__base { stroke: var(--og-divider); stroke-width: 1; }
+.og-fan__line { fill: none; stroke: var(--og-accent); stroke-width: 1.6; stroke-linejoin: round; }
+.og-fan__ends { display: flex; justify-content: space-between; width: 108px; color: var(--og-dim); font: 500 9px var(--og-mono); text-transform: uppercase; white-space: nowrap; }
+.og-temp { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--og-border); border-radius: 2px; background: var(--og-surface); color: var(--og-accent); }
+.og-temp svg { flex-shrink: 0; }
+.og-temp__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; color: var(--og-text); }
+.og-temp__value { font: 700 17px/1.1 var(--og-mono); }
+.og-temp__name { color: var(--og-muted); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.og-curve { display: block; width: 100%; height: auto; }
+.og-curve__grid { stroke: var(--og-track); stroke-width: 1; }
+.og-curve__axis { stroke: var(--og-border); stroke-width: 1; }
+.og-curve__scale { fill: var(--og-muted); font: 500 10px var(--og-mono); }
+.og-curve__now { stroke: var(--og-dim); stroke-width: 1; stroke-dasharray: 3 3; }
+.og-curve__line { fill: none; stroke: var(--og-accent); stroke-width: 2; stroke-linejoin: round; }
+.og-curve__tail { fill: none; stroke: var(--og-dim); stroke-width: 2; stroke-dasharray: 4 3; }
+.og-curve__point { fill: var(--og-accent); stroke: var(--og-surface); stroke-width: 2; transition: y 0.2s ease; }
+.og-curve__point--picked { stroke: var(--og-text); }
+.og-curve__dot { fill: var(--og-surface); stroke: var(--og-text); stroke-width: 2; }
+
 .og-dial {
   display: flex;
   justify-content: center;

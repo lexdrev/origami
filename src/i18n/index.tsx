@@ -12,6 +12,7 @@ import type {
   TriggerLevel,
   Triggers,
 } from "../backend";
+import type { FanPreset } from "../fans";
 import type { PaletteColour } from "../lighting";
 import type { TriggerPattern } from "../triggers";
 import type { TdpPreset } from "../power";
@@ -43,6 +44,8 @@ export interface Messages {
     lighting(on: boolean): string;
     gamepadSub: string;
     triggers: { off: string; steady: string; taps: string };
+    /** The fan curve on the Fans tile. */
+    curve(name: string): string;
   };
   settings: {
     title: string;
@@ -144,6 +147,27 @@ export interface Messages {
     profileWaiting: string;
     removeProfile: string;
     removeAgain: string;
+  };
+  fans: {
+    title: string;
+    fans: readonly [string, string];
+    parts: readonly [string, string];
+    minuteAgo: string;
+    now: string;
+    history(fan: string): string;
+    temperatures: readonly [string, string];
+    curve(name: string): string;
+    curveOn: string;
+    curveOff: string;
+    presets: Record<FanPreset["id"] | "default" | "custom", string>;
+    speedNow(temp: string, speed: string): string;
+    chart: string;
+    preset: string;
+    point: string;
+    speedAt(temp: string): string;
+    safety: string;
+    ownedBy(plugin: string): string;
+    ownedText(plugin: string): string;
   };
   display: {
     title: string;

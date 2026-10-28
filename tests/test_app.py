@@ -1186,6 +1186,97 @@ def test_the_chosen_boost_is_journaled_and_given_back_on_uninstall(
     asyncio.run(scenario())
 
 
+@pytest.fixture
+def fan_curves(powered: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The firmware's curve device on its own curve; the fan keeper looks every few milliseconds."""
+    monkeypatch.setattr(app_module, "FAN_POLL_SECONDS", 0.005)
+    return powered.hwmon(8, "asus_custom_fan_curve", pwm1_enable=2, pwm2_enable=2)
+
+
+def fan_mode(device: Path) -> list[int]:
+    return [int((device / f"pwm{fan}_enable").read_text(encoding="utf-8")) for fan in (1, 2)]
+
+
+def fan_speeds(device: Path, fan: int = 1) -> list[int]:
+    return [
+        int((device / f"pwm{fan}_auto_point{index}_pwm").read_text(encoding="utf-8"))
+        for index in range(1, 9)
+    ]
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_origami_holds_its_fan_curve_and_gives_the_fans_back(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        assert fan_mode(fan_curves) == [2, 2]
+
+        await app.update_settings(
+            {"fans": {"enabled": True, "points": [20, 30, 45, 60, 75, 90, 100]}}
+        )
+        assert fan_mode(fan_curves) == [1, 1]
+        assert fan_speeds(fan_curves, 2) == [51, 77, 115, 153, 191, 230, 255, 255]
+        assert await app.changes() == [Change("power", "tdp", None), Change("fans", "curve", None)]
+
+        # A platform profile written by Steam switches the curve off; ORIGAMI switches it on again.
+        powered.write(f"sys/class/hwmon/{fan_curves.name}/pwm1_enable", 2)
+        await asyncio.sleep(0.05)
+        assert fan_mode(fan_curves) == [1, 1]
+
+        await app.update_settings(
+            {"fans": {"enabled": False, "points": [20, 30, 45, 60, 75, 90, 100]}}
+        )
+        assert fan_mode(fan_curves) == [2, 2]
+        assert Change("fans", "curve", None) not in await app.changes()
+        await asyncio.sleep(0.05)
+        assert fan_mode(fan_curves) == [2, 2]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_uninstalling_gives_the_fans_back(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"fans": {"enabled": True}})
+        app.stop()
+
+        app.uninstall()
+
+        assert fan_mode(fan_curves) == [2, 2]
+        assert Change("fans", "curve", None) not in await app.changes()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("plugin", ["Panel de Control", "Ally Fix"])
+@pytest.mark.usefixtures("quick_power")
+def test_fan_plugins_own_the_fans(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path, plugin: str
+) -> None:
+    install_plugin(tmp_path, plugin)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        assert (await app.conflicts()).fans == plugin
+
+        with pytest.raises(RuntimeError, match=plugin):
+            await app.update_settings({"fans": {"enabled": True}})
+
+        assert fan_mode(fan_curves) == [2, 2]
+        assert (await app.settings()).fans is None
+        app.stop()
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize("plugin", ["Panel de Control", "SimpleDeckyTDP", "PowerTools"])
 @pytest.mark.usefixtures("quick_power")
 def test_power_plugins_own_the_power(powered: FakeRoot, tmp_path: Path, plugin: str) -> None:

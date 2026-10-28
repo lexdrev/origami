@@ -9,6 +9,7 @@ import { ArmouryCrateScreen } from "./screens/ArmouryCrateScreen";
 import { ChangesScreen } from "./screens/ChangesScreen";
 import { CustomColourScreen } from "./screens/CustomColourScreen";
 import { DisplayScreen } from "./screens/DisplayScreen";
+import { FansScreen } from "./screens/FansScreen";
 import { GamepadScreen } from "./screens/GamepadScreen";
 import { MainScreen } from "./screens/MainScreen";
 import { GameProfilesScreen } from "./screens/GameProfilesScreen";
@@ -24,6 +25,7 @@ import { styles } from "./ui/styles";
 const screens: Record<ScreenId, ComponentType> = {
   main: MainScreen,
   power: PowerScreen,
+  fans: FansScreen,
   gameProfiles: GameProfilesScreen,
   gameProfile: GameProfileScreen,
   display: DisplayScreen,

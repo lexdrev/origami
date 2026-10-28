@@ -9,7 +9,14 @@ import { ru } from "../i18n/ru";
 import { tileTexts } from "./tiles";
 
 const NBSP = "\u00a0";
-const none = { saturation: null, vibration: null, tdp: null, lighting: undefined, triggers: undefined };
+const none = {
+  saturation: null,
+  vibration: null,
+  tdp: null,
+  lighting: undefined,
+  triggers: undefined,
+  fanCurve: undefined,
+};
 
 const allyX: Telemetry = {
   power: { tdpLimitW: 35, packagePowerW: 16.94, cpuBoost: false, onBattery: false, battery: null },
@@ -19,11 +26,11 @@ const allyX: Telemetry = {
 
 describe("tile texts", () => {
   it("show live values in Russian", () => {
-    const own = { ...none, saturation: 150, tdp: 17, lighting: true, triggers: null };
+    const own = { ...none, saturation: 150, tdp: 17, lighting: true, triggers: null, fanCurve: null };
 
     expect(tileTexts(allyX, own, ru)).toEqual({
       power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · CPU${NBSP}буст${NBSP}выкл` },
-      fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C` },
+      fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C · кривая${NBSP}·${NBSP}Дефолт` },
       display: { value: "150%", subtitle: `Насыщенность · подсветка${NBSP}вкл` },
       gamepad: { value: "50%", subtitle: `Вибрация ручек · триггеры${NBSP}выкл` },
     });

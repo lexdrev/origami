@@ -12,6 +12,7 @@ from typing import Protocol
 from origami.buttons import Button, ButtonAction, button_presses
 from origami.cpu import program_cap, read_boost, write_boost
 from origami.decky_plugins import (
+    FAN_OWNERS,
     LIGHTING_OWNERS,
     POWER_OWNERS,
     SATURATION_OWNERS,
@@ -20,6 +21,8 @@ from origami.decky_plugins import (
     enabled_plugins,
 )
 from origami.device import Device, read_device
+from origami.fans import POLL_SECONDS as FAN_POLL_SECONDS
+from origami.fans import FanCurve, curve_dir, curve_on, give_back, write_curve
 from origami.gyro import GyroState, read_gyro_state, remove_fix, restart_inputplumber, write_fix
 from origami.hid_bpf import HidBpfProgram
 from origami.inputplumber import Chord, press_chord
@@ -110,6 +113,7 @@ class Conflicts:
     vibration: str | None
     triggers: str | None
     power: str | None
+    fans: str | None
 
 
 class Origami:
@@ -144,6 +148,9 @@ class Origami:
         self._look_now = asyncio.Event()
         """Wakes the keeper before its next look: a supply changed, or there is news to write."""
         self._power = BackgroundTask("origami-power", self._hold_power)
+        self._fans = BackgroundTask("origami-fans", self._hold_fans)
+        self._fans_written: tuple[int, ...] | None = None
+        """The points last sent to the fans while ORIGAMI holds them."""
         self._pulsing = False
 
     async def start(self) -> None:
@@ -204,6 +211,8 @@ class Origami:
                     if triggers_changed:
                         raise
                     log.warning("Grips not lifted: %s", error)
+            if updated.fans != self._settings.fans:
+                await self._send_fans(updated.fans)
             if updated.gyro_fix != self._settings.gyro_fix:
                 await self._set_gyro(on=updated.gyro_fix)
             await asyncio.to_thread(self._settings_store.save, updated)
@@ -342,6 +351,7 @@ class Origami:
             vibration=owner(VIBRATION_OWNERS),
             triggers=owner(TRIGGER_OWNERS),
             power=owner(POWER_OWNERS),
+            fans=owner(FAN_OWNERS),
         )
 
     def uninstall(self) -> None:
@@ -353,6 +363,7 @@ class Origami:
         """
         if remove_fix(self._env.root):
             self._journal.forget("gamepad", "gyro")
+        self._give_back_fans()
         self._give_back_tdp()
         self._give_back_boost()
         log.info("ORIGAMI uninstalled")
@@ -369,6 +380,7 @@ class Origami:
         self._buttons.cancel()
         self._after_resume.cancel()
         self._power.cancel()
+        self._fans.cancel()
         # A look at the hardware still running in its thread ends before this returns.
         self._keeper.hold(None)
         self._end_pulse()
@@ -396,6 +408,7 @@ class Origami:
     async def _follow_settings(self) -> None:
         settings = self._settings
         await self._follow_power(settings)
+        await self._follow_fans(settings)
         buttons = _driven_buttons(settings)
         if buttons != self._buttons_read:
             # The reader opens only the interfaces its buttons come from.
@@ -445,6 +458,82 @@ class Origami:
             return
         self._journal.forget("power", "tdp")
         log.info("TDP given back to the platform profile")
+
+    async def _send_fans(self, curve: FanCurve | None) -> None:
+        """Send a changed curve before it is saved, so a curve the firmware refused is not kept."""
+        if (
+            curve is None
+            or not curve.enabled
+            or await asyncio.to_thread(curve_dir, self._env.root) is None
+        ):
+            return
+        owner = (await self.conflicts()).fans
+        if owner is not None:
+            raise RuntimeError(f"{owner} sets the fans, so ORIGAMI leaves them alone")
+        await asyncio.to_thread(self._write_fans, curve.points)
+
+    async def _follow_fans(self, settings: Settings) -> None:
+        """Hold the fan curve while it is on and no plugin drives the fans; else give them back."""
+        curve = settings.fans
+        hold = (
+            curve is not None
+            and curve.enabled
+            and await asyncio.to_thread(curve_dir, self._env.root) is not None
+            and (await self.conflicts()).fans is None
+        )
+        if curve is not None and hold:
+            if curve.points != self._fans_written or not await asyncio.to_thread(
+                curve_on, self._env.root
+            ):
+                try:
+                    await asyncio.to_thread(self._write_fans, curve.points)
+                except OSError as error:
+                    log.warning("Fan curve not written: %s", error)
+        elif self._journal.recorded("fans", "curve"):
+            await asyncio.to_thread(self._give_back_fans)
+        await self._fans.run_while(on=hold)
+
+    def _write_fans(self, points: tuple[int, ...]) -> None:
+        """Send the curve to the fans, the journal remembering first; blocks briefly."""
+        if not self._journal.recorded("fans", "curve"):
+            # The fans ran the firmware's own curve before ORIGAMI, not a value.
+            self._journal.record("fans", "curve", None)
+        write_curve(self._env.root, points)
+        self._fans_written = points
+        log.info("Fan curve written: %s", "/".join(map(str, points)))
+
+    async def _hold_fans(self) -> None:
+        """Switch the curve on again whenever something switches it off: a platform profile, say."""
+        while True:
+            await asyncio.sleep(FAN_POLL_SECONDS)
+            curve = self._settings.fans
+            if (
+                curve is None
+                or not curve.enabled
+                or await asyncio.to_thread(curve_on, self._env.root)
+            ):
+                continue
+            try:
+                await asyncio.to_thread(write_curve, self._env.root, curve.points)
+                log.info("Fan curve switched on again")
+            except OSError as error:
+                log.warning("Fan curve not switched on again: %s", error)
+
+    def _give_back_fans(self) -> None:
+        """Let the firmware run the fans on its own curve again; blocks briefly."""
+        if not self._journal.recorded("fans", "curve"):
+            return
+        try:
+            give_back(self._env.root)
+        except OSError as error:
+            log.warning("Fans not given back to the firmware: %s", error)
+            return
+        self._journal.forget("fans", "curve")
+        self._fans_written = None
+        # The firmware's own curve may bring back the profile's own power: the limits go again.
+        self._keeper.write_again("fans given back")
+        self._look_now.set()
+        log.info("Fans given back to the firmware")
 
     def _give_back_boost(self) -> None:
         original = self._journal.original("power", "cpu_boost")

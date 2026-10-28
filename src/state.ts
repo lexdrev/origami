@@ -5,6 +5,7 @@ import {
   backend,
   type Change,
   type Conflicts,
+  type FanCurve,
   type GamePower,
   type GyroState,
   type HeldPower,
@@ -166,6 +167,18 @@ export function setPower(power: Power): void {
   if (current.status !== "ready") return;
   settings.set({ status: "ready", value: { ...current.value, power } });
   savePower.send(power);
+}
+
+const saveFans = latestOnly(async (fans: FanCurve) => {
+  if (!(await updateSettings({ fans }))) await reloadSettings();
+});
+
+/** Saves the fan curve, shown at once so a point follows a held D-pad. */
+export function setFans(fans: FanCurve): void {
+  const current = settings.get();
+  if (current.status !== "ready") return;
+  settings.set({ status: "ready", value: { ...current.value, fans } });
+  saveFans.send(fans);
 }
 
 const saveGamePower = latestOnly(async (gamePower: GamePower[]) => {

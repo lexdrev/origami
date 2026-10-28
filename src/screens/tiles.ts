@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 lexdrev
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Telemetry, TriggerRumble, Vibration } from "../backend";
+import type { FanCurve, Telemetry, TriggerRumble, Vibration } from "../backend";
+import { curveName } from "../fans";
 import type { Messages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
 import { currentVibration, formatVibration } from "../vibration";
@@ -30,6 +31,8 @@ export interface OwnValues {
   lighting: boolean | undefined;
   /** The trigger rumble as chosen, null until then; undefined where ORIGAMI rumbles no triggers. */
   triggers: TriggerRumble | null | undefined;
+  /** ORIGAMI's fan curve, null until switched on; undefined while another plugin drives the fans. */
+  fanCurve: FanCurve | null | undefined;
 }
 
 const SEPARATOR = " · ";
@@ -61,7 +64,11 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
     },
     fans: {
       value: fastestFan !== null ? number(fastestFan) : t.unknown,
-      subtitle: line(t.units.rpm, hottest !== null && withUnit(number(hottest), t.units.celsius)),
+      subtitle: line(
+        t.units.rpm,
+        hottest !== null && withUnit(number(hottest), t.units.celsius),
+        own.fanCurve !== undefined && t.main.curve(curveName(own.fanCurve, t)),
+      ),
     },
     display: {
       value: own.saturation !== null ? `${own.saturation}%` : t.unknown,

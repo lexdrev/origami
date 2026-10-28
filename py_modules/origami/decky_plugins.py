@@ -24,6 +24,8 @@ TRIGGER_OWNERS = ("Ally Fix",)
 """Plugins that rumble the impulse triggers with a HID-BPF program of their own."""
 POWER_OWNERS = ("Panel de Control", "SimpleDeckyTDP", "PowerTools")
 """Plugins that set the TDP or the CPU boost and frequency; ORIGAMI then shows the power only."""
+FAN_OWNERS = ("Panel de Control", "Ally Fix")
+"""Plugins that write the fan curves; ORIGAMI then shows the fans only."""
 
 
 def enabled_plugins(decky_home: Path) -> frozenset[str]:

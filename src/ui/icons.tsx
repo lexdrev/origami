@@ -158,6 +158,17 @@ export const ChevronIcon = () => <StrokeIcon size={16} width={2.2} d="M9 5l7 7-7
 export const CheckIcon = () => <StrokeIcon size={12} width={3} d="M4 12l5 5L20 6" />;
 export const LockIcon = () => <StrokeIcon size={11} width={2.4} d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4" />;
 
+/** A thermometer beside a temperature, in the tile icons' amber. */
+export function ThermometerIcon() {
+  return (
+    <svg width="16" height="24" viewBox="0 0 16 24" fill="none" stroke="currentColor" strokeWidth={1.4} aria-hidden="true">
+      <path d="M6 3h4v11.5a4 4 0 1 1-4 0z" strokeLinejoin="round" />
+      <path d="M8 8v8" strokeLinecap="square" />
+      <circle cx="8" cy="18" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** A filled triangle, as on a play button. */
 export function PlayIcon() {
   return (

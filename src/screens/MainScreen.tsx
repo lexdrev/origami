@@ -43,6 +43,7 @@ export function MainScreen() {
       tdp: held.status === "ready" ? (held.value.limits?.spl ?? null) : null,
       lighting: setting && others?.lighting === null ? (setting.lighting?.enabled ?? false) : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
+      fanCurve: setting && others?.fans === null ? setting.fans : undefined,
     },
     t,
   );
@@ -68,7 +69,14 @@ export function MainScreen() {
             navigate("power");
           }}
         />
-        <Tile icon={<FansIcon />} name={t.main.tiles.fans} {...tiles.fans} />
+        <Tile
+          icon={<FansIcon />}
+          name={t.main.tiles.fans}
+          {...tiles.fans}
+          onOpen={() => {
+            navigate("fans");
+          }}
+        />
         <Tile
           icon={<DisplayIcon />}
           name={t.main.tiles.display}

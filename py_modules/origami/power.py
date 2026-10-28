@@ -271,6 +271,11 @@ class PowerKeeper:
             self._due += [(now + delay, "game started") for delay in GAME_REWRITE_SECONDS]
             self._cap_due = now + CAP_SETTLE_SECONDS
 
+    def write_again(self, reason: str) -> None:
+        """Write the limits again at the next look: the profile's own may have come back."""
+        with self._lock:
+            self._due.append((self._clock(), reason))
+
     def held(self) -> HeldPower:
         with self._lock:
             return self._held

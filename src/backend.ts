@@ -63,6 +63,13 @@ export interface Lighting {
   brightness: LightBrightness;
 }
 
+/** ORIGAMI's curve for both fans (origami.fans.FanCurve); speeds in percent at 30–90 °C. */
+export interface FanCurve {
+  /** Off gives the fans back to the firmware; the points wait for the next time it is on. */
+  enabled: boolean;
+  points: number[];
+}
+
 /** Handle vibration (origami.vibration.Vibration); strengths in percent. */
 export interface Vibration {
   /** Off keeps the handles still; the strengths wait for the next time it is on. */
@@ -174,6 +181,8 @@ export interface Settings {
   batteryHighTdp: boolean;
   /** Games with power settings of their own, one profile each. */
   gamePower: GamePower[];
+  /** Null until the user switches it on; the fans run the firmware's own curve until then. */
+  fans: FanCurve | null;
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
@@ -183,6 +192,7 @@ export interface Conflicts {
   vibration: string | null;
   triggers: string | null;
   power: string | null;
+  fans: string | null;
 }
 
 export interface Change {

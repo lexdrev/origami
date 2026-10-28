@@ -41,10 +41,18 @@ let settings: Settings = {
     { appId: 1091500, name: "Cyberpunk 2077", power: { tdp: 25, headroom: true, cpuBoost: null }, active: true },
     { appId: 990080, name: "Hogwarts Legacy", power: { tdp: 20, headroom: false, cpuBoost: false }, active: false },
   ],
+  fans: { enabled: true, points: [0, 10, 25, 40, 55, 75, 100] },
 };
 // Steam's value, as gamescope shows it on the console without vibrantDeck.
 const STEAM_SATURATION = 100;
-const conflicts: Conflicts = { lighting: null, saturation: null, vibration: null, triggers: null, power: null };
+const conflicts: Conflicts = {
+  lighting: null,
+  saturation: null,
+  vibration: null,
+  triggers: null,
+  power: null,
+  fans: null,
+};
 const changes: Change[] = [];
 
 function telemetry(): Telemetry {

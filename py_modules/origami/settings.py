@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import cast
 
 from origami.buttons import ButtonAction
+from origami.fans import FanCurve
 from origami.fsutil import atomic_write_text
 from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
@@ -68,6 +69,8 @@ class Settings:
     """The TDP may go over 25 W on the battery too."""
     game_power: tuple[GamePower, ...] = ()
     """Games with power settings of their own, one profile each."""
+    fans: FanCurve | None = None
+    """ORIGAMI's curve for both fans (B07); None until switched on: the firmware's own."""
 
     def power_for(self, game: int | None) -> Power:
         """The power a game runs with: its own profile while that is active, else the general."""
@@ -87,7 +90,7 @@ class Settings:
                     parsed[key] = expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
-                case "lighting" | "vibration" | "trigger_rumble":
+                case "lighting" | "vibration" | "trigger_rumble" | "fans":
                     parsed[key] = None if value is None else _OPTIONAL[key].from_json(value)
                 case "saturation":
                     parsed[key] = _saturation(value)
@@ -123,13 +126,15 @@ class Settings:
             "power": self.power.to_json(),
             "battery_high_tdp": self.battery_high_tdp,
             "game_power": [profile.to_json() for profile in self.game_power],
+            "fans": None if self.fans is None else self.fans.to_json(),
         }
 
 
-_OPTIONAL: dict[str, type[Lighting | Vibration | TriggerRumble]] = {
+_OPTIONAL: dict[str, type[Lighting | Vibration | TriggerRumble | FanCurve]] = {
     "lighting": Lighting,
     "vibration": Vibration,
     "trigger_rumble": TriggerRumble,
+    "fans": FanCurve,
 }
 """Settings that stay None until the user sets them, and the parsers of their values."""
 

@@ -79,7 +79,8 @@ export interface Choice<T extends string> {
 /** The last cell of the strip, which is no choice: what the control holds off the choices. */
 interface CustomCell {
   label: string;
-  detail: string;
+  /** A second line, such as the value the control holds; one line without it, as the choices. */
+  detail?: string;
   selected: boolean;
 }
 
@@ -120,9 +121,9 @@ export function ChoiceGroup<T extends string>(props: ChoiceGroupProps<T>) {
           );
         })}
         {custom !== undefined && (
-          <span className={`${choiceClass(custom.selected, true)} og-choice--static`}>
+          <span className={`${choiceClass(custom.selected, custom.detail !== undefined)} og-choice--static`}>
             {custom.label}
-            <span className="og-choice__detail">{custom.detail}</span>
+            {custom.detail !== undefined && <span className="og-choice__detail">{custom.detail}</span>}
           </span>
         )}
       </div>

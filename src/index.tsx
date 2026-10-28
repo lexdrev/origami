@@ -8,6 +8,7 @@ import { backend } from "./backend";
 import { App } from "./App";
 import { watchButtonActions } from "./buttonActions";
 import { PluginTitle } from "./PluginTitle";
+import { recordFanHistory } from "./fanHistory";
 import { watchRunningGame } from "./games";
 import { watchGameStarts, watchSteamTdpLimit } from "./power";
 import { watchQuickAccessButton } from "./qamAssist";
@@ -34,6 +35,7 @@ export default definePlugin(() => {
   const stopGameStarts = watchGameStarts();
   // A game with power settings of its own runs with them.
   const stopRunningGame = watchRunningGame();
+  const stopFanHistory = recordFanHistory();
   // The tab follows the settings: it appears once they are loaded and moves when they change.
   const unsubscribe = settings.subscribe(() => {
     const current = settings.get();
@@ -52,6 +54,7 @@ export default definePlugin(() => {
       stopSteamTdpLimit();
       stopGameStarts();
       stopRunningGame();
+      stopFanHistory();
     },
   };
 });
