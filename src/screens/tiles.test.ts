@@ -20,7 +20,7 @@ const allyX: Telemetry = {
 describe("tile texts", () => {
   it("show live values in Russian", () => {
     expect(tileTexts(allyX, { saturation: 150, vibration: null, tdp: 17 }, ru)).toEqual({
-      power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · буст${NBSP}выкл` },
+      power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · CPU${NBSP}буст${NBSP}выкл` },
       fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C` },
       display: { value: "150%", subtitle: "Насыщенность" },
       gamepad: { value: "50%", subtitle: "Вибрация ручек" },
