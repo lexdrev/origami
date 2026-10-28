@@ -326,18 +326,15 @@ ${fontFaces}
 }
 .og-dial__readout b { color: var(--og-text); }
 .og-dial__status { display: flex; align-items: flex-start; gap: 5px; }
-.og-dial__status::before { content: ""; flex-shrink: 0; width: 7px; height: 7px; margin-top: 4px; background: var(--og-dim); }
+.og-dial__status::before { content: ""; flex-shrink: 0; width: 7px; height: 7px; margin-top: 3px; background: var(--og-dim); }
 .og-dial__status--problem { color: var(--og-danger-text); }
 .og-dial__status--problem::before { background: var(--og-danger); }
 
-/* The TDP card: the dial on the left, the title and the power drawn beside it, a size larger than
-   in other cards, as the dial beside them is large. They start a little over the middle and stay
-   there as the status line comes and goes. */
+/* The TDP card: the dial on the left, the title and the power drawn beside it. They start a little
+   over the middle and stay there as the status line comes and goes. */
 .og-tdp { display: flex; align-items: flex-start; gap: 6px; }
 .og-tdp .og-dial__face { flex-shrink: 0; margin-left: -8px; }
 .og-tdp__side { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding-top: 10px; }
-.og-tdp__side .og-card__title { font-size: 12px; }
-.og-tdp__side .og-card__subtitle, .og-tdp__side .og-dial__readout { font-size: 11px; }
 
 .og-limits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .og-limit { display: flex; flex-direction: column; gap: 2px; padding: 6px 7px; border: 1px solid var(--og-track); background: var(--og-panel); }
@@ -360,7 +357,7 @@ ${fontFaces}
 
 .og-colour-value { display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--og-border); }
 .og-colour-value__swatch { width: 18px; height: 18px; border-radius: 2px; }
-.og-colour-value__hex { font: 700 16px var(--og-mono); }
+.og-colour-value__hex { font: 700 17px var(--og-mono); letter-spacing: 0.04em; }
 
 .og-note { padding: 10px; border: 1px solid var(--og-border); border-radius: 2px; color: var(--og-text-soft); font-size: 11px; line-height: 1.45; }
 
