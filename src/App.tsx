@@ -17,6 +17,7 @@ import { SettingsScreen } from "./screens/SettingsScreen";
 import { actionError, useLanguage } from "./state";
 import { useStore } from "./store";
 import { Alert } from "./ui/blocks";
+import { ScrollBar } from "./ui/scrollbar";
 import { styles } from "./ui/styles";
 
 const screens: Record<ScreenId, ComponentType> = {
@@ -39,6 +40,7 @@ export function App() {
       {/* The style element renders inside the quick access window, which is a separate document. */}
       <style>{styles}</style>
       <div className="og-root">
+        <ScrollBar />
         <ActionError />
         <CurrentScreen />
       </div>

@@ -42,6 +42,11 @@ ${fontFaces}
 }
 .og-root *, .og-root *::before, .og-root *::after { box-sizing: border-box; }
 
+/* The panel's scrollbar (ui/scrollbar.tsx): placed over the panel's right edge, it takes no space. */
+.og-scrollbar-anchor { display: none; }
+.og-scrollbar { position: fixed; z-index: 1; width: 3px; border-radius: 2px; background: var(--og-track); pointer-events: none; }
+.og-scrollbar__thumb { position: absolute; right: 0; left: 0; border-radius: 2px; background: var(--og-dim); }
+
 .og-root {
   display: flex;
   flex-direction: column;
