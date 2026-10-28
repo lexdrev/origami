@@ -12,7 +12,6 @@ import type { Language } from "./i18n";
 
 interface ClientSettings {
   steamos_tdp_limit_enabled?: boolean;
-  steamos_tdp_limit?: number;
   steamos_platform_performance_profile?: string;
 }
 
@@ -27,21 +26,14 @@ function clientSettings(): ClientSettings | null {
   return typeof settings === "object" && settings !== null ? settings : null;
 }
 
-/** Steam's own TDP limit: whether its slider sets the TDP now, and its watts. */
-export interface SteamTdpLimit {
-  /** The slider is on and the profile lets Steam write the TDP. */
-  enabled: boolean;
-  watts: number | null;
-}
-
-/** Null where Steam has no client settings ORIGAMI knows. */
-export function readSteamTdpLimit(): SteamTdpLimit | null {
+/**
+ * Whether Steam's TDP slider is on where it writes the TDP: in the performance profile. Null where
+ * Steam has no client settings ORIGAMI knows.
+ */
+export function readSteamTdpSlider(): boolean | null {
   const settings = clientSettings();
   if (settings === null) return null;
-  return {
-    enabled: settings.steamos_tdp_limit_enabled === true && settings.steamos_platform_performance_profile === TDP_PROFILE,
-    watts: settings.steamos_tdp_limit ?? null,
-  };
+  return settings.steamos_tdp_limit_enabled === true && settings.steamos_platform_performance_profile === TDP_PROFILE;
 }
 
 /** Interface language of the Steam client, reduced to the languages ORIGAMI has. */

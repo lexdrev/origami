@@ -11,7 +11,7 @@ import { LockIcon } from "./icons";
 const ARC_DEGREES = 240;
 const TICKS = MAX_TDP - MIN_TDP + 1;
 
-export type DialFill = "on" | "over" | "drawn";
+export type DialFill = "on" | "drawn";
 
 export interface DialStatus {
   text: string;
@@ -24,30 +24,21 @@ interface DialProps {
   label: string;
   /** Watts the arc is lit up to, and how. */
   fill: { watts: number; kind: DialFill };
-  /** Lit as a problem past the fill: what someone else sets over ORIGAMI's limit. */
-  over?: number | undefined;
   /** The watts over this are locked: on the battery, until more than 25 W is allowed. */
   locked?: number | undefined;
   /** The power drawn now, under the dial; absent where the dial shows it itself. */
-  now?: { label: string; value: string; problem: boolean } | undefined;
+  now?: { label: string; value: string } | undefined;
   status?: DialStatus | null | undefined;
 }
 
-export function Dial({ value, unit, label, fill, over, locked, now, status }: DialProps) {
+export function Dial({ value, unit, label, fill, locked, now, status }: DialProps) {
   return (
     <div className="og-dial">
       <div className="og-dial__face" aria-hidden="true">
         {Array.from({ length: TICKS }, (_, index) => {
           const watts = MIN_TDP + index;
           const angle = -ARC_DEGREES / 2 + index * (ARC_DEGREES / (TICKS - 1));
-          const kind =
-            locked !== undefined && watts > locked
-              ? "locked"
-              : watts <= fill.watts
-                ? fill.kind
-                : over !== undefined && watts <= over
-                  ? "over"
-                  : null;
+          const kind = locked !== undefined && watts > locked ? "locked" : watts <= fill.watts ? fill.kind : null;
           const classes = ["og-dial__tick", watts % 5 === 0 && "og-dial__tick--major", kind && `og-dial__tick--${kind}`];
           return (
             <span
@@ -75,7 +66,7 @@ export function Dial({ value, unit, label, fill, over, locked, now, status }: Di
       {now !== undefined && (
         <div className={status ? "og-dial__readout og-dial__readout--split" : "og-dial__readout"}>
           <span>
-            {now.label} <b className={now.problem ? "og-dial__now--problem" : undefined}>{now.value}</b>
+            {now.label} <b>{now.value}</b>
           </span>
           {status && (
             <span className={status.problem ? "og-dial__status og-dial__status--problem" : "og-dial__status"}>

@@ -3,30 +3,30 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { readSteamTdpLimit } from "./steam";
+import { readSteamTdpSlider } from "./steam";
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Steam's TDP limit", () => {
+describe("Steam's TDP slider", () => {
   it("is the SteamOS slider of Steam's client settings, in the performance profile", () => {
     const settings = { steamos_tdp_limit_enabled: true, steamos_tdp_limit: 20, steamos_cec_enabled: false };
     vi.stubGlobal("settingsStore", {
       clientSettings: { ...settings, steamos_platform_performance_profile: "performance" },
     });
-    expect(readSteamTdpLimit()).toEqual({ enabled: true, watts: 20 });
+    expect(readSteamTdpSlider()).toBe(true);
 
-    // In balanced steamos-manager refuses Steam's TDP: the slider sets nothing.
+    // In balanced steamos-manager refuses Steam's TDP: the slider writes nothing.
     vi.stubGlobal("settingsStore", { clientSettings: { ...settings, steamos_platform_performance_profile: "balanced" } });
-    expect(readSteamTdpLimit()).toEqual({ enabled: false, watts: 20 });
+    expect(readSteamTdpSlider()).toBe(false);
   });
 
   it("is off when Steam has never set it, and unknown without the store", () => {
     vi.stubGlobal("settingsStore", { clientSettings: {} });
-    expect(readSteamTdpLimit()).toEqual({ enabled: false, watts: null });
+    expect(readSteamTdpSlider()).toBe(false);
 
     vi.stubGlobal("settingsStore", undefined);
-    expect(readSteamTdpLimit()).toBeNull();
+    expect(readSteamTdpSlider()).toBeNull();
   });
 });

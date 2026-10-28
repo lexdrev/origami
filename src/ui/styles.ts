@@ -307,7 +307,6 @@ ${fontFaces}
 .og-dial__tick { position: absolute; top: 70px; left: 50%; width: 3px; height: 9px; margin: -7px 0 0 -1.5px; background: #262d36; }
 .og-dial__tick--major { height: 13px; }
 .og-dial__tick--on { background: var(--og-accent); }
-.og-dial__tick--over { background: var(--og-danger-line); }
 .og-dial__tick--drawn { background: var(--og-dim); }
 .og-dial__tick--locked { background: transparent; box-shadow: inset 0 0 0 1px #3a434e; }
 .og-dial__lock { position: absolute; right: 15px; bottom: 4px; display: flex; color: var(--og-dim); }
@@ -331,7 +330,6 @@ ${fontFaces}
 }
 .og-dial__readout--split { justify-content: space-between; }
 .og-dial__readout b { color: var(--og-text); }
-.og-dial__readout b.og-dial__now--problem { color: var(--og-danger-text); }
 .og-dial__status { display: flex; align-items: center; gap: 5px; }
 .og-dial__status::before { content: ""; width: 7px; height: 7px; background: var(--og-dim); }
 .og-dial__status--problem { color: var(--og-danger-text); }

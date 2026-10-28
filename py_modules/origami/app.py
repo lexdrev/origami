@@ -281,21 +281,17 @@ class Origami:
         """The limits ORIGAMI holds now, for the Power screen."""
         return self._keeper.held()
 
-    async def set_steam_tdp_limit(self, *, on: bool, watts: int | None = None) -> None:
-        """Steam's own TDP limit was switched on or off; while it is on, Steam sets the TDP.
+    async def set_steam_tdp_limit(self, *, on: bool) -> None:
+        """Steam's TDP slider was switched on or off (in the performance profile, where it works).
 
-        Its slider writes whenever it moves, and ORIGAMI would write over each move, so ORIGAMI
-        steps aside, leaves the slider's watts in place and the Power screen says why.
+        While ORIGAMI manages the TDP, it keeps it: the slider's writes are answered at once, and
+        the Power screen says the slider does nothing. Steam sets the TDP once "Manage TDP" is off.
         """
         await self._started()
-        if on == self._steam_tdp_limit:
-            return
-        held = self._keeper.held().limits is not None
-        self._steam_tdp_limit = on
-        log.info("Steam's TDP limit is %s", "on: Steam sets the TDP" if on else "off")
-        await self._follow_power(self._settings)
-        if on and held and watts is not None:
-            await asyncio.to_thread(self._keeper.hand_over, watts)
+        if on != self._steam_tdp_limit:
+            self._steam_tdp_limit = on
+            log.info("Steam's TDP slider is %s", "on: ORIGAMI writes over it" if on else "off")
+            await self._follow_power(self._settings)
 
     async def game_started(self) -> None:
         """Steam started a game: it writes its own limits meanwhile, so ORIGAMI writes again."""
@@ -394,8 +390,9 @@ class Origami:
         else:
             target = PowerTarget(
                 settings.power,
-                tdp=settings.manage_tdp and not self._steam_tdp_limit,
+                tdp=settings.manage_tdp,
                 battery_high_tdp=settings.battery_high_tdp,
+                steam_slider=self._steam_tdp_limit,
             )
             await asyncio.to_thread(self._record_power, target)
         self._keeper.hold(target)

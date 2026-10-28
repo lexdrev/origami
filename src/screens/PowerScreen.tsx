@@ -15,7 +15,7 @@ import {
   MAX_TDP,
   MIN_TDP,
   presetOf,
-  steamTdpLimit,
+  steamTdpSlider,
   TDP_PRESETS,
   TDP_STEP,
 } from "../power";
@@ -80,17 +80,16 @@ export function PowerScreen() {
 function OwnPower({ setting, power }: { setting: Settings; power: PowerReadings | null }) {
   const t = useMessages();
   const held = useStore(heldPower);
-  const steam = useStore(steamTdpLimit);
+  const steamSlider = useStore(steamTdpSlider) === true;
   const holding = held.status === "ready" ? held.value : null;
   const heldLimits = holding?.limits ?? null;
   const highest = highestTdp(power, setting.batteryHighTdp);
   // A TDP chosen on the charger stays; on the battery the screen shows the 25 W held.
   const shown = Math.min(setting.power.tdp, highest);
   const limits = heldLimits?.spl === shown ? heldLimits : limitsFor({ ...setting.power, tdp: shown });
-  const steamOn = steam?.enabled === true;
   const drawn = power?.packagePowerW ?? null;
-  const status: DialStatus | null = steamOn
-    ? { text: t.power.steamOverrides, problem: true }
+  const status: DialStatus | null = steamSlider
+    ? { text: t.power.steamSliderIdle, problem: true }
     : holding?.contested
       ? { text: t.power.contested, problem: true }
       : drawn !== null && drawn < shown * NO_LOAD_SHARE
@@ -99,16 +98,15 @@ function OwnPower({ setting, power }: { setting: Settings; power: PowerReadings 
 
   return (
     <>
-      {steamOn && <SteamLimitPlate steam={steam.watts} own={setting.power.tdp} />}
-      {holding?.contested && !steamOn && <Alert title={t.power.contested}>{t.power.contestedText}</Alert>}
+      {steamSlider && <SteamSliderPlate />}
+      {holding?.contested && <Alert title={t.power.contested}>{t.power.contestedText}</Alert>}
       <Dial
         value={String(shown)}
         unit={t.units.watts}
         label={t.power.limit}
         fill={{ watts: shown, kind: "on" }}
-        over={steamOn ? (steam.watts ?? undefined) : undefined}
         locked={highest < MAX_TDP ? highest : undefined}
-        now={drawn === null ? undefined : { label: t.power.now, value: formatWatts(drawn, t), problem: steamOn }}
+        now={drawn === null ? undefined : { label: t.power.now, value: formatWatts(drawn, t) }}
         status={status}
       />
       <TdpCard power={setting.power} highest={highest} />
@@ -240,12 +238,12 @@ function BoostRow({ power, readings }: { power: Power; readings: PowerReadings |
   );
 }
 
-/** Steam's own TDP limit is on: Steam sets the TDP over ORIGAMI's, and the way to switch it off. */
-function SteamLimitPlate({ steam, own }: { steam: number | null; own: number }) {
+/** Steam's TDP slider is on but does nothing while ORIGAMI keeps the TDP; the way to switch it off. */
+function SteamSliderPlate() {
   const t = useMessages();
   return (
     <>
-      <Alert title={t.power.steamLimit}>{t.power.steamLimitText(steam, own)}</Alert>
+      <Alert title={t.power.steamSlider}>{t.power.steamSliderText}</Alert>
       <Pressable
         className="og-button"
         action={t.actions.open}

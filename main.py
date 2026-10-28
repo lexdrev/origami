@@ -78,12 +78,10 @@ class Plugin:
     async def game_started(self) -> None:
         await self._app.game_started()
 
-    async def set_steam_tdp_limit(self, on: object, watts: object = None) -> None:
+    async def set_steam_tdp_limit(self, on: object) -> None:
         if not isinstance(on, bool):
-            raise TypeError("Steam's TDP limit is on or off")
-        if watts is not None and (not isinstance(watts, int) or isinstance(watts, bool)):
-            raise TypeError("Steam's TDP limit is whole watts")
-        await self._app.set_steam_tdp_limit(on=on, watts=watts)
+            raise TypeError("Steam's TDP slider is on or off")
+        await self._app.set_steam_tdp_limit(on=on)
 
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())

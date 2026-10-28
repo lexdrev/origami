@@ -87,8 +87,8 @@ export interface Messages {
     now: string;
     /** The SoC draws far less than the limit: nothing runs that needs it. */
     noLoad: string;
-    /** Steam's own TDP limit is on and writes over ORIGAMI's. */
-    steamOverrides: string;
+    /** On the dial while Steam's TDP slider is on: ORIGAMI writes over it. */
+    steamSliderIdle: string;
     tdp: string;
     tdpSub: string;
     presets: Record<TdpPreset["id"] | "custom", string>;
@@ -106,9 +106,8 @@ export interface Messages {
     charging: string;
     timeLeft(hours: number, minutes: number): string;
     capacity: string;
-    steamLimit: string;
-    /** Steam's own watts, when known, over ORIGAMI's. */
-    steamLimitText(steam: number | null, own: number): string;
+    steamSlider: string;
+    steamSliderText: string;
     openPerformance: string;
     contested: string;
     contestedText: string;

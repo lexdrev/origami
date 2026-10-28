@@ -7,7 +7,6 @@ from contextlib import aclosing
 import pytest
 
 from origami.power import (
-    FOREIGN_GRACE_SECONDS,
     FOREIGN_LIMIT,
     MIN_LOOK_SECONDS,
     POLL_SECONDS,
@@ -121,8 +120,11 @@ def hold(
     *,
     tdp: bool = True,
     battery_high_tdp: bool = False,
+    steam_slider: bool = False,
 ) -> None:
-    target = PowerTarget(power or Power(), tdp=tdp, battery_high_tdp=battery_high_tdp)
+    target = PowerTarget(
+        power or Power(), tdp=tdp, battery_high_tdp=battery_high_tdp, steam_slider=steam_slider
+    )
     console.keeper.hold(target)
 
 
@@ -229,14 +231,11 @@ def test_limits_someone_else_writes_are_answered_until_they_keep_coming(
     for _ in range(FOREIGN_LIMIT):
         console.overwrite(Limits(35, 36, 37))
         console.tick()
-        assert console.limits() == Limits(35, 36, 37)
-        console.tick(FOREIGN_GRACE_SECONDS)
         assert console.limits() == Limits(20, 24, 29)
         assert console.keeper.held().contested is False
 
     console.overwrite(Limits(35, 36, 37))
     console.tick()
-    console.tick(FOREIGN_GRACE_SECONDS)
 
     assert console.limits() == Limits(35, 36, 37)
     assert console.keeper.held().contested is True
@@ -248,20 +247,17 @@ def test_limits_someone_else_writes_are_answered_until_they_keep_coming(
     assert console.keeper.held().contested is False
 
 
-def test_steams_slider_switched_on_keeps_its_value_once_origami_steps_aside(
-    console: Console,
-) -> None:
-    hold(console, Power(13))
+def test_steams_slider_is_answered_at_once_however_often_it_moves(console: Console) -> None:
+    hold(console, Power(13), steam_slider=True)
     console.tick()
+    assert console.keeper.next_look() == pytest.approx(WATCH_LOOK_SECONDS)
 
-    # Steam writes its slider's watts at once; the frontend reports the slider a moment later.
-    console.overwrite(Limits(20, 21, 22))
-    console.tick(0.5)
-    hold(console, Power(13), tdp=False)
-    console.tick(FOREIGN_GRACE_SECONDS)
+    for watts in (20, 21, 20, 15, 18, 25):
+        console.overwrite(Limits(watts, watts + 1, watts + 2))
+        console.tick(WATCH_LOOK_SECONDS)
+        assert console.limits() == Limits(13, 17, 22)
 
-    assert console.limits() == Limits(20, 21, 22)
-    assert console.keeper.held().limits is None
+    assert console.keeper.held().contested is False
 
 
 def test_a_soc_drawing_more_than_the_boost_limit_for_long_gets_the_limits_again(

@@ -63,7 +63,6 @@ export const en: Messages = {
     limit: "Limit",
     now: "Now",
     noLoad: "No load",
-    steamOverrides: "Steam overrides",
     tdp: "TDP",
     tdpSub: "CPU and graphics together",
     presets: { eco: "Eco", balance: "Balance", turbo: "Turbo", custom: "Custom" },
@@ -81,9 +80,10 @@ export const en: Messages = {
     charging: "Charging",
     timeLeft: (hours, minutes) => (hours > 0 ? `~${hours}\u00a0h\u00a0${minutes}\u00a0min` : `~${minutes}\u00a0min`),
     capacity: "Capacity",
-    steamLimit: "Steam's TDP slider is on",
-    steamLimitText: (steam, own) =>
-      `Steam sets ${steam === null ? "its own TDP" : `its ${steam}\u00a0W`} over ORIGAMI's ${own}\u00a0W. Switch off "TDP Limit" in Steam's quick access menu\u00a0→ Performance.`,
+    steamSliderIdle: "Steam's slider does nothing",
+    steamSlider: "Steam's TDP slider is on",
+    steamSliderText:
+      "ORIGAMI keeps the TDP, so Steam's slider does nothing. Switch off \"TDP Limit\" in Steam's quick access menu\u00a0→ Performance to avoid confusion. To set the TDP with Steam's slider, switch off \"Manage TDP\" in ORIGAMI's settings.",
     openPerformance: "Open Performance",
     contested: "Something else changes the TDP",
     contestedText:

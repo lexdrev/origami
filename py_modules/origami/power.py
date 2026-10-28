@@ -23,7 +23,7 @@ import math
 import threading
 import time
 from collections.abc import AsyncGenerator, Callable
-from dataclasses import astuple, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
@@ -67,10 +67,6 @@ about ten seconds later (probe 21; Ally Fix watches as long)."""
 FOREIGN_WINDOW_SECONDS = 60.0
 FOREIGN_LIMIT = 3
 """Writes over ORIGAMI's limits in a window that it answers; one more and it stops holding them."""
-FOREIGN_GRACE_SECONDS = 3.0
-"""How long a write over ORIGAMI's limits stands before ORIGAMI answers it. Steam's TDP slider
-writes as it is switched on, and the frontend reports the slider within this time: ORIGAMI then
-steps aside and leaves Steam's value instead of writing over it."""
 OVER_MARGIN_W = 2.0
 OVER_SECONDS = 10.0
 """How long the SoC may draw more than the boost limit before ORIGAMI writes the limits again."""
@@ -142,6 +138,9 @@ class PowerTarget:
     """ORIGAMI writes the TDP; off, it keeps only the CPU boost and its cap."""
     battery_high_tdp: bool = False
     """The TDP may go over BATTERY_TDP on the battery too."""
+    steam_slider: bool = False
+    """Steam's TDP slider is on and writes as it moves. ORIGAMI keeps the TDP all the same: it looks
+    often and answers the slider at once, and never takes its writes for a writer to give way to."""
 
     def tdp_for(self, *, mains: bool) -> int:
         if mains or self.battery_high_tdp:
@@ -196,8 +195,6 @@ class PowerKeeper:
         self._last_event = -math.inf
         self._last_write = -math.inf
         self._foreign: list[float] = []
-        self._foreign_since: float | None = None
-        """When limits someone else wrote were first seen; None while the limits are ORIGAMI's."""
         self._contested = False
         self._over_since: float | None = None
         self._last_power_fix = -math.inf
@@ -222,26 +219,6 @@ class PowerKeeper:
             if target is None or not target.tdp:
                 self._held = HeldPower(None, battery_capped=False, contested=False)
 
-    def hand_over(self, watts: int) -> None:
-        """Leave the TDP at Steam's slider, written as Steam writes it: N, N + 1 and N + 2 W.
-
-        Steam writes only as its slider moves or the charger changes. Limits ORIGAMI wrote after
-        Steam's last write, at the plugin's start for one, would stay while the screen says that
-        Steam sets the TDP.
-        """
-        with self._lock:
-            ranges = read_ranges(self._root)
-            if ranges is None:
-                return
-            spl, sppt, fppt = ranges
-            limits = Limits(spl.clamp(watts), sppt.clamp(watts + 1), fppt.clamp(watts + 2))
-            try:
-                write_limits(self._root, limits)
-            except OSError as error:
-                log.warning("TDP not handed over to Steam: %s", error)
-                return
-            log.info("TDP %d / %d / %d W handed over to Steam's slider", *astuple(limits))
-
     def game_started(self) -> None:
         """Write the limits again as Steam settles a game that starts, and keep the cap."""
         with self._lock:
@@ -261,10 +238,11 @@ class PowerKeeper:
             due = [at for at, _ in self._due]
             if self._cap_due is not None:
                 due.append(self._cap_due)
-            if self._foreign_since is not None:
-                due.append(self._foreign_since + FOREIGN_GRACE_SECONDS)
             soonest = min(due, default=now + POLL_SECONDS)
-            poll = WATCH_LOOK_SECONDS if now - self._last_event < WATCH_SECONDS else POLL_SECONDS
+            watching = now - self._last_event < WATCH_SECONDS or (
+                self._target is not None and self._target.steam_slider
+            )
+            poll = WATCH_LOOK_SECONDS if watching else POLL_SECONDS
             return min(max(soonest - now, MIN_LOOK_SECONDS), poll)
 
     def tick(self) -> str | None:
@@ -313,7 +291,9 @@ class PowerKeeper:
         if self._contested:
             reason = None
         elif reason is None:
-            reason = self._check_written(now, want, mains=mains) or self._check_power(now, want)
+            reason = self._check_written(now, target, want, mains=mains) or self._check_power(
+                now, want
+            )
         if reason is not None:
             write_limits(self._root, want)
             self._written[mains] = want
@@ -329,29 +309,28 @@ class PowerKeeper:
         self._due = [(at, reason) for at, reason in self._due if at > now]
         return ready[0] if ready else None
 
-    def _check_written(self, now: float, want: Limits, *, mains: bool) -> str | None:
+    def _check_written(
+        self, now: float, target: PowerTarget, want: Limits, *, mains: bool
+    ) -> str | None:
         current = read_limits(self._root)
         if current is None or current == want or self._due:
             # A write of ORIGAMI's comes anyway.
-            self._foreign_since = None
             return None
         if self._written.get(mains) != want:
             # This set never got these limits (a write failed): nobody wrote over ORIGAMI.
             return "limits differ"
+        written = f"written over with {current.spl} / {current.sppt} / {current.fppt} W"
         if now - self._last_event < QUIET_SECONDS:
-            return f"written over with {current.spl} / {current.sppt} / {current.fppt} W, settling"
-        if self._foreign_since is None:
-            self._foreign_since = now
-        if now - self._foreign_since < FOREIGN_GRACE_SECONDS:
-            return None
-        self._foreign_since = None
+            return f"{written}, settling"
+        if target.steam_slider:
+            return f"{written} by Steam's slider"
         self._foreign = [at for at in self._foreign if now - at < FOREIGN_WINDOW_SECONDS]
         self._foreign.append(now)
         if len(self._foreign) > FOREIGN_LIMIT:
             self._contested = True
             log.warning("Something else keeps writing TDP (%s); ORIGAMI stops holding it", current)
             return None
-        return f"written over with {current.spl} / {current.sppt} / {current.fppt} W"
+        return written
 
     def _check_power(self, now: float, want: Limits) -> str | None:
         """Write the limits again when the SoC draws more than they allow, for long."""

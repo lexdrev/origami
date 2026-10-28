@@ -5,33 +5,30 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "./i18n/en";
 import { ru } from "./i18n/ru";
-import { batteryTexts, limitsFor, presetOf, steamTdpLimit, watchSteamTdpLimit } from "./power";
+import { batteryTexts, limitsFor, presetOf, steamTdpSlider, watchSteamTdpLimit } from "./power";
 
 // The backend and Steam's performance store, which exist only inside Steam.
 const fake = vi.hoisted(() => {
-  const state: {
-    steam: { enabled: boolean; watts: number | null } | null;
-    reported: [boolean, number | null][];
-  } = { steam: null, reported: [] };
+  const state: { steam: boolean | null; reported: boolean[] } = { steam: null, reported: [] };
   return state;
 });
 
 vi.mock("./backend", () => ({
   backend: {
-    setSteamTdpLimit: (on: boolean, watts: number | null) => {
-      fake.reported.push([on, watts]);
+    setSteamTdpLimit: (on: boolean) => {
+      fake.reported.push(on);
       return Promise.resolve();
     },
   },
 }));
 
-vi.mock("./steam", () => ({ readSteamTdpLimit: () => fake.steam }));
+vi.mock("./steam", () => ({ readSteamTdpSlider: () => fake.steam }));
 
 afterEach(() => {
   vi.useRealTimers();
   fake.steam = null;
   fake.reported = [];
-  steamTdpLimit.set(null);
+  steamTdpSlider.set(null);
 });
 
 const NBSP = "\u00a0";
@@ -68,26 +65,23 @@ describe("power", () => {
   });
 });
 
-describe("Steam's TDP limit", () => {
+describe("Steam's TDP slider", () => {
   it("reaches the backend once at the start and then only when it is switched", async () => {
     vi.useFakeTimers();
-    fake.steam = { enabled: false, watts: 15 };
+    fake.steam = false;
     const stop = watchSteamTdpLimit();
     await vi.advanceTimersByTimeAsync(6000);
-    expect(fake.reported).toEqual([[false, 15]]);
+    expect(fake.reported).toEqual([false]);
 
-    fake.steam = { enabled: true, watts: 20 };
+    fake.steam = true;
     await vi.advanceTimersByTimeAsync(500);
-    expect(fake.reported).toEqual([
-      [false, 15],
-      [true, 20],
-    ]);
-    expect(steamTdpLimit.get()).toEqual({ enabled: true, watts: 20 });
+    expect(fake.reported).toEqual([false, true]);
+    expect(steamTdpSlider.get()).toBe(true);
 
     stop();
-    fake.steam = { enabled: false, watts: 20 };
+    fake.steam = false;
     await vi.advanceTimersByTimeAsync(4000);
-    expect(fake.reported).toHaveLength(2);
+    expect(fake.reported).toEqual([false, true]);
   });
 
   it("counts as off where Steam has no store ORIGAMI knows", async () => {
@@ -96,7 +90,7 @@ describe("Steam's TDP limit", () => {
     await vi.advanceTimersByTimeAsync(0);
     stop();
 
-    expect(fake.reported).toEqual([[false, null]]);
-    expect(steamTdpLimit.get()).toBeNull();
+    expect(fake.reported).toEqual([false]);
+    expect(steamTdpSlider.get()).toBeNull();
   });
 });

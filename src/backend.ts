@@ -192,5 +192,5 @@ export const backend = {
   restoreSaturation: callable("restore_saturation"),
   getPower: callable<[], HeldPower>("get_power"),
   gameStarted: callable("game_started"),
-  setSteamTdpLimit: callable<[on: boolean, watts: number | null]>("set_steam_tdp_limit"),
+  setSteamTdpLimit: callable<[on: boolean]>("set_steam_tdp_limit"),
 };

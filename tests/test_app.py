@@ -1187,30 +1187,27 @@ def test_a_charger_event_has_the_keeper_write_at_once(
 
 
 @pytest.mark.usefixtures("quick_power")
-def test_origami_steps_aside_while_steams_tdp_limit_is_on(
+def test_origami_keeps_the_tdp_over_steams_slider_while_it_manages_it(
     powered: FakeRoot, tmp_path: Path
 ) -> None:
     async def scenario() -> None:
         app = make_app(powered, tmp_path)
         await app.start()
         await app.update_settings({"power": {"tdp": 20}})
+        await app.set_steam_tdp_limit(on=True)
         await asyncio.sleep(0.05)
 
-        # ORIGAMI wrote over Steam's own write before it heard of the slider: the slider's watts
-        # come back, as Steam writes them.
-        await app.set_steam_tdp_limit(on=True, watts=12)
-        await asyncio.sleep(0.05)
-        assert written_limits(powered) == [12, 13, 19]
-        assert (await app.power()).limits is None
+        for watts in (12, 15, 22, 18, 25):
+            powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", watts)
+            await asyncio.sleep(0.05)
+            assert written_limits(powered) == [20, 24, 29]
+        assert (await app.power()).contested is False
 
+        # With "Manage TDP" off, the slider sets the TDP.
+        await app.update_settings({"manage_tdp": False})
         powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", 15)
         await asyncio.sleep(0.05)
         assert written_limits(powered)[0] == 15
-
-        # Switched off in Steam, the TDP is ORIGAMI's again.
-        await app.set_steam_tdp_limit(on=False)
-        await asyncio.sleep(0.05)
-        assert written_limits(powered) == [20, 24, 29]
         app.stop()
 
     asyncio.run(scenario())

@@ -4,7 +4,7 @@
 import { backend, type BatteryTelemetry, type Limits, type Power } from "./backend";
 import type { Messages } from "./i18n";
 import { formatNumber, withUnit } from "./i18n/format";
-import { readSteamTdpLimit, type SteamTdpLimit } from "./steam";
+import { readSteamTdpSlider } from "./steam";
 import { createStore } from "./store";
 
 // The TDP and the CPU boost ORIGAMI holds (origami.power). The firmware takes a sustained limit of
@@ -75,31 +75,28 @@ export function formatWatts(watts: number, t: Messages): string {
   return withUnit(formatNumber(watts, t.locale, 1), t.units.watts);
 }
 
-/** Steam's own TDP limit as last seen; null where Steam has no store ORIGAMI knows. */
-export const steamTdpLimit = createStore<SteamTdpLimit | null>(null);
+/** Steam's TDP slider, on where it writes the TDP, as last seen; null where Steam has no store ORIGAMI knows. */
+export const steamTdpSlider = createStore<boolean | null>(null);
 
-/**
- * Steam's slider writes as it is switched on; the backend waits this long and more before it
- * answers a write over its limits (origami.power.FOREIGN_GRACE_SECONDS), so it hears first.
- */
+/** The screen says so soon after the slider is switched; the backend answers its writes meanwhile. */
 const STEAM_LOOK_MS = 500;
 
 /**
- * Starts telling the backend whether Steam's TDP limit is on; while it is, Steam sets the TDP and
- * ORIGAMI steps aside (origami.app.set_steam_tdp_limit). Returns the function that stops it.
+ * Starts telling the backend whether Steam's TDP slider is on: ORIGAMI keeps the TDP over it while
+ * it manages the TDP, and answers its writes at once (origami.app.set_steam_tdp_limit). Returns the
+ * function that stops it.
  */
 export function watchSteamTdpLimit(): () => void {
   let reported: boolean | null = null;
   let sending = false;
   const look = () => {
-    const limit = readSteamTdpLimit();
-    const shown = steamTdpLimit.get();
-    if (limit?.enabled !== shown?.enabled || limit?.watts !== shown?.watts) steamTdpLimit.set(limit);
-    const on = limit?.enabled ?? false;
+    const slider = readSteamTdpSlider();
+    steamTdpSlider.set(slider);
+    const on = slider ?? false;
     if (on === reported || sending) return;
     sending = true;
     backend
-      .setSteamTdpLimit(on, limit?.watts ?? null)
+      .setSteamTdpLimit(on)
       .then(() => {
         reported = on;
       })

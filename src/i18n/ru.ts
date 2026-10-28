@@ -67,7 +67,6 @@ export const ru: Messages = {
     limit: "Предел",
     now: "Сейчас",
     noLoad: "Нет нагрузки",
-    steamOverrides: "Перебивает Steam",
     tdp: "TDP",
     tdpSub: "Процессор и\u00a0графика вместе",
     presets: { eco: "Эко", balance: "Баланс", turbo: "Турбо", custom: "Свой" },
@@ -85,9 +84,10 @@ export const ru: Messages = {
     charging: "Заряжается",
     timeLeft: (hours, minutes) => (hours > 0 ? `~${hours}\u00a0ч\u00a0${minutes}\u00a0мин` : `~${minutes}\u00a0мин`),
     capacity: "Ёмкость",
-    steamLimit: "Ползунок TDP в\u00a0Steam включён",
-    steamLimitText: (steam, own) =>
-      `Steam ставит ${steam === null ? "свой TDP" : `свои ${steam}\u00a0Вт`} поверх ${own}\u00a0Вт ORIGAMI. Выключите «Ограничение\u00a0TDP» в\u00a0быстром меню Steam\u00a0→ «Производительность».`,
+    steamSliderIdle: "Ползунок Steam не\u00a0действует",
+    steamSlider: "Ползунок TDP в\u00a0Steam включён",
+    steamSliderText:
+      "TDP держит ORIGAMI, поэтому ползунок Steam ни\u00a0на что не\u00a0влияет. Выключите «Ограничение\u00a0TDP» в\u00a0быстром меню Steam\u00a0→ «Производительность», чтобы не\u00a0путаться. Если хотите задавать TDP ползунком Steam, выключите «Управлять\u00a0TDP» в\u00a0настройках ORIGAMI.",
     openPerformance: "Открыть «Производительность»",
     contested: "TDP меняет кто-то ещё",
     contestedText:
