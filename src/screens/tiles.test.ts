@@ -3,13 +3,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { Telemetry } from "../backend";
+import type { Telemetry, TriggerRumble } from "../backend";
 import { en } from "../i18n/en";
 import { ru } from "../i18n/ru";
 import { tileTexts } from "./tiles";
 
 const NBSP = "\u00a0";
-const none = { saturation: null, vibration: null, tdp: null };
+const none = { saturation: null, vibration: null, tdp: null, lighting: undefined, triggers: undefined };
 
 const allyX: Telemetry = {
   power: { tdpLimitW: 35, packagePowerW: 16.94, cpuBoost: false, onBattery: false, battery: null },
@@ -19,12 +19,30 @@ const allyX: Telemetry = {
 
 describe("tile texts", () => {
   it("show live values in Russian", () => {
-    expect(tileTexts(allyX, { saturation: 150, vibration: null, tdp: 17 }, ru)).toEqual({
+    const own = { ...none, saturation: 150, tdp: 17, lighting: true, triggers: null };
+
+    expect(tileTexts(allyX, own, ru)).toEqual({
       power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · CPU${NBSP}буст${NBSP}выкл` },
       fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C` },
-      display: { value: "150%", subtitle: "Насыщенность" },
-      gamepad: { value: "50%", subtitle: "Вибрация ручек" },
+      display: { value: "150%", subtitle: `Насыщенность · подсветка${NBSP}вкл` },
+      gamepad: { value: "50%", subtitle: `Вибрация ручек · триггеры${NBSP}выкл` },
     });
+  });
+
+  it("show how the triggers rumble", () => {
+    const rumble = { enabled: true, triggers: "both", level: "medium", taps: false } as const;
+    const subtitle = (triggers: TriggerRumble | null) => tileTexts(allyX, { ...none, triggers }, ru).gamepad.subtitle;
+
+    expect(subtitle({ ...rumble, enabled: false })).toBe(`Вибрация ручек · триггеры${NBSP}выкл`);
+    expect(subtitle(rumble)).toBe(`Вибрация ручек · триггеры${NBSP}вкл`);
+    expect(subtitle({ ...rumble, taps: true })).toBe(`Вибрация ручек · триггеры${NBSP}толчками`);
+  });
+
+  it("leave out what other plugins drive", () => {
+    const texts = tileTexts(allyX, none, en);
+
+    expect(texts.display.subtitle).toBe("Saturation");
+    expect(texts.gamepad.subtitle).toBe("Handle rumble");
   });
 
   it("show both handles when they differ", () => {
@@ -34,7 +52,7 @@ describe("tile texts", () => {
   });
 
   it("show the strength ORIGAMI keeps, which the driver does not know", () => {
-    const own = { saturation: null, vibration: { enabled: true, left: 25, right: 25 }, tdp: null };
+    const own = { ...none, vibration: { enabled: true, left: 25, right: 25 } };
 
     expect(tileTexts(allyX, own, en).gamepad.value).toBe("25%");
   });

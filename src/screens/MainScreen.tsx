@@ -8,7 +8,7 @@ import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
 import { ENTER_PREFERRED_CHILD } from "../quickAccess";
 import { refreshSaturation, saturation } from "../saturation";
-import { heldPower, info, settings } from "../state";
+import { conflicts, heldPower, info, refreshConflicts, refreshTriggerState, settings, triggerState } from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
@@ -23,16 +23,26 @@ export function MainScreen() {
   const level = useStore(saturation);
   const current = useStore(settings);
   const held = useStore(heldPower);
-  // Steam's own setting, changed from Steam's settings page too.
+  const owners = useStore(conflicts);
+  const motors = useStore(triggerState);
+  // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
+  // can change between visits as well.
   useEffect(() => {
     void refreshSaturation();
+    void refreshConflicts();
+    void refreshTriggerState();
   }, []);
+  const setting = current.status === "ready" ? current.value : null;
+  const others = owners.status === "ready" ? owners.value : null;
+  const ownTriggers = others?.triggers === null && motors.status === "ready" && motors.value === "available";
   const tiles = tileTexts(
     telemetry.status === "ready" ? telemetry.value : null,
     {
       saturation: level,
-      vibration: current.status === "ready" ? current.value.vibration : null,
+      vibration: setting?.vibration ?? null,
       tdp: held.status === "ready" ? (held.value.limits?.spl ?? null) : null,
+      lighting: setting && others?.lighting === null ? (setting.lighting?.enabled ?? false) : undefined,
+      triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
     },
     t,
   );

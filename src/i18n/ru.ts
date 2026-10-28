@@ -18,7 +18,9 @@ export const ru: Messages = {
     powerNow: (watts) => `сейчас\u00a0${watts}`,
     boost: (on) => (on ? "CPU\u00a0буст\u00a0вкл" : "CPU\u00a0буст\u00a0выкл"),
     displaySub: "Насыщенность",
+    lighting: (on) => (on ? "подсветка\u00a0вкл" : "подсветка\u00a0выкл"),
     gamepadSub: "Вибрация ручек",
+    triggers: { off: "триггеры\u00a0выкл", steady: "триггеры\u00a0вкл", taps: "триггеры\u00a0толчками" },
   },
   settings: {
     title: "Настройки",

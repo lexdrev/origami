@@ -18,7 +18,9 @@ export const en: Messages = {
     powerNow: (watts) => `now\u00a0${watts}`,
     boost: (on) => (on ? "CPU\u00a0boost\u00a0on" : "CPU\u00a0boost\u00a0off"),
     displaySub: "Saturation",
-    gamepadSub: "Handle vibration",
+    lighting: (on) => (on ? "lighting\u00a0on" : "lighting\u00a0off"),
+    gamepadSub: "Handle rumble",
+    triggers: { off: "triggers\u00a0off", steady: "triggers\u00a0on", taps: "trigger\u00a0taps" },
   },
   settings: {
     title: "Settings",

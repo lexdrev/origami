@@ -130,6 +130,7 @@ ${fontFaces}
 }
 .og-tile__value { font: 700 17px var(--og-mono); text-transform: uppercase; white-space: nowrap; }
 .og-tile__sub {
+  min-height: 2.7em;
   margin-top: -4px;
   color: var(--og-muted);
   font: 500 10px/1.35 var(--og-mono);

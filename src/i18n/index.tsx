@@ -40,7 +40,9 @@ export interface Messages {
     powerNow(watts: string): string;
     boost(on: boolean): string;
     displaySub: string;
+    lighting(on: boolean): string;
     gamepadSub: string;
+    triggers: { off: string; steady: string; taps: string };
   };
   settings: {
     title: string;
