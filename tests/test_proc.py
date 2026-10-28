@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from origami.proc import CommandError, run, system_environment
+from origami.proc import CommandError, run, run_blocking, system_environment
 
 
 def test_pyinstaller_library_path_is_restored(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -60,3 +60,17 @@ def test_cancellation_kills_the_program(tmp_path: Path) -> None:
         asyncio.run(scenario())
 
     assert not Path("/proc", pid_file.read_text()).exists()
+
+
+def test_blocking_run_returns_stdout_and_carries_stderr() -> None:
+    assert run_blocking(sys.executable, "-c", "print('ok')", timeout=10).strip() == "ok"
+    with pytest.raises(CommandError, match="exited with 3: broken"):
+        script = "import sys; sys.stderr.write('broken'); sys.exit(3)"
+        run_blocking(sys.executable, "-c", script, timeout=10)
+    with pytest.raises(CommandError, match="Cannot start origami-no-such-program"):
+        run_blocking("origami-no-such-program", timeout=10)
+
+
+def test_blocking_run_stops_waiting_at_its_timeout() -> None:
+    with pytest.raises(TimeoutError):
+        run_blocking(sys.executable, "-c", "import time; time.sleep(60)", timeout=0.5)

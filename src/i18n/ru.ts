@@ -157,7 +157,7 @@ export const ru: Messages = {
       lighting: { name: "Подсветка стиков", detail: "Включить или выключить" },
       screenshot: { name: "Скриншот", detail: "Как Steam + R1" },
       keyboard: { name: "Экранная клавиатура", detail: "Как Steam + X · в игре" },
-      magnifier: { name: "Лупа", detail: "Увеличение в\u00a01,5 раза · ещё раз — выключить" },
+      magnifier: { name: "Лупа", detail: "Увеличение в\u00a01,5 раза, правый стик водит · ещё раз — выключить" },
       close_game: {
         name: "Закрыть игру",
         detail: "Удержать — появится предупреждение. Удержать ещё раз в\u00a0течение 3\u00a0с — игра закроется",

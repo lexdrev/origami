@@ -118,6 +118,13 @@ class FakeDisplay:
         self.calls: list[tuple[tuple[str, ...], tuple[int, int] | None]] = []
 
     async def run(self, *args: str, user: tuple[int, int] | None = None) -> str:
+        return self._answer(args, user)
+
+    def run_blocking(self, *args: str, timeout: float, user: tuple[int, int] | None = None) -> str:
+        assert timeout > 0
+        return self._answer(args, user)
+
+    def _answer(self, args: tuple[str, ...], user: tuple[int, int] | None) -> str:
         self.calls.append((args, user))
         if "-set" in args:
             self.properties[args[-2]] = int(args[-1])

@@ -14,6 +14,7 @@ export const PRESS_ACTIONS: readonly ButtonAction[] = [
   "screenshot",
   "keyboard",
   "magnifier",
+  "l5",
   "none",
 ];
 
@@ -35,11 +36,13 @@ export const HOLD_ACTIONS: readonly ButtonAction[] = [
 ];
 
 export function pressText(action: ButtonAction, t: Messages): ActionText {
+  if (action === "l5") return t.armouryCrate.l5;
   return action === "none" ? t.armouryCrate.nothing : t.armouryCrate.actions[action];
 }
 
+/** The held button gives Steam L5 by itself, so "l5" is no choice there. */
 export function holdText(action: ButtonAction, t: Messages): ActionText {
-  return action === "none" ? t.armouryCrate.l5 : t.armouryCrate.actions[action];
+  return action === "none" || action === "l5" ? t.armouryCrate.l5 : t.armouryCrate.actions[action];
 }
 
 /** The line under the button on the Gamepad screen; null while nothing is assigned, which is a problem. */

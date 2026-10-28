@@ -15,10 +15,11 @@ from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
 from origami.buttons import ButtonAction
 from origami.gyro import GyroState
-from origami.inputplumber import SteamChord
+from origami.inputplumber import Chord
 from origami.journal import Change
 from origami.jsonio import JsonValue
 from origami.lighting import Lighting, LightMode
+from origami.magnifier import Magnifier
 from origami.rumble import SETTINGS_MAP
 from origami.settings import Language, Settings
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers, TriggerState
@@ -830,13 +831,13 @@ def test_buttons_are_not_read_until_something_is_assigned(ally_x: FakeRoot, tmp_
     asyncio.run(scenario())
 
 
-def test_steam_chords_are_pressed_and_other_actions_go_to_the_frontend(
+def test_steam_buttons_are_pressed_and_other_actions_go_to_the_frontend(
     ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     short_press = bytes.fromhex("5aa600000000")
-    pressed: list[SteamChord] = []
+    pressed: list[Chord] = []
 
-    async def press(_root: Path, chord: SteamChord) -> None:
+    def press(_root: Path, chord: Chord) -> None:
         pressed.append(chord)
 
     monkeypatch.setattr(app_module, "press_chord", press)
@@ -856,13 +857,16 @@ def test_steam_chords_are_pressed_and_other_actions_go_to_the_frontend(
 
         os.write(writer, short_press)
         await asyncio.sleep(0.05)
-        assert pressed == [SteamChord.SCREENSHOT]
+        await app.update_settings({"armoury_crate": "l5"})
+        os.write(writer, short_press)
+        await asyncio.sleep(0.05)
+        assert pressed == [Chord.SCREENSHOT, Chord.L5]
         assert events.empty()
 
         await app.update_settings({"armoury_crate": "overlay"})
         os.write(writer, short_press)
         assert await asyncio.wait_for(events.get(), 1) == (BUTTON_ACTION, "overlay")
-        assert pressed == [SteamChord.SCREENSHOT]
+        assert pressed == [Chord.SCREENSHOT, Chord.L5]
 
         app.stop()
         os.close(writer)
@@ -870,16 +874,16 @@ def test_steam_chords_are_pressed_and_other_actions_go_to_the_frontend(
     asyncio.run(scenario())
 
 
-def test_the_magnifier_is_switched_through_gamescope(
+def test_the_button_switches_the_magnifier(
     ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    switched: list[Path] = []
+    switched: list[Magnifier] = []
 
-    async def toggle(root: Path) -> bool:
-        switched.append(root)
+    def toggle(magnifier: Magnifier) -> bool:
+        switched.append(magnifier)
         return True
 
-    monkeypatch.setattr(app_module, "toggle_magnifier", toggle)
+    monkeypatch.setattr(Magnifier, "toggle", toggle)
 
     async def scenario() -> None:
         config = ally_x.ally_controller()
@@ -892,7 +896,7 @@ def test_the_magnifier_is_switched_through_gamescope(
         os.write(writer, bytes.fromhex("5aa600000000"))
         await asyncio.sleep(0.05)
 
-        assert switched == [ally_x.path]
+        assert len(switched) == 1
         app.stop()
         os.close(writer)
 

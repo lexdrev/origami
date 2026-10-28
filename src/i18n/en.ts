@@ -153,7 +153,7 @@ export const en: Messages = {
       lighting: { name: "Stick lighting", detail: "Switch on or off" },
       screenshot: { name: "Screenshot", detail: "Like Steam + R1" },
       keyboard: { name: "On-screen keyboard", detail: "Like Steam + X · in a game" },
-      magnifier: { name: "Magnifier", detail: "Zoom 1.5× · again to stop" },
+      magnifier: { name: "Magnifier", detail: "Zoom 1.5×, the right stick moves it · again to stop" },
       close_game: {
         name: "Close game",
         detail: "Hold it: a warning shows. Hold it again within\u00a03\u00a0s: the game closes",

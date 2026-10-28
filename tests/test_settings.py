@@ -72,11 +72,12 @@ def test_own_tab_position(before: int | None) -> None:
         {"saturation": 201},
         {"saturation": True},
         {"armoury_crate": "dance"},
+        {"armoury_crate_hold": "l5"},
     ],
 )
 def test_update_rejects_invalid_changes(changes: dict[str, object]) -> None:
     with pytest.raises(
-        ValueError, match=r"theme|de|qam_tab|position|qam_assist|Saturation|ButtonAction"
+        ValueError, match=r"theme|de|qam_tab|position|qam_assist|Saturation|ButtonAction|L5"
     ):
         Settings().updated(changes)
 

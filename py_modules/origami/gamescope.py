@@ -11,7 +11,7 @@ import asyncio
 import os
 from pathlib import Path
 
-from origami.proc import CommandError, run
+from origami.proc import CommandError, run, run_blocking
 
 DISPLAY = ":0"
 X_SOCKET = Path("tmp/.X11-unix/X0")
@@ -27,13 +27,19 @@ def _display_owner(root: Path) -> tuple[int, int] | None:
     return socket.st_uid, socket.st_gid
 
 
-async def _xprop(root: Path, *args: str) -> str:
-    owner = await asyncio.to_thread(_display_owner, root)
+def _xprop_command(root: Path, *args: str) -> tuple[tuple[str, ...], tuple[int, int] | None]:
+    """The xprop command and the user to run it as."""
+    owner = _display_owner(root)
     if owner is None:
         raise CommandError("gamescope's display is not there")
     user = None if owner[0] == os.geteuid() else owner
+    return ("xprop", "-display", DISPLAY, "-root", *args), user
+
+
+async def _xprop(root: Path, *args: str) -> str:
+    command, user = await asyncio.to_thread(_xprop_command, root, *args)
     async with asyncio.timeout(TIMEOUT_SECONDS):
-        return await run("xprop", "-display", DISPLAY, "-root", *args, user=user)
+        return await run(*command, user=user)
 
 
 async def read_cardinal(root: Path, atom: str) -> int | None:
@@ -49,4 +55,14 @@ async def read_cardinal(root: Path, atom: str) -> int | None:
 
 async def write_cardinal(root: Path, atom: str, value: int) -> None:
     """Set a 32-bit CARDINAL property; raise CommandError or TimeoutError on failure."""
-    await _xprop(root, "-f", atom, "32c", "-set", atom, str(value))
+    await _xprop(root, *_set_cardinal(atom, value))
+
+
+def write_cardinal_blocking(root: Path, atom: str, value: int) -> None:
+    """write_cardinal() for code that cannot await."""
+    command, user = _xprop_command(root, *_set_cardinal(atom, value))
+    run_blocking(*command, timeout=TIMEOUT_SECONDS, user=user)
+
+
+def _set_cardinal(atom: str, value: int) -> tuple[str, ...]:
+    return ("-f", atom, "32c", "-set", atom, str(value))

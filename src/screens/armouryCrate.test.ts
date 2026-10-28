@@ -15,5 +15,6 @@ describe("Armoury Crate button summary", () => {
 
   it("is a problem while nothing is assigned", () => {
     expect(armouryCrateSummary("none", "none", ru)).toBeNull();
+    expect(armouryCrateSummary("l5", "none", ru)).toBe("Коротко: L5 в Steam · долго: L5 в Steam");
   });
 });

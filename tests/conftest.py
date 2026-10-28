@@ -45,5 +45,6 @@ def display(fake_root: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> FakeDisplay
     fake_root.write("tmp/.X11-unix/X0", "")
     fake = FakeDisplay()
     monkeypatch.setattr(gamescope, "run", fake.run)
+    monkeypatch.setattr(gamescope, "run_blocking", fake.run_blocking)
     monkeypatch.setattr(gamescope.os, "geteuid", lambda: 0)
     return fake

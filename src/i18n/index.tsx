@@ -158,10 +158,10 @@ export interface Messages {
     subtitle: string;
     press: string;
     hold: string;
-    actions: Record<Exclude<ButtonAction, "none">, ActionText>;
+    actions: Record<Exclude<ButtonAction, "none" | "l5">, ActionText>;
     /** A short press left alone: the button does nothing. */
     nothing: ActionText;
-    /** Holding left alone: Steam gets the L5 it always gets. */
+    /** Holding left alone: Steam gets the L5 it always gets; a short press can give it too. */
     l5: ActionText;
     /** Above the long-press choices: Steam gets L5 whatever ORIGAMI does. */
     holdHint: string;

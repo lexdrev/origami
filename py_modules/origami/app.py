@@ -20,11 +20,11 @@ from origami.decky_plugins import (
 from origami.device import Device, read_device
 from origami.gyro import GyroState, read_gyro_state, remove_fix, restart_inputplumber, write_fix
 from origami.hid_bpf import HidBpfProgram
-from origami.inputplumber import SteamChord, press_chord
+from origami.inputplumber import Chord, press_chord
 from origami.journal import Change, ChangeJournal
 from origami.jsonio import JsonValue
 from origami.lighting import Lighting, apply_lighting
-from origami.magnifier import toggle_magnifier
+from origami.magnifier import Magnifier
 from origami.power import resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach, RumbleProgram, RumbleSettings
@@ -56,11 +56,12 @@ QAM_PRESSED = "qam_pressed"
 BUTTON_ACTION = "button_action"
 """Event sent to the frontend with the action of a button ORIGAMI drives, on every press of it."""
 
-STEAM_CHORDS = {
-    ButtonAction.SCREENSHOT: SteamChord.SCREENSHOT,
-    ButtonAction.KEYBOARD: SteamChord.KEYBOARD,
+CHORDS = {
+    ButtonAction.SCREENSHOT: Chord.SCREENSHOT,
+    ButtonAction.KEYBOARD: Chord.KEYBOARD,
+    ButtonAction.L5: Chord.L5,
 }
-"""Actions Steam does on a chord of its own, which ORIGAMI presses through InputPlumber."""
+"""Actions that are buttons Steam knows, which ORIGAMI presses through InputPlumber."""
 
 RESUME_SETTLE_SECONDS = 2.0
 """The driver resets the controller on resume; ORIGAMI sends its settings after that."""
@@ -116,6 +117,7 @@ class Origami:
         self._env = environment
         self._emit = emit
         self._rumble = RumbleProgram(environment.root, environment.plugin_dir / PROGRAM, attach_bpf)
+        self._magnifier = Magnifier(environment.root)
         self._settings_store = SettingsStore(environment.settings_dir / "settings.json")
         self._journal = ChangeJournal(environment.data_dir / "changes.json")
         self._settings = Settings()
@@ -291,12 +293,17 @@ class Origami:
         Decky ends the process right after unloading, and while the unload waits, Decky 3.3.0's
         own socket listener spins on the closed socket and freezes the event loop, so a waiting
         unload never returns and Decky kills the plugin after 5 s. A vibration test still running
-        is stopped right away, and the rumble program leaves the controller.
+        is stopped right away, the rumble program leaves the controller, and the magnifier goes
+        off with the right stick given back to the game.
         """
         self._buttons.cancel()
         self._after_resume.cancel()
         self._end_pulse()
         self._rumble.close()
+        try:
+            self._magnifier.close()
+        except (CommandError, TimeoutError) as error:
+            log.warning("Magnifier not switched off: %s", error)
         log.info("ORIGAMI stopped")
 
     def _start_handle_pulse(self) -> None:
@@ -459,15 +466,15 @@ class Origami:
 
     async def _act(self, action: ButtonAction) -> None:
         """Do what the backend can do itself; have the frontend do the rest in Steam's interface."""
-        chord = STEAM_CHORDS.get(action)
+        chord = CHORDS.get(action)
         try:
             if chord is not None:
-                await press_chord(self._env.root, chord)
+                await asyncio.to_thread(press_chord, self._env.root, chord)
             elif action is ButtonAction.MAGNIFIER:
-                await toggle_magnifier(self._env.root)
+                await asyncio.to_thread(self._magnifier.toggle)
             elif action is not ButtonAction.NONE:
                 await self._emit(BUTTON_ACTION, action.value)
-        except (CommandError, TimeoutError) as error:
+        except (CommandError, TimeoutError, ValueError) as error:
             log.warning("%s not done: %s", action.value, error)
 
     async def _started(self) -> None:

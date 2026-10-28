@@ -33,6 +33,7 @@ const ACTIONS: readonly ButtonAction[] = [
   "lighting",
   "screenshot",
   "keyboard",
+  "l5",
   "magnifier",
   "close_game",
 ];
@@ -163,6 +164,7 @@ export function watchButtonActions(ownTabShown: () => boolean): () => void {
       case "none":
       case "screenshot":
       case "keyboard":
+      case "l5":
       case "magnifier":
         // The backend does these itself and reports no press of a button left alone.
         return;

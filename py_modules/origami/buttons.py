@@ -54,6 +54,8 @@ class ButtonAction(StrEnum):
     """The stick lighting, on or off."""
     SCREENSHOT = "screenshot"
     KEYBOARD = "keyboard"
+    L5 = "l5"
+    """Steam's L5, which holding the button gives it anyway; for the short press."""
     MAGNIFIER = "magnifier"
     CLOSE_GAME = "close_game"
     """The running game, after the button is held a second time."""

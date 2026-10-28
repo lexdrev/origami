@@ -24,6 +24,7 @@ ignore = [
     "TRY003", # exception messages carry the context of the failure
     "TRY004", # malformed file content is a ValueError, even when detected by its type
     "TRY400", # expected failures are logged without a traceback
+    "S603",   # programs run from fixed names without a shell; a shell stays banned (S602)
 ]
 
 [tool.ruff.lint.isort]
@@ -66,3 +67,5 @@ xfail_strict = true
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "node_modules"]
+# Programs run from fixed names without a shell (proc.py); a shell stays banned (B602).
+skips = ["B404", "B603"]

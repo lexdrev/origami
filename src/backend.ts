@@ -82,6 +82,7 @@ export type ButtonAction =
   | "lighting"
   | "screenshot"
   | "keyboard"
+  | "l5"
   | "magnifier"
   | "close_game";
 

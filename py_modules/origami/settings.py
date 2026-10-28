@@ -71,8 +71,10 @@ class Settings:
                     parsed[key] = None if value is None else Lighting.from_json(value)
                 case "saturation":
                     parsed[key] = _saturation(value)
-                case "armoury_crate" | "armoury_crate_hold":
+                case "armoury_crate":
                     parsed[key] = ButtonAction(value)
+                case "armoury_crate_hold":
+                    parsed[key] = _hold_action(value)
                 case "vibration":
                     parsed[key] = None if value is None else Vibration.from_json(value)
                 case "trigger_rumble":
@@ -98,6 +100,13 @@ class Settings:
             "armoury_crate": self.armoury_crate.value,
             "armoury_crate_hold": self.armoury_crate_hold.value,
         }
+
+
+def _hold_action(value: object) -> ButtonAction:
+    action = ButtonAction(value)
+    if action is ButtonAction.L5:
+        raise ValueError("Steam gets L5 from the held button by itself")
+    return action
 
 
 def _saturation(value: object) -> int | None:

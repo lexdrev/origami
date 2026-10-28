@@ -4,6 +4,7 @@
 import asyncio
 import contextlib
 import os
+import subprocess
 
 
 class CommandError(Exception):
@@ -57,3 +58,31 @@ async def run(*args: str, user: tuple[int, int] | None = None) -> str:
         message = stderr.decode(errors="replace").strip()
         raise CommandError(f"{args[0]} exited with {process.returncode}: {message}")
     return stdout.decode(errors="replace")
+
+
+def run_blocking(*args: str, timeout: float, user: tuple[int, int] | None = None) -> str:
+    """run() for code that cannot await, such as what is undone while Decky unloads the plugin.
+
+    Raise CommandError on failure and TimeoutError when the program takes longer than `timeout`.
+    """
+    uid, gid = user if user is not None else (None, None)
+    try:
+        result = subprocess.run(
+            args,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            env=system_environment(),
+            user=uid,
+            group=gid,
+            extra_groups=[] if user is not None else None,
+            timeout=timeout,
+            check=False,
+        )
+    except OSError as error:
+        raise CommandError(f"Cannot start {args[0]}: {error.strerror}") from error
+    except subprocess.TimeoutExpired as error:
+        raise TimeoutError(f"{args[0]} took longer than {timeout} s") from error
+    if result.returncode != 0:
+        message = result.stderr.decode(errors="replace").strip()
+        raise CommandError(f"{args[0]} exited with {result.returncode}: {message}")
+    return result.stdout.decode(errors="replace")
