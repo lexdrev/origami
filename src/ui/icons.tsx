@@ -12,23 +12,6 @@ interface IconProps {
   size?: number;
 }
 
-/** Outline fox for the header and the About block. */
-export function FoxMark({ size = 36 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <g fill="none" stroke="currentColor" strokeWidth={1.1} strokeLinejoin="round">
-        <polygon points="4,2 9,8 12,8 12,21 3,12" />
-        <polygon points="20,2 15,8 12,8 12,21 21,12" />
-      </g>
-      <g fill="currentColor">
-        <polygon points="6.5,12 10,13.2 7.6,14.2" />
-        <polygon points="17.5,12 14,13.2 16.4,14.2" />
-        <polygon points="10.8,18.4 13.2,18.4 12,20" />
-      </g>
-    </svg>
-  );
-}
-
 const FOX_SILHOUETTE = [
   // Head outline, then ears, eyes and nose cut out with the even-odd rule.
   "M7.52 3 7.92 25.03 9.62 47.57 12.24 49.8 4.25 60.16 50 97 95.75 60.16 87.76 49.8 90.38 47.57",
@@ -40,13 +23,22 @@ const FOX_SILHOUETTE = [
   "M42.13 85.2 57.87 85.2 50 97Z",
 ].join(" ");
 
-/** Single-colour fox for the Decky plugin list; Steam recolours it for the selected row. */
-export function FoxGlyph() {
+function Fox({ size }: { size: number | string }) {
   return (
-    <svg width="1em" height="1em" viewBox="0 0 100 100" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <path d={FOX_SILHOUETTE} fill="currentColor" fillRule="evenodd" />
     </svg>
   );
+}
+
+/** The quick access tab's fox for the header and the About block, in the colour around it. */
+export function FoxMark({ size = 36 }: IconProps) {
+  return <Fox size={size} />;
+}
+
+/** Single-colour fox for the Decky plugin list; Steam recolours it for the selected row. */
+export function FoxGlyph() {
+  return <Fox size="1em" />;
 }
 
 function TileIcon({ children }: { children: ReactNode }) {
