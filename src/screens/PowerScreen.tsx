@@ -24,7 +24,7 @@ import { UISound } from "../sounds";
 import { conflicts, heldPower, refreshConflicts, setPower, updateSettings } from "../state";
 import { settings } from "../state";
 import { useStore } from "../store";
-import { Alert, Card, CardTitles, Header, Screen } from "../ui/blocks";
+import { Alert, Card, CardTitles, Header, Screen, SwitchLine } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { Dial, DialFace, DialReadout, type DialStatus } from "../ui/dial";
 import { useTelemetry } from "../useTelemetry";
@@ -100,16 +100,15 @@ function OwnPower({ setting, power }: { setting: Settings; power: PowerReadings 
     <>
       {steamSlider && <SteamSliderPlate />}
       {holding?.contested && <Alert title={t.power.contested}>{t.power.contestedText}</Alert>}
-      <TdpCard power={setting.power} highest={highest} drawn={drawn} status={status} />
+      <TdpCard
+        power={setting.power}
+        highest={highest}
+        batteryHighTdp={setting.batteryHighTdp}
+        drawn={drawn}
+        status={status}
+      />
       <HeadroomCard power={setting.power} limits={limits} />
       <BoostRow power={setting.power} readings={power} />
-      <ToggleRow
-        title={t.power.batteryHigh}
-        subtitle={setting.batteryHighTdp ? t.power.batteryHighOn : t.power.batteryHighOff}
-        value={setting.batteryHighTdp}
-        action={t.actions.toggle}
-        onChange={(batteryHighTdp) => void updateSettings({ batteryHighTdp })}
-      />
     </>
   );
 }
@@ -136,15 +135,17 @@ function DrawnDial({ power }: { power: PowerReadings | null }) {
 interface TdpCardProps {
   power: Power;
   highest: number;
+  batteryHighTdp: boolean;
   drawn: number | null;
   status: DialStatus | null;
 }
 
 /**
  * The sustained limit in one card: the dial with the title and the power drawn beside it, then the
- * scale up to its top and the presets, as the saturation. The dial shows the scale's ends.
+ * scale up to its top and the presets, as the saturation. The dial shows the scale's ends; under the
+ * presets the switch that unlocks the top of the scale on the battery, next to the lock it opens.
  */
-function TdpCard({ power, highest, drawn, status }: TdpCardProps) {
+function TdpCard({ power, highest, batteryHighTdp, drawn, status }: TdpCardProps) {
   const t = useMessages();
   const tdp = Math.min(power.tdp, highest);
   const preset = presetOf(tdp);
@@ -196,6 +197,14 @@ function TdpCard({ power, highest, drawn, status }: TdpCardProps) {
           detail: preset === undefined ? watts(tdp) : "+",
           selected: preset === undefined,
         }}
+      />
+      <span className="og-card__divider" aria-hidden="true" />
+      <SwitchLine
+        title={t.power.batteryHigh}
+        subtitle={batteryHighTdp ? t.power.batteryHighOn : t.power.batteryHighOff}
+        value={batteryHighTdp}
+        action={t.actions.toggle}
+        onChange={(on) => void updateSettings({ batteryHighTdp: on })}
       />
     </Card>
   );

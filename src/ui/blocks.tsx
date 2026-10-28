@@ -128,18 +128,7 @@ export function Card({ title, subtitle, problem = false, aside, toggle, children
           </div>
         )
       ) : (
-        <Pressable
-          className="og-card__head og-card__head--switch"
-          action={toggle.action}
-          pressed={toggle.value}
-          sound={toggle.value ? UISound.ToggleOff : UISound.ToggleOn}
-          onPress={() => {
-            toggle.onChange(!toggle.value);
-          }}
-        >
-          {titles}
-          <Switch on={toggle.value} />
-        </Pressable>
+        <SwitchLine title={title ?? ""} subtitle={subtitle} problem={problem} {...toggle} />
       )}
       {toggle === undefined
         ? children
@@ -150,6 +139,30 @@ export function Card({ title, subtitle, problem = false, aside, toggle, children
             </>
           )}
     </section>
+  );
+}
+
+interface SwitchLineProps extends CardSwitch {
+  title: string;
+  subtitle?: string | undefined;
+  problem?: boolean;
+}
+
+/** A title with a switch: a card's head, or an option inside a card that has no switch of its own. */
+export function SwitchLine({ title, subtitle, problem = false, value, action, onChange }: SwitchLineProps) {
+  return (
+    <Pressable
+      className="og-card__head og-card__head--switch"
+      action={action}
+      pressed={value}
+      sound={value ? UISound.ToggleOff : UISound.ToggleOn}
+      onPress={() => {
+        onChange(!value);
+      }}
+    >
+      <CardTitles title={title} subtitle={subtitle} problem={problem} />
+      <Switch on={value} />
+    </Pressable>
   );
 }
 
