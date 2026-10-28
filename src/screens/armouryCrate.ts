@@ -7,31 +7,32 @@ import type { ActionText, Messages } from "../i18n";
 /** Actions for a short press. Nothing reaches Steam from it, so "none" leaves the button dead. */
 export const PRESS_ACTIONS: readonly ButtonAction[] = [
   "origami",
+  "l5",
+  "magnifier",
+  "screenshot",
+  "lighting",
   "quick_access",
   "performance",
   "overlay",
-  "lighting",
-  "screenshot",
   "keyboard",
-  "magnifier",
-  "l5",
   "none",
 ];
 
 /**
- * Actions for holding the button. Steam gets L5 from it in any case; "none" leaves only that.
- * Closing the game is here only: it waits for the button to be held a second time.
+ * Actions for holding the button, in the short press's order. Steam gets L5 from it in any case;
+ * "none" leaves only that, so it stands where L5 does. Closing the game is here only: it waits for
+ * the button to be held a second time.
  */
 export const HOLD_ACTIONS: readonly ButtonAction[] = [
-  "none",
   "origami",
+  "none",
+  "magnifier",
+  "screenshot",
+  "lighting",
   "quick_access",
   "performance",
   "overlay",
-  "lighting",
-  "screenshot",
   "keyboard",
-  "magnifier",
   "close_game",
 ];
 
