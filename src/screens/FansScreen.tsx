@@ -111,12 +111,15 @@ function FanGauge({ rpm }: { rpm: number | null }) {
 const SPARK_WIDTH = 108;
 const SPARK_HEIGHT = 30;
 const SPARK_SAMPLES = 60;
-/** The graph spans at least this many rpm, so small wobbles stay small. */
-const SPARK_SPAN = 800;
+/** The graph spans at least this many rpm around the middle of the minute, so a fan's wobble of a few
+ * hundred rpm stays a ripple and a steady fan a line across the middle. */
+const SPARK_SPAN = 2000;
 
 function Sparkline({ samples, label }: { samples: readonly number[]; label: string }) {
-  const low = Math.min(...samples);
-  const high = Math.max(low + SPARK_SPAN, ...samples);
+  const middle = (Math.min(...samples) + Math.max(...samples)) / 2;
+  const span = Math.max(SPARK_SPAN, Math.max(...samples) - Math.min(...samples));
+  const low = middle - span / 2;
+  const high = middle + span / 2;
   const step = SPARK_WIDTH / (SPARK_SAMPLES - 1);
   const points = samples
     .map((rpm, index) => {
@@ -170,7 +173,7 @@ function CurveCard({ curve, hottest }: { curve: FanCurve | null; hottest: number
   return (
     <Card
       title={t.fans.curve(curveName(curve, t))}
-      subtitle={on ? t.fans.curveOn : t.fans.curveOff}
+      subtitle={on ? t.fans.curveSubs[preset?.id ?? "custom"] : t.fans.curveOff}
       toggle={{
         value: on,
         action: t.actions.toggle,

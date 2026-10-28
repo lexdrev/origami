@@ -125,7 +125,12 @@ export const en: Messages = {
     history: (fan) => `Speed of ${fan} over a minute`,
     temperatures: ["CPU", "GPU"],
     curve: (name) => `Curve · ${name}`,
-    curveOn: "Quieter in the middle · up to\u00a0100% when hot",
+    curveSubs: {
+      quiet: "Quietest · the chip runs warmer",
+      balance: "Quiet in menus · cool in games",
+      power: "Coolest · louder",
+      custom: "Points set by hand",
+    },
     curveOff: "No more than 78% even at\u00a094\u00a0°C",
     presets: { default: "Default", quiet: "Quiet", balance: "Balanced", power: "Strong", custom: "Custom" },
     speedNow: (temp, speed) => `Now ${temp} → ${speed}`,

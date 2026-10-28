@@ -129,7 +129,12 @@ export const ru: Messages = {
     history: (fan) => `Обороты: ${fan}, за минуту`,
     temperatures: ["Процессор", "Видеокарта"],
     curve: (name) => `Кривая · ${name}`,
-    curveOn: "Тише на средних · до\u00a0100% на высоких",
+    curveSubs: {
+      quiet: "Тише всех · чип теплее",
+      balance: "Тихо в меню · прохладно в игре",
+      power: "Холоднее всех · громче",
+      custom: "Точки настроены вручную",
+    },
     curveOff: "Не выше 78% даже при\u00a094\u00a0°C",
     presets: { default: "Дефолт", quiet: "Тихая", balance: "Баланс", power: "Мощная", custom: "Своя" },
     speedNow: (temp, speed) => `Сейчас ${temp} → ${speed}`,

@@ -157,7 +157,8 @@ export interface Messages {
     history(fan: string): string;
     temperatures: readonly [string, string];
     curve(name: string): string;
-    curveOn: string;
+    /** Under the curve's name while it is on: what the preset gives and what it costs. */
+    curveSubs: Record<FanPreset["id"] | "custom", string>;
     curveOff: string;
     presets: Record<FanPreset["id"] | "default" | "custom", string>;
     speedNow(temp: string, speed: string): string;
