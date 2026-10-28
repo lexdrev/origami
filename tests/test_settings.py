@@ -115,9 +115,11 @@ def test_bad_lighting_is_rejected() -> None:
         Settings().updated({"lighting": {"mode": "disco"}})
 
 
-def test_vibration_is_unset_until_chosen_and_then_saved(tmp_path: Path) -> None:
+def test_vibration_starts_at_the_middle_and_is_saved(tmp_path: Path) -> None:
     store = SettingsStore(tmp_path / "settings.json")
-    assert Settings().vibration is None
+    assert Settings().vibration == Vibration(enabled=True, left=50, right=50)
+    # Saved before the default: the controller keeps its own strength.
+    assert Settings().updated({"vibration": None}).vibration is None
 
     store.save(Settings().updated({"vibration": {"left": 25, "right": 75}}))
 

@@ -41,6 +41,8 @@ class RumbleSettings:
     right_trigger: int = 0
     grips: int = 0
     """0 leaves the grips as the game sent them."""
+    taps: bool = False
+    """The triggers tap once on each shot instead of following the grips."""
 
     def idle(self) -> bool:
         return not (self.left_trigger or self.right_trigger or self.grips)
@@ -49,7 +51,7 @@ class RumbleSettings:
         return replace(self, left_trigger=0, right_trigger=0)
 
     def to_bytes(self) -> bytes:
-        return bytes([self.left_trigger, self.right_trigger, self.grips])
+        return bytes([self.left_trigger, self.right_trigger, self.grips, self.taps])
 
 
 def lays_out_rumble(device: Path) -> bool:

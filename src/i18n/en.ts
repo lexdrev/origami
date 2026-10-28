@@ -163,8 +163,12 @@ export const en: Messages = {
     triggersStill: "The trigger motors are silent",
     triggersOn: "On · only from games",
     triggerChoices: { right: "Right", both: "Both" },
+    triggerSides: "Triggers",
+    triggerCharacter: "Pattern",
+    triggerPattern: "How the triggers rumble",
+    triggerPatterns: { steady: "Steady", taps: "Taps" },
     triggerStrength: "Trigger strength",
-    triggerLevels: { soft: "Weak", medium: "Medium", strong: "Strong", max: "Max" },
+    triggerLevels: { soft: "Weak", medium: "Medium", strong: "Strong" },
     triggerStrengthNote: "Strength at a game's full rumble",
     triggersOwnedBy: (plugin) => `${plugin} drives the triggers`,
     triggersOwnedText: (plugin) =>

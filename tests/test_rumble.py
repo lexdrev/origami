@@ -39,10 +39,11 @@ def replug_gamepad(root: FakeRoot, hid_id: int) -> None:
 
 
 def test_settings_go_to_the_program_in_its_layout() -> None:
-    # struct rumble_settings in bpf/rumble.bpf.c: left trigger, right trigger, grips.
+    # struct rumble_settings in bpf/rumble.bpf.c: left trigger, right trigger, grips, taps.
     assert RumbleSettings(left_trigger=30, right_trigger=60, grips=70).to_bytes() == bytes(
-        [30, 60, 70]
+        [30, 60, 70, 0]
     )
+    assert RumbleSettings(right_trigger=20, taps=True).to_bytes() == bytes([0, 20, 0, 1])
     assert RumbleSettings().idle()
     assert not RumbleSettings(grips=70).idle()
 
@@ -60,13 +61,13 @@ def test_program_goes_on_the_gamepad_interface_with_the_settings(
 
     [attached] = bpf.attached()
     assert (attached.path, attached.ops, attached.hid_id) == (PROGRAM, OPS_MAP, 7)
-    assert attached.maps[SETTINGS_MAP] == [bytes([0, 60, 0]), bytes([100, 100, 70])]
+    assert attached.maps[SETTINGS_MAP] == [bytes([0, 60, 0, 0]), bytes([100, 100, 70, 0])]
 
 
 def test_program_stays_for_the_grips_alone(program: RumbleProgram, bpf: FakeHidBpf) -> None:
     program.apply(RumbleSettings(grips=70))
 
-    assert bpf.attached()[0].maps[SETTINGS_MAP] == [bytes([0, 0, 70])]
+    assert bpf.attached()[0].maps[SETTINGS_MAP] == [bytes([0, 0, 70, 0])]
 
 
 def test_program_leaves_when_it_has_nothing_to_do(program: RumbleProgram, bpf: FakeHidBpf) -> None:
@@ -118,9 +119,9 @@ def test_muted_triggers_get_their_strength_back_and_the_grips_stay_lifted(
     program.unmute()
 
     assert bpf.attached()[0].maps[SETTINGS_MAP] == [
-        bytes([0, 60, 70]),
-        bytes([0, 0, 70]),
-        bytes([0, 60, 70]),
+        bytes([0, 60, 70, 0]),
+        bytes([0, 0, 70, 0]),
+        bytes([0, 60, 70, 0]),
     ]
 
 

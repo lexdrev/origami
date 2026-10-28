@@ -8,9 +8,10 @@ always carries 0 for both. The rumble program (origami.rumble) fills each chosen
 grip motor on its side as the report goes out, at the level chosen here. Games rumble the grips, so
 a trigger follows a game and nothing else.
 
-The trigger motors answer in a narrow band (HARDWARE.md): up to about 30 they hum in the shell, and
-only 60 and more are felt in the finger. A game's shots give a grip 60-90% of its full strength, so
-the levels are four points of that band rather than a fine scale whose steps feel the same.
+A trigger motor answers in a narrow band (HARDWARE.md, accelerometer in a game): anything up to a
+fifth of its range runs at one least strength, and from there to the top the shake only doubles. So
+the levels are three points of that band, and the lighter feel is a pattern rather than a strength:
+taps, one short tap on each shot, where steady rumble follows the game's whole rumble.
 """
 
 from dataclasses import dataclass
@@ -35,16 +36,22 @@ class TriggerLevel(StrEnum):
     SOFT = "soft"
     MEDIUM = "medium"
     STRONG = "strong"
-    MAX = "max"
 
 
 LEVEL_STRENGTH = {
-    TriggerLevel.SOFT: 30,
+    TriggerLevel.SOFT: 20,
     TriggerLevel.MEDIUM: 60,
-    TriggerLevel.STRONG: 80,
-    TriggerLevel.MAX: 100,
+    TriggerLevel.STRONG: 100,
 }
 """Strength of a trigger at a game's full rumble, in percent, for each level."""
+
+FORMER_LEVELS = {"min": TriggerLevel.SOFT, "max": TriggerLevel.STRONG}
+"""Levels of earlier versions, read as the nearest of today's."""
+
+TAP_SECONDS = 0.06
+"""One tap of the test, as long as the program's (TAP_NS in bpf/rumble.bpf.c)."""
+TAPS_IN_TEST = 3
+TAP_GAP_SECONDS = 0.3
 
 
 class TriggerState(StrEnum):
@@ -59,6 +66,9 @@ class TriggerRumble:
     """Off keeps the trigger motors still; the triggers and the level wait until it is on again."""
     triggers: Triggers = Triggers.RIGHT
     level: TriggerLevel = TriggerLevel.MEDIUM
+    """Switched on for the first time, the right trigger rumbles at the middle level."""
+    taps: bool = False
+    """One short tap on each shot instead of steady rumble."""
 
     @classmethod
     def from_json(cls, value: object) -> TriggerRumble:
@@ -72,14 +82,23 @@ class TriggerRumble:
         if "enabled" not in data and "triggers" in data:
             data = {**data, "enabled": triggers != "off"}
             triggers = defaults.triggers if triggers == "off" else triggers
+        level = data.get("level", defaults.level)
+        if isinstance(level, str):
+            level = FORMER_LEVELS.get(level, level)
         return cls(
             enabled=expect_bool("enabled", data.get("enabled", defaults.enabled)),
             triggers=Triggers(triggers),
-            level=TriggerLevel(data.get("level", defaults.level)),
+            level=TriggerLevel(level),
+            taps=expect_bool("taps", data.get("taps", defaults.taps)),
         )
 
     def to_json(self) -> dict[str, JsonValue]:
-        return {"enabled": self.enabled, "triggers": self.triggers.value, "level": self.level.value}
+        return {
+            "enabled": self.enabled,
+            "triggers": self.triggers.value,
+            "level": self.level.value,
+            "taps": self.taps,
+        }
 
     def strengths(self) -> tuple[int, int]:
         """Strength of the left and the right trigger at a game's full rumble; 0 keeps it still."""

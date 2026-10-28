@@ -44,8 +44,19 @@ async def no_events(_event: str, *_args: JsonValue) -> None:
 
 
 def make_app(
-    root: FakeRoot, tmp_path: Path, emit: Emit = no_events, bpf: FakeHidBpf | None = None
+    root: FakeRoot,
+    tmp_path: Path,
+    emit: Emit = no_events,
+    bpf: FakeHidBpf | None = None,
+    *,
+    first_start: bool = False,
 ) -> Origami:
+    settings = tmp_path / "settings" / "settings.json"
+    if not first_start and not settings.exists():
+        # Saved by an install before the handles' default strength: the controller keeps its
+        # own, so a test sees only what it sets itself.
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        settings.write_text('{"vibration": null}\n', encoding="utf-8")
     environment = Environment(
         root=root.path,
         settings_dir=tmp_path / "settings",
@@ -111,7 +122,7 @@ def test_calls_wait_for_start(ally_x: FakeRoot, tmp_path: Path) -> None:
 
         await app.start()
 
-        assert await pending == Settings()
+        assert await pending == Settings(vibration=None)
 
     asyncio.run(scenario())
 
@@ -137,11 +148,11 @@ def test_settings_are_saved(ally_x: FakeRoot, tmp_path: Path) -> None:
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
         await app.start()
-        assert await app.update_settings({"language": "en"}) == Settings(language=Language.EN)
+        assert await app.update_settings({"language": "en"}) == Settings(language=Language.EN, vibration=None)
 
         restarted = make_app(ally_x, tmp_path)
         await restarted.start()
-        assert await restarted.settings() == Settings(language=Language.EN)
+        assert await restarted.settings() == Settings(language=Language.EN, vibration=None)
 
     asyncio.run(scenario())
 
@@ -464,6 +475,37 @@ def test_vibration_is_sent_kept_and_journaled_with_the_driver_strength(
     asyncio.run(scenario())
 
 
+def test_the_first_start_sets_the_handles_to_the_middle_level(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, first_start=True)
+        await app.start()
+
+        assert sent_vibration == [Vibration(left=50, right=50)]
+        assert (await app.settings()).vibration == Vibration(left=50, right=50)
+        assert await app.changes() == [Change("gamepad", "vibration", [50, 50])]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_the_first_start_leaves_the_vibration_to_ally_vibe_control(
+    ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
+) -> None:
+    install_plugin(tmp_path, "Ally Vibe Control")
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, first_start=True)
+        await app.start()
+
+        assert sent_vibration == []
+        assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
 def test_vibration_is_left_alone_while_ally_vibe_control_runs(
     ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
 ) -> None:
@@ -555,7 +597,10 @@ def test_trigger_rumble_attaches_the_program_and_keeps_the_setting(
         assert settings.trigger_rumble == TriggerRumble(True, Triggers.RIGHT, TriggerLevel.MEDIUM)
         [program] = bpf.attached()
         assert program.path == tmp_path / "plugin/bin/rumble.bpf.o"
-        assert program.maps[SETTINGS_MAP] == [bytes([0, 60, 0])]
+        assert program.maps[SETTINGS_MAP] == [bytes([0, 60, 0, 0])]
+
+        await app.update_settings({"trigger_rumble": {"enabled": True, "taps": True}})
+        assert program.maps[SETTINGS_MAP][-1] == bytes([0, 60, 0, 1])
         # Nothing stays in the system: the program goes with the plugin.
         assert await app.changes() == []
 
@@ -581,7 +626,7 @@ def test_saved_trigger_rumble_comes_back_at_start(ally_x: FakeRoot, tmp_path: Pa
         await app.start()
 
         [program] = bpf.attached()
-        assert program.maps[SETTINGS_MAP] == [bytes([100, 100, 0])]
+        assert program.maps[SETTINGS_MAP] == [bytes([100, 100, 0, 0])]
         app.stop()
 
     asyncio.run(scenario())
@@ -622,7 +667,7 @@ def test_grips_are_lifted_under_origamis_own_strength(
 
         assert sent_vibration == [Vibration(left=80, right=80)]
         [program] = bpf.attached()
-        assert program.maps[SETTINGS_MAP] == [bytes([0, 0, 70]), bytes([0, 60, 70])]
+        assert program.maps[SETTINGS_MAP] == [bytes([0, 0, 70, 0]), bytes([0, 60, 70, 0])]
         app.stop()
 
     asyncio.run(scenario())
@@ -722,9 +767,9 @@ def test_the_handle_test_keeps_the_triggers_still(
         await app.test_vibration()
 
         assert bpf.attached()[0].maps[SETTINGS_MAP] == [
-            bytes([0, 60, 0]),
-            bytes(3),
-            bytes([0, 60, 0]),
+            bytes([0, 60, 0, 0]),
+            bytes(4),
+            bytes([0, 60, 0, 0]),
         ]
         app.stop()
 
@@ -758,6 +803,34 @@ def test_trigger_test_is_a_pulse_of_the_chosen_triggers(
     asyncio.run(scenario())
     assert pulses == [TriggerRumble(True, Triggers.BOTH, TriggerLevel.SOFT)]
     assert rumbles == ["stop"]
+
+
+def test_trigger_test_taps_when_the_triggers_tap(
+    ally_x: FakeRoot, tmp_path: Path, rumbles: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ally_x.ally_controller()
+    pulses: list[TriggerRumble] = []
+
+    def pulse(_root: Path, trigger_rumble: TriggerRumble) -> None:
+        pulses.append(trigger_rumble)
+        rumbles.append("tap")
+
+    monkeypatch.setattr(app_module, "start_trigger_pulse", pulse)
+    monkeypatch.setattr(app_module, "TAP_SECONDS", 0.01)
+    monkeypatch.setattr(app_module, "TAP_GAP_SECONDS", 0.01)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"trigger_rumble": {"enabled": True, "taps": True}})
+
+        await app.test_trigger_rumble()
+
+        app.stop()
+
+    asyncio.run(scenario())
+    assert len(pulses) == 3
+    assert rumbles == ["tap", "stop"] * 3
 
 
 def test_a_cancelled_or_unloaded_vibration_test_still_stops_the_motors(

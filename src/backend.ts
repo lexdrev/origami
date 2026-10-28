@@ -75,7 +75,7 @@ export interface Vibration {
 export type Triggers = "right" | "both";
 
 /** How strongly the triggers rumble (origami.triggers.TriggerLevel). */
-export type TriggerLevel = "soft" | "medium" | "strong" | "max";
+export type TriggerLevel = "soft" | "medium" | "strong";
 
 /** Rumble of the impulse triggers (origami.triggers.TriggerRumble). */
 export interface TriggerRumble {
@@ -83,6 +83,8 @@ export interface TriggerRumble {
   enabled: boolean;
   triggers: Triggers;
   level: TriggerLevel;
+  /** One short tap on each shot instead of steady rumble. */
+  taps: boolean;
 }
 
 /** Whether the triggers here have motors ORIGAMI can rumble (origami.triggers.TriggerState). */

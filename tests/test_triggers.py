@@ -14,8 +14,7 @@ from origami.triggers import (
 
 from fakes import FakeRoot
 
-SOFT, MEDIUM = TriggerLevel.SOFT, TriggerLevel.MEDIUM
-STRONG, MAX = TriggerLevel.STRONG, TriggerLevel.MAX
+SOFT, MEDIUM, STRONG = TriggerLevel.SOFT, TriggerLevel.MEDIUM, TriggerLevel.STRONG
 
 
 def on(triggers: Triggers, level: TriggerLevel) -> TriggerRumble:
@@ -23,26 +22,27 @@ def on(triggers: Triggers, level: TriggerLevel) -> TriggerRumble:
 
 
 def test_triggers_stay_still_until_switched_on_then_rumble_the_right_at_the_middle() -> None:
-    assert TriggerRumble() == TriggerRumble(enabled=False, triggers=Triggers.RIGHT, level=MEDIUM)
+    assert TriggerRumble() == TriggerRumble(
+        enabled=False, triggers=Triggers.RIGHT, level=MEDIUM, taps=False
+    )
     assert TriggerRumble().strengths() == (0, 0)
 
 
 def test_strength_of_each_trigger_at_each_level() -> None:
-    assert on(Triggers.RIGHT, SOFT).strengths() == (0, 30)
+    assert on(Triggers.RIGHT, SOFT).strengths() == (0, 20)
     assert on(Triggers.RIGHT, MEDIUM).strengths() == (0, 60)
-    assert on(Triggers.RIGHT, STRONG).strengths() == (0, 80)
-    assert on(Triggers.BOTH, MAX).strengths() == (100, 100)
+    assert on(Triggers.BOTH, STRONG).strengths() == (100, 100)
 
 
 def test_off_keeps_the_triggers_and_the_level_for_later() -> None:
-    off = TriggerRumble(enabled=False, triggers=Triggers.BOTH, level=MAX)
+    off = TriggerRumble(enabled=False, triggers=Triggers.BOTH, level=STRONG, taps=True)
 
     assert off.strengths() == (0, 0)
     assert TriggerRumble.from_json(off.to_json()) == off
 
 
 def test_json_round_trip() -> None:
-    rumble = on(Triggers.BOTH, STRONG)
+    rumble = TriggerRumble(enabled=True, triggers=Triggers.BOTH, level=STRONG, taps=True)
 
     assert TriggerRumble.from_json(rumble.to_json()) == rumble
     assert TriggerRumble.from_json({"enabled": True}) == on(Triggers.RIGHT, MEDIUM)
@@ -57,6 +57,11 @@ def test_settings_saved_before_the_switch() -> None:
     assert both == on(Triggers.BOTH, MEDIUM)
 
 
+def test_levels_of_earlier_versions_read_as_the_nearest() -> None:
+    assert TriggerRumble.from_json({"enabled": True, "level": "min"}).level is SOFT
+    assert TriggerRumble.from_json({"enabled": True, "level": "max"}).level is STRONG
+
+
 @pytest.mark.parametrize(
     "value",
     [
@@ -66,6 +71,7 @@ def test_settings_saved_before_the_switch() -> None:
         {"enabled": "yes"},
         {"triggers": "right", "level": "loud"},
         {"triggers": "right", "level": 60},
+        {"enabled": True, "taps": "yes"},
     ],
 )
 def test_bad_trigger_rumble_is_rejected(value: object) -> None:
@@ -74,8 +80,8 @@ def test_bad_trigger_rumble_is_rejected(value: object) -> None:
 
 
 def test_the_test_pulse_drives_the_triggers_and_not_the_grips() -> None:
-    assert pulse_report(on(Triggers.RIGHT, SOFT)) == bytes.fromhex("0d0f001e0000ff00eb")
-    assert pulse_report(on(Triggers.BOTH, MAX)) == bytes.fromhex("0d0f64640000ff00eb")
+    assert pulse_report(on(Triggers.RIGHT, SOFT)) == bytes.fromhex("0d0f00140000ff00eb")
+    assert pulse_report(on(Triggers.BOTH, STRONG)) == bytes.fromhex("0d0f64640000ff00eb")
 
 
 def test_trigger_motors_on_the_ally_x(ally_x: FakeRoot) -> None:

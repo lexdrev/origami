@@ -24,7 +24,13 @@ import {
   updateSettings,
 } from "../state";
 import { useStore } from "../store";
-import { currentTriggerRumble, separateTriggerOwner, TRIGGER_CHOICES, TRIGGER_LEVELS } from "../triggers";
+import {
+  currentTriggerRumble,
+  separateTriggerOwner,
+  TRIGGER_CHOICES,
+  TRIGGER_LEVELS,
+  TRIGGER_PATTERNS,
+} from "../triggers";
 import { Alert, Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, NavRow, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { PlayIcon } from "../ui/icons";
@@ -112,7 +118,7 @@ export function GamepadScreen() {
   );
 }
 
-/** One card: the switch in its head, then the scale, the handles with the test and the presets. */
+/** One card: the switch in its head, the handles with the test, then the strength: scale and presets. */
 function VibrationSettings({ setting }: { setting: Vibration | null }) {
   const t = useMessages();
   const readings = useStore(telemetry);
@@ -133,6 +139,21 @@ function VibrationSettings({ setting }: { setting: Vibration | null }) {
         },
       }}
     >
+      <span className="og-card__label">{t.gamepad.handles}</span>
+      <ChoiceGroup
+        label={t.gamepad.handles}
+        choices={[
+          { value: "together", label: t.gamepad.together },
+          { value: "separate", label: t.gamepad.separate },
+        ]}
+        value={separate ? "separate" : "together"}
+        action={t.actions.select}
+        onChange={(choice) => {
+          if (choice === "together") setVibration(together(vibration));
+          setSeparate(choice === "separate");
+        }}
+        after={<TestButton disabled={silent(vibration)} onPress={() => void testVibration()} />}
+      />
       <div className="og-card__head">
         <span className="og-card__label">{t.gamepad.strength}</span>
         <span className="og-card__value">{formatVibration(vibration, t.gamepad.off)}</span>
@@ -167,20 +188,6 @@ function VibrationSettings({ setting }: { setting: Vibration | null }) {
         <span>{VIBRATION_NOTCH}</span>
         <span>{MAX_VIBRATION}</span>
       </div>
-      <ChoiceGroup
-        label={t.gamepad.handles}
-        choices={[
-          { value: "together", label: t.gamepad.together },
-          { value: "separate", label: t.gamepad.separate },
-        ]}
-        value={separate ? "separate" : "together"}
-        action={t.actions.select}
-        onChange={(choice) => {
-          if (choice === "together") setVibration(together(vibration));
-          setSeparate(choice === "separate");
-        }}
-        after={<TestButton disabled={silent(vibration)} onPress={() => void testVibration()} />}
-      />
       <ChoiceGroup
         label={t.gamepad.strength}
         choices={VIBRATION_PRESETS.map((choice) => ({
@@ -269,6 +276,7 @@ function TriggerRumbleSettings({ setting }: { setting: TriggerRumble | null }) {
         },
       }}
     >
+      <span className="og-card__label">{t.gamepad.triggerSides}</span>
       <ChoiceGroup
         label={t.gamepad.triggers}
         choices={TRIGGER_CHOICES.map((triggers) => ({ value: triggers, label: t.gamepad.triggerChoices[triggers] }))}
@@ -279,6 +287,17 @@ function TriggerRumbleSettings({ setting }: { setting: TriggerRumble | null }) {
         }}
         after={<TestButton onPress={() => void testTriggerRumble()} />}
       />
+      <span className="og-card__label">{t.gamepad.triggerCharacter}</span>
+      <ChoiceGroup
+        label={t.gamepad.triggerPattern}
+        choices={TRIGGER_PATTERNS.map((pattern) => ({ value: pattern, label: t.gamepad.triggerPatterns[pattern] }))}
+        value={rumble.taps ? "taps" : "steady"}
+        action={t.actions.select}
+        onChange={(pattern) => {
+          setTriggerRumble({ ...rumble, taps: pattern === "taps" });
+        }}
+      />
+      <span className="og-card__label">{t.gamepad.strength}</span>
       <ChoiceGroup
         label={t.gamepad.triggerStrength}
         choices={TRIGGER_LEVELS.map((level) => ({

@@ -36,6 +36,9 @@ from origami.tasks import BackgroundTask
 from origami.tdp import read_limits, reset_to_profile
 from origami.telemetry import Telemetry, read_telemetry
 from origami.triggers import (
+    TAP_GAP_SECONDS,
+    TAP_SECONDS,
+    TAPS_IN_TEST,
     TriggerRumble,
     TriggerState,
     read_trigger_state,
@@ -245,15 +248,25 @@ class Origami:
             await asyncio.to_thread(self._rumble.unmute)
 
     async def test_trigger_rumble(self) -> None:
-        """Rumble the triggers for a second at their level, as a game's full rumble would."""
+        """Rumble the triggers at their level as a game's full rumble would: a second, or taps."""
         await self._started()
         trigger_rumble = self._settings.trigger_rumble
         if self._pulsing or trigger_rumble is None or not trigger_rumble.enabled:
             return
         self._pulsing = True
         try:
-            await asyncio.to_thread(start_trigger_pulse, self._env.root, trigger_rumble)
-            await asyncio.sleep(PULSE_SECONDS)
+            if trigger_rumble.taps:
+                # Taps as a game's shots give them, not one long rumble.
+                # The last tap ends with the test.
+                for tap in range(TAPS_IN_TEST):
+                    if tap:
+                        await asyncio.to_thread(stop_rumble, self._env.root)
+                        await asyncio.sleep(TAP_GAP_SECONDS)
+                    await asyncio.to_thread(start_trigger_pulse, self._env.root, trigger_rumble)
+                    await asyncio.sleep(TAP_SECONDS)
+            else:
+                await asyncio.to_thread(start_trigger_pulse, self._env.root, trigger_rumble)
+                await asyncio.sleep(PULSE_SECONDS)
         finally:
             self._end_pulse()
 
@@ -499,7 +512,9 @@ class Origami:
             and owners.vibration is None
         )
         rumble = RumbleSettings(
-            *trigger_rumble.strengths(), grips=GRIP_AT_GAME_FULL if own_grips else 0
+            *trigger_rumble.strengths(),
+            grips=GRIP_AT_GAME_FULL if own_grips else 0,
+            taps=trigger_rumble.enabled and trigger_rumble.taps,
         )
         async with self._controller_lock:
             if owners.triggers is not None and trigger_rumble.enabled:

@@ -13,6 +13,10 @@
  * rough. A trigger follows a rise at once but falls no faster than RELEASE_PER_SECOND, and goes off
  * as soon as its grip does: the controller keeps any rumble until told otherwise.
  *
+ * Below a fifth of its range a trigger motor runs at one and the same least strength (HARDWARE.md,
+ * accelerometer in a game), so the lightest rumble is shorter, not weaker: with taps on, a trigger
+ * gives one tap of TAP_NS on each rise of its grip, a shot, and stays still until the next one.
+ *
  * The gamepad interface has no interrupt OUT endpoint, so a hidraw write ends up as SET_REPORT:
  * the report is changed in hid_hw_request. ORIGAMI attaches the program only to that interface,
  * after checking that its report descriptor lays the report out as below.
@@ -40,6 +44,9 @@
 #define RELEASE_PER_SECOND	40
 #define NS_PER_RELEASE_STEP	(1000000000ULL / (RELEASE_PER_SECOND * FINE))
 
+/* Long enough for the motor to spin up; reports come every 10-60 ms while a game rumbles. */
+#define TAP_NS			(60ULL * 1000000)
+
 enum side {
 	LEFT,
 	RIGHT,
@@ -48,17 +55,20 @@ enum side {
 
 /*
  * Strengths at a game's full rumble, in percent: of each trigger, where 0 keeps it still, and of
- * the grips, where 0 leaves them as the game sent them.
+ * the grips, where 0 leaves them as the game sent them. With taps, the triggers tap on each shot.
  */
 struct rumble_settings {
 	__u8 left_trigger;
 	__u8 right_trigger;
 	__u8 grips;
+	__u8 taps;
 };
 
 struct envelope {
 	__u64 at_ns;
+	__u64 tap_ns;
 	__u32 level;
+	__u8 grip;
 };
 
 struct {
@@ -82,7 +92,7 @@ static __u32 scaled(__u8 grip, __u8 strength)
 	return value < MAX_STRENGTH ? value : MAX_STRENGTH;
 }
 
-static __u8 trigger_strength(__u32 side, __u8 grip, __u8 setting)
+static __u8 trigger_strength(__u32 side, __u8 grip, __u8 setting, __u8 taps)
 {
 	struct envelope *envelope = bpf_map_lookup_elem(&envelopes, &side);
 	__u32 strength = scaled(grip, setting);
@@ -91,7 +101,15 @@ static __u8 trigger_strength(__u32 side, __u8 grip, __u8 setting)
 	__u32 level;
 
 	if (!envelope)
-		return strength;
+		return taps ? 0 : strength;
+
+	if (taps) {
+		if (grip > envelope->grip)
+			envelope->tap_ns = now;
+		envelope->grip = grip;
+		return strength && now - envelope->tap_ns < TAP_NS ? strength : 0;
+	}
+	envelope->grip = grip;
 
 	fall = (now - envelope->at_ns) / NS_PER_RELEASE_STEP;
 	level = envelope->level > fall ? envelope->level - fall : 0;
@@ -129,8 +147,8 @@ int BPF_PROG(origami_rumble, struct hid_bpf_ctx *hctx, unsigned char reportnum,
 	left_grip = data[LEFT_GRIP];
 	right_grip = data[RIGHT_GRIP];
 	if (!data[LEFT_TRIGGER] && !data[RIGHT_TRIGGER]) {
-		data[LEFT_TRIGGER] = trigger_strength(LEFT, left_grip, strength->left_trigger);
-		data[RIGHT_TRIGGER] = trigger_strength(RIGHT, right_grip, strength->right_trigger);
+		data[LEFT_TRIGGER] = trigger_strength(LEFT, left_grip, strength->left_trigger, strength->taps);
+		data[RIGHT_TRIGGER] = trigger_strength(RIGHT, right_grip, strength->right_trigger, strength->taps);
 	}
 	if (strength->grips) {
 		data[LEFT_GRIP] = scaled(left_grip, strength->grips);

@@ -6,15 +6,15 @@ import { describe, expect, it } from "vitest";
 import { currentTriggerRumble, separateTriggerOwner, STOCK_TRIGGER_RUMBLE, TRIGGER_LEVELS } from "./triggers";
 
 describe("trigger rumble", () => {
-  it("keeps the triggers still until switched on, then starts with the right one at the middle level", () => {
-    expect(currentTriggerRumble(null)).toEqual({ enabled: false, triggers: "right", level: "medium" });
-    const both = { enabled: true, triggers: "both", level: "max" } as const;
+  it("keeps the triggers still until switched on, then starts with the right one steadily at the middle level", () => {
+    expect(currentTriggerRumble(null)).toEqual({ enabled: false, triggers: "right", level: "medium", taps: false });
+    const both = { enabled: true, triggers: "both", level: "strong", taps: true } as const;
     expect(currentTriggerRumble(both)).toEqual(both);
     expect(STOCK_TRIGGER_RUMBLE.enabled).toBe(false);
   });
 
   it("gives each level the backend's strength", () => {
-    expect(TRIGGER_LEVELS.map((level) => level.value)).toEqual([30, 60, 80, 100]);
+    expect(TRIGGER_LEVELS.map((level) => level.value)).toEqual([20, 60, 100]);
   });
 
   it("names a plugin that owns the triggers once on the screen", () => {

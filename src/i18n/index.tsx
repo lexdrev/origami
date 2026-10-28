@@ -13,6 +13,7 @@ import type {
   Triggers,
 } from "../backend";
 import type { PaletteColour } from "../lighting";
+import type { TriggerPattern } from "../triggers";
 import type { TdpPreset } from "../power";
 import type { VibrationPreset } from "../vibration";
 import { en } from "./en";
@@ -177,6 +178,12 @@ export interface Messages {
     /** What the trigger rumble follows while it is on. */
     triggersOn: string;
     triggerChoices: Record<Triggers, string>;
+    /** Labels over the trigger card's strips, as over the stick lighting's. */
+    triggerSides: string;
+    triggerCharacter: string;
+    triggerPattern: string;
+    /** Steady rumble follows a game's whole rumble; taps give one short tap on each shot. */
+    triggerPatterns: Record<TriggerPattern, string>;
     triggerStrength: string;
     triggerLevels: Record<TriggerLevel, string>;
     /** Under the levels: what their percentages mean. */

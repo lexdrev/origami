@@ -167,8 +167,12 @@ export const ru: Messages = {
     triggersStill: "Моторы триггеров молчат",
     triggersOn: "Включена · только от игры",
     triggerChoices: { right: "Правый", both: "Оба" },
+    triggerSides: "Триггеры",
+    triggerCharacter: "Характер",
+    triggerPattern: "Как вибрируют триггеры",
+    triggerPatterns: { steady: "Непрерывно", taps: "Толчки" },
     triggerStrength: "Сила триггеров",
-    triggerLevels: { soft: "Слабо", medium: "Средне", strong: "Сильно", max: "Макс." },
+    triggerLevels: { soft: "Слабо", medium: "Средне", strong: "Сильно" },
     triggerStrengthNote: "Сила при полной вибрации игры",
     triggersOwnedBy: (plugin) => `Триггерами управляет ${plugin}`,
     triggersOwnedText: (plugin) =>
