@@ -65,6 +65,11 @@ ${fontFaces}
 .og-plugin-title__icon { display: flex; color: var(--og-accent); }
 .og-tab-content { padding-top: 16px; }
 
+/* Decky's tab puts the plugin in a box as tall as the panel under its title row, and Steam scrolled the
+   panel into the 43 px left below the screen whenever the focus came to the bottom row. Sized to ORIGAMI,
+   the panel scrolls only as far as the screen goes, as in ORIGAMI's own tab. */
+:has(> .og-root) { height: auto !important; }
+
 .og-header {
   display: flex;
   align-items: center;

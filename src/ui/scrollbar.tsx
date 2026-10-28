@@ -27,13 +27,15 @@ export function ScrollBar() {
 
   useEffect(() => {
     const element = anchor.current;
+    // ORIGAMI's own screen: the root the anchor is in.
+    const content = element?.parentElement;
     const scroller = element && scrollingBox(element);
     const view = element?.ownerDocument.defaultView;
-    if (!element || !scroller || !view) return undefined;
+    if (!element || !content || !scroller || !view) return undefined;
 
     const update = () => {
       setBar((previous) => {
-        const next = measure(scroller);
+        const next = measure(scroller, content);
         return sameBar(previous, next) ? previous : next;
       });
     };
@@ -41,7 +43,7 @@ export function ScrollBar() {
     // The panel's elements live in the quick access window: its own observer sees them resize.
     const resizes = new view.ResizeObserver(update);
     resizes.observe(scroller);
-    if (element.parentElement) resizes.observe(element.parentElement);
+    resizes.observe(content);
     scroller.addEventListener("scroll", update, { passive: true });
     // The panel slides in and out; its place settles when the slide ends.
     const document = element.ownerDocument;
@@ -79,14 +81,20 @@ function scrollingBox(element: HTMLElement): HTMLElement | null {
   return null;
 }
 
-/** The bar for the box as it is scrolled now; null while all of it is in view. */
-export function measure(box: HTMLElement): Bar | null {
-  const { scrollTop, scrollHeight, clientHeight } = box;
-  if (scrollHeight <= clientHeight + 1) return null;
+/**
+ * The bar for the box as it is scrolled now; null while all of the content is in view. It goes by the
+ * content's end, not the box's: in Decky's tab the plugin's wrapper is as tall as the panel and sits
+ * under Decky's title row and a 16 px gap, so the box scrolls some 40 px past the end of any plugin.
+ */
+export function measure(box: HTMLElement, content: HTMLElement): Bar | null {
+  const { scrollTop, clientHeight } = box;
   const rect = box.getBoundingClientRect();
+  const length = content.getBoundingClientRect().bottom - rect.top + scrollTop;
+  if (length <= clientHeight + 1) return null;
   const track = rect.height - 2 * INSET;
-  const thumbHeight = Math.max(MIN_THUMB, (track * clientHeight) / scrollHeight);
-  const thumbTop = ((track - thumbHeight) * scrollTop) / (scrollHeight - clientHeight);
+  const thumbHeight = Math.max(MIN_THUMB, (track * clientHeight) / length);
+  // A finger can still drag the box into Decky's empty space; the thumb stays at the bottom then.
+  const thumbTop = ((track - thumbHeight) * Math.min(scrollTop, length - clientHeight)) / (length - clientHeight);
   return {
     top: rect.top + INSET,
     left: rect.right - INSET - WIDTH,
