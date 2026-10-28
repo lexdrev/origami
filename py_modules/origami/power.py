@@ -23,7 +23,7 @@ import math
 import threading
 import time
 from collections.abc import AsyncGenerator, Callable
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from pathlib import Path
 from typing import cast
 
@@ -67,6 +67,10 @@ about ten seconds later (probe 21; Ally Fix watches as long)."""
 FOREIGN_WINDOW_SECONDS = 60.0
 FOREIGN_LIMIT = 3
 """Writes over ORIGAMI's limits in a window that it answers; one more and it stops holding them."""
+FOREIGN_GRACE_SECONDS = 3.0
+"""How long a write over ORIGAMI's limits stands before ORIGAMI answers it. Steam's TDP slider
+writes as it is switched on, and the frontend reports the slider within this time: ORIGAMI then
+steps aside and leaves Steam's value instead of writing over it."""
 OVER_MARGIN_W = 2.0
 OVER_SECONDS = 10.0
 """How long the SoC may draw more than the boost limit before ORIGAMI writes the limits again."""
@@ -192,6 +196,8 @@ class PowerKeeper:
         self._last_event = -math.inf
         self._last_write = -math.inf
         self._foreign: list[float] = []
+        self._foreign_since: float | None = None
+        """When limits someone else wrote were first seen; None while the limits are ORIGAMI's."""
         self._contested = False
         self._over_since: float | None = None
         self._last_power_fix = -math.inf
@@ -205,14 +211,36 @@ class PowerKeeper:
         with self._lock:
             if target == self._target:
                 return
-            self._target = target
+            before, self._target = self._target, target
             self._contested = False
             self._foreign.clear()
             now = self._clock()
             self._due.append((now, "settings"))
-            self._cap_due = now
+            # The cap needs programming when the keeper starts and when the boost goes off.
+            if before is None or target is None or before.power.cpu_boost != target.power.cpu_boost:
+                self._cap_due = now
             if target is None or not target.tdp:
                 self._held = HeldPower(None, battery_capped=False, contested=False)
+
+    def hand_over(self, watts: int) -> None:
+        """Leave the TDP at Steam's slider, written as Steam writes it: N, N + 1 and N + 2 W.
+
+        Steam writes only as its slider moves or the charger changes. Limits ORIGAMI wrote after
+        Steam's last write, at the plugin's start for one, would stay while the screen says that
+        Steam sets the TDP.
+        """
+        with self._lock:
+            ranges = read_ranges(self._root)
+            if ranges is None:
+                return
+            spl, sppt, fppt = ranges
+            limits = Limits(spl.clamp(watts), sppt.clamp(watts + 1), fppt.clamp(watts + 2))
+            try:
+                write_limits(self._root, limits)
+            except OSError as error:
+                log.warning("TDP not handed over to Steam: %s", error)
+                return
+            log.info("TDP %d / %d / %d W handed over to Steam's slider", *astuple(limits))
 
     def game_started(self) -> None:
         """Write the limits again as Steam settles a game that starts, and keep the cap."""
@@ -233,6 +261,8 @@ class PowerKeeper:
             due = [at for at, _ in self._due]
             if self._cap_due is not None:
                 due.append(self._cap_due)
+            if self._foreign_since is not None:
+                due.append(self._foreign_since + FOREIGN_GRACE_SECONDS)
             soonest = min(due, default=now + POLL_SECONDS)
             poll = WATCH_LOOK_SECONDS if now - self._last_event < WATCH_SECONDS else POLL_SECONDS
             return min(max(soonest - now, MIN_LOOK_SECONDS), poll)
@@ -303,12 +333,18 @@ class PowerKeeper:
         current = read_limits(self._root)
         if current is None or current == want or self._due:
             # A write of ORIGAMI's comes anyway.
+            self._foreign_since = None
             return None
         if self._written.get(mains) != want:
             # This set never got these limits (a write failed): nobody wrote over ORIGAMI.
             return "limits differ"
         if now - self._last_event < QUIET_SECONDS:
             return f"written over with {current.spl} / {current.sppt} / {current.fppt} W, settling"
+        if self._foreign_since is None:
+            self._foreign_since = now
+        if now - self._foreign_since < FOREIGN_GRACE_SECONDS:
+            return None
+        self._foreign_since = None
         self._foreign = [at for at in self._foreign if now - at < FOREIGN_WINDOW_SECONDS]
         self._foreign.append(now)
         if len(self._foreign) > FOREIGN_LIMIT:

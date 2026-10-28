@@ -135,6 +135,9 @@ class Origami:
         self._buttons_read: frozenset[Button] = frozenset()
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
         self._keeper = PowerKeeper(environment.root)
+        self._steam_tdp_limit = False
+        self._look_now = asyncio.Event()
+        """Wakes the keeper before its next look: a supply changed, or there is news to write."""
         self._power = BackgroundTask("origami-power", self._hold_power)
         self._pulsing = False
 
@@ -278,9 +281,26 @@ class Origami:
         """The limits ORIGAMI holds now, for the Power screen."""
         return self._keeper.held()
 
+    async def set_steam_tdp_limit(self, *, on: bool, watts: int | None = None) -> None:
+        """Steam's own TDP limit was switched on or off; while it is on, Steam sets the TDP.
+
+        Its slider writes whenever it moves, and ORIGAMI would write over each move, so ORIGAMI
+        steps aside, leaves the slider's watts in place and the Power screen says why.
+        """
+        await self._started()
+        if on == self._steam_tdp_limit:
+            return
+        held = self._keeper.held().limits is not None
+        self._steam_tdp_limit = on
+        log.info("Steam's TDP limit is %s", "on: Steam sets the TDP" if on else "off")
+        await self._follow_power(self._settings)
+        if on and held and watts is not None:
+            await asyncio.to_thread(self._keeper.hand_over, watts)
+
     async def game_started(self) -> None:
         """Steam started a game: it writes its own limits meanwhile, so ORIGAMI writes again."""
         self._keeper.game_started()
+        self._look_now.set()
 
     async def changes(self) -> list[Change]:
         await self._started()
@@ -373,10 +393,13 @@ class Origami:
             target = None
         else:
             target = PowerTarget(
-                settings.power, tdp=settings.manage_tdp, battery_high_tdp=settings.battery_high_tdp
+                settings.power,
+                tdp=settings.manage_tdp and not self._steam_tdp_limit,
+                battery_high_tdp=settings.battery_high_tdp,
             )
             await asyncio.to_thread(self._record_power, target)
         self._keeper.hold(target)
+        self._look_now.set()
         await self._power.run_while(on=target is not None)
 
     def _record_power(self, target: PowerTarget) -> None:
@@ -409,13 +432,12 @@ class Origami:
         self._journal.forget("power", "cpu_boost")
 
     async def _hold_power(self) -> None:
-        """Let the keeper look when it asks to, and at once when a supply changes."""
-        supply_changed = asyncio.Event()
-        watcher = asyncio.create_task(self._watch_supplies(supply_changed))
+        """Let the keeper look when it asks to, and at once when something changes."""
+        watcher = asyncio.create_task(self._watch_supplies())
         try:
             while True:
-                # Cleared before the look: a change reported meanwhile brings the next one at once.
-                supply_changed.clear()
+                # Cleared before the look: a change meanwhile brings the next one at once.
+                self._look_now.clear()
                 cap_due = await asyncio.to_thread(self._keeper.tick)
                 if cap_due is not None:
                     try:
@@ -425,15 +447,15 @@ class Origami:
                         log.warning("CPU frequency cap not programmed: %s", error)
                 with suppress(TimeoutError):
                     async with asyncio.timeout(self._keeper.next_look()):
-                        await supply_changed.wait()
+                        await self._look_now.wait()
         finally:
             watcher.cancel()
 
-    async def _watch_supplies(self, changed: asyncio.Event) -> None:
+    async def _watch_supplies(self) -> None:
         try:
             async with aclosing(supply_changes()) as changes:
                 async for _ in changes:
-                    changed.set()
+                    self._look_now.set()
         except OSError as error:
             log.warning(
                 "No kernel events about the charger, it is looked for every %s s: %s",

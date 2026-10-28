@@ -1184,3 +1184,53 @@ def test_a_charger_event_has_the_keeper_write_at_once(
         app.stop()
 
     asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_origami_steps_aside_while_steams_tdp_limit_is_on(
+    powered: FakeRoot, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"tdp": 20}})
+        await asyncio.sleep(0.05)
+
+        # ORIGAMI wrote over Steam's own write before it heard of the slider: the slider's watts
+        # come back, as Steam writes them.
+        await app.set_steam_tdp_limit(on=True, watts=12)
+        await asyncio.sleep(0.05)
+        assert written_limits(powered) == [12, 13, 19]
+        assert (await app.power()).limits is None
+
+        powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", 15)
+        await asyncio.sleep(0.05)
+        assert written_limits(powered)[0] == 15
+
+        # Switched off in Steam, the TDP is ORIGAMI's again.
+        await app.set_steam_tdp_limit(on=False)
+        await asyncio.sleep(0.05)
+        assert written_limits(powered) == [20, 24, 29]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_new_settings_reach_the_hardware_before_the_next_look(
+    powered: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Without being woken the keeper would not look again for a minute.
+    monkeypatch.setattr(power_module, "POLL_SECONDS", 60)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await asyncio.sleep(0.05)
+
+        await app.update_settings({"power": {"tdp": 25}})
+        await asyncio.sleep(0.05)
+
+        assert written_limits(powered) == [25, 29, 34]
+        app.stop()
+
+    asyncio.run(scenario())

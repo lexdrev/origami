@@ -7,6 +7,7 @@ from contextlib import aclosing
 import pytest
 
 from origami.power import (
+    FOREIGN_GRACE_SECONDS,
     FOREIGN_LIMIT,
     MIN_LOOK_SECONDS,
     POLL_SECONDS,
@@ -228,11 +229,14 @@ def test_limits_someone_else_writes_are_answered_until_they_keep_coming(
     for _ in range(FOREIGN_LIMIT):
         console.overwrite(Limits(35, 36, 37))
         console.tick()
+        assert console.limits() == Limits(35, 36, 37)
+        console.tick(FOREIGN_GRACE_SECONDS)
         assert console.limits() == Limits(20, 24, 29)
         assert console.keeper.held().contested is False
 
     console.overwrite(Limits(35, 36, 37))
     console.tick()
+    console.tick(FOREIGN_GRACE_SECONDS)
 
     assert console.limits() == Limits(35, 36, 37)
     assert console.keeper.held().contested is True
@@ -242,6 +246,22 @@ def test_limits_someone_else_writes_are_answered_until_they_keep_coming(
     console.tick()
     assert console.limits() == Limits(21, 25, 30)
     assert console.keeper.held().contested is False
+
+
+def test_steams_slider_switched_on_keeps_its_value_once_origami_steps_aside(
+    console: Console,
+) -> None:
+    hold(console, Power(13))
+    console.tick()
+
+    # Steam writes its slider's watts at once; the frontend reports the slider a moment later.
+    console.overwrite(Limits(20, 21, 22))
+    console.tick(0.5)
+    hold(console, Power(13), tdp=False)
+    console.tick(FOREIGN_GRACE_SECONDS)
+
+    assert console.limits() == Limits(20, 21, 22)
+    assert console.keeper.held().limits is None
 
 
 def test_a_soc_drawing_more_than_the_boost_limit_for_long_gets_the_limits_again(
@@ -387,3 +407,19 @@ def test_nothing_is_held_without_a_target(console: Console) -> None:
     console.tick()
 
     assert console.limits() == FACTORY
+
+
+def test_new_tdp_settings_leave_the_cpu_cap_alone(console: Console) -> None:
+    hold(console, Power(17))
+    assert console.tick() == "after a change"
+
+    hold(console, Power(25))
+    assert console.tick() is None
+    assert console.limits() == Limits(25, 29, 34)
+
+    # Off from on, the boost leaves the cores to their cap, which is programmed again.
+    hold(console, Power(25, cpu_boost=True))
+    console.tick()
+    hold(console, Power(25, cpu_boost=False))
+    console.tick(0.5)
+    assert console.tick(1) == "after a change"
