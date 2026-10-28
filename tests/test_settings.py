@@ -8,6 +8,7 @@ import pytest
 
 from origami.buttons import ButtonAction
 from origami.lighting import Lighting, LightMode
+from origami.power import Power
 from origami.settings import FIRST_TAB, SOUNDTRACKS_TAB, Language, Settings, SettingsStore
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers
 from origami.vibration import Vibration
@@ -159,3 +160,28 @@ def test_armoury_crate_actions_are_saved(tmp_path: Path) -> None:
         ButtonAction.ORIGAMI,
         ButtonAction.QUICK_ACCESS,
     )
+
+
+def test_origami_owns_the_tdp_at_the_factorys_limits_until_changed(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    assert Settings().manage_tdp is True
+    assert Settings().power == Power(17, headroom=True, cpu_boost=None)
+    assert Settings().battery_high_tdp is False
+
+    changes = {
+        "power": {"tdp": 25, "headroom": False, "cpu_boost": False},
+        "manage_tdp": False,
+        "battery_high_tdp": True,
+    }
+    store.save(Settings().updated(changes))
+
+    assert store.load() == Settings(
+        manage_tdp=False, power=Power(25, headroom=False, cpu_boost=False), battery_high_tdp=True
+    )
+
+
+def test_bad_power_settings_are_rejected() -> None:
+    with pytest.raises(ValueError, match="tdp"):
+        Settings().updated({"power": {"tdp": 40}})
+    with pytest.raises(ValueError, match="manage_tdp"):
+        Settings().updated({"manage_tdp": 1})

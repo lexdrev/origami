@@ -64,3 +64,11 @@ def test_unreadable_journal_starts_empty(
 
     assert reopened(path).entries() == []
     assert "unreadable" in caplog.text
+
+
+def test_the_original_is_looked_up_by_module_and_key(tmp_path: Path) -> None:
+    journal = reopened(tmp_path / "changes.json")
+    journal.record("power", "cpu_boost", True)
+
+    assert reopened(tmp_path / "changes.json").original("power", "cpu_boost") is True
+    assert journal.original("power", "tdp") is None

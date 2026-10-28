@@ -11,6 +11,7 @@ import pytest
 
 from origami import app as app_module
 from origami import gyro as gyro_module
+from origami import power as power_module
 from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
 from origami.buttons import ButtonAction
@@ -20,8 +21,10 @@ from origami.journal import Change
 from origami.jsonio import JsonValue
 from origami.lighting import Lighting, LightMode
 from origami.magnifier import Magnifier
+from origami.power import Power, PowerKeeper
 from origami.rumble import SETTINGS_MAP
 from origami.settings import Language, Settings
+from origami.tdp import Limits
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers, TriggerState
 from origami.vibration import Vibration
 
@@ -1003,5 +1006,181 @@ def test_another_programs_gyroscope_file_is_left_alone(
 
         assert (await app.settings()).gyro_fix is False
         assert inputplumber == []
+
+    asyncio.run(scenario())
+
+
+ARMOURY = "sys/class/firmware-attributes/asus-armoury/attributes"
+
+
+async def no_supply_changes() -> AsyncGenerator[None]:
+    await asyncio.Event().wait()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def quiet_supplies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No kernel events about the charger; tests that need one send their own."""
+    monkeypatch.setattr(app_module, "supply_changes", no_supply_changes)
+
+
+@pytest.fixture
+def quick_power(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The power keeper looks every few milliseconds instead of every two seconds."""
+    monkeypatch.setattr(power_module, "POLL_SECONDS", 0.005)
+
+
+def written_limits(root: FakeRoot) -> list[int]:
+    return [
+        int((root.path / ARMOURY / name / "current_value").read_text(encoding="utf-8"))
+        for name in ("ppt_pl1_spl", "ppt_pl2_sppt", "ppt_pl3_fppt")
+    ]
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_origami_holds_the_tdp_from_the_start_and_journals_it(
+    powered: FakeRoot, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+
+        await app.update_settings({"power": {"tdp": 20, "headroom": True, "cpu_boost": None}})
+        await asyncio.sleep(0.05)
+
+        assert written_limits(powered) == [20, 24, 29]
+        assert (await app.power()).limits == Limits(20, 24, 29)
+        assert await app.changes() == [Change("power", "tdp", None)]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_letting_go_of_the_tdp_gives_the_firmware_its_profile_back(
+    powered: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    given_back: list[Path] = []
+
+    def reset(root: Path) -> bool:
+        given_back.append(root)
+        return True
+
+    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"tdp": 20}})
+        await asyncio.sleep(0.05)
+
+        await app.update_settings({"manage_tdp": False})
+        powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", 35)
+        await asyncio.sleep(0.05)
+
+        # The profile was written again, and ORIGAMI no longer answers other writes.
+        assert given_back == [powered.path]
+        assert written_limits(powered)[0] == 35
+        assert (await app.power()).limits is None
+        assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_the_chosen_boost_is_journaled_and_given_back_on_uninstall(
+    powered: FakeRoot, tmp_path: Path
+) -> None:
+    boost = powered.path / "sys/devices/system/cpu/cpufreq/boost"
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"cpu_boost": True}})
+        await asyncio.sleep(0.05)
+        assert boost.read_text(encoding="utf-8") == "1\n"
+        assert Change("power", "cpu_boost", False) in await app.changes()
+        app.stop()
+
+        assert app.uninstall() is None
+
+        assert boost.read_text(encoding="utf-8") == "0\n"
+        assert await app.changes() == []
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("plugin", ["Panel de Control", "SimpleDeckyTDP", "PowerTools"])
+@pytest.mark.usefixtures("quick_power")
+def test_power_plugins_own_the_power(powered: FakeRoot, tmp_path: Path, plugin: str) -> None:
+    install_plugin(tmp_path, plugin)
+    powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", 20)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await asyncio.sleep(0.05)
+        assert (await app.conflicts()).power == plugin
+
+        with pytest.raises(RuntimeError, match=plugin):
+            await app.update_settings({"power": {"tdp": 25}})
+
+        assert written_limits(powered)[0] == 20
+        assert (await app.settings()).power == Power()
+        assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_a_game_start_reaches_the_keeper(
+    powered: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    starts: list[PowerKeeper] = []
+
+    def game_started(keeper: PowerKeeper) -> None:
+        starts.append(keeper)
+
+    monkeypatch.setattr(PowerKeeper, "game_started", game_started)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.game_started()
+        app.stop()
+
+    asyncio.run(scenario())
+    assert len(starts) == 1
+
+
+def test_a_charger_event_has_the_keeper_write_at_once(
+    powered: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Without the event the keeper would not look again for a minute.
+    monkeypatch.setattr(power_module, "POLL_SECONDS", 60)
+    plugged = asyncio.Event()
+
+    async def one_change() -> AsyncGenerator[None]:
+        await plugged.wait()
+        yield
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(app_module, "supply_changes", one_change)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"tdp": 20}})
+        await asyncio.sleep(0.05)
+
+        powered.write("sys/class/power_supply/AC0/online", 1)
+        powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", 35)
+        plugged.set()
+        await asyncio.sleep(0.2)
+
+        assert written_limits(powered) == [20, 24, 29]
+        app.stop()
 
     asyncio.run(scenario())

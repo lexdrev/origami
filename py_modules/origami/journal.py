@@ -53,6 +53,11 @@ class ChangeJournal:
     def recorded(self, module: str, key: str) -> bool:
         return (module, key) in self._changes
 
+    def original(self, module: str, key: str) -> JsonValue:
+        """The value from before ORIGAMI's first change; None also when nothing is recorded."""
+        change = self._changes.get((module, key))
+        return None if change is None else change.original
+
     def record(self, module: str, key: str, original: JsonValue) -> None:
         """Remember the value before the first change; later changes keep that original."""
         if self.recorded(module, key):

@@ -72,6 +72,12 @@ class Plugin:
     async def test_vibration(self) -> None:
         await self._app.test_vibration()
 
+    async def get_power(self) -> JsonValue:
+        return to_wire(await self._app.power())
+
+    async def game_started(self) -> None:
+        await self._app.game_started()
+
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
 

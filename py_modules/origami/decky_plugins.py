@@ -22,6 +22,8 @@ VIBRATION_OWNERS = ("Ally Vibe Control", "Ally Fix")
 """Plugins that set the strength of the handle vibration."""
 TRIGGER_OWNERS = ("Ally Fix",)
 """Plugins that rumble the impulse triggers with a HID-BPF program of their own."""
+POWER_OWNERS = ("Panel de Control", "SimpleDeckyTDP", "PowerTools")
+"""Plugins that set the TDP or the CPU boost and frequency; ORIGAMI then shows the power only."""
 
 
 def enabled_plugins(decky_home: Path) -> frozenset[str]:

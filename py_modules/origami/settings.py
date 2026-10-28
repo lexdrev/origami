@@ -4,7 +4,7 @@
 import json
 import logging
 from collections.abc import Mapping
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, field, fields, replace
 from enum import StrEnum
 from pathlib import Path
 
@@ -12,6 +12,7 @@ from origami.buttons import ButtonAction
 from origami.fsutil import atomic_write_text
 from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
+from origami.power import Power
 from origami.saturation import MAX_PERCENT as MAX_SATURATION
 from origami.triggers import TriggerRumble
 from origami.vibration import Vibration
@@ -55,6 +56,12 @@ class Settings:
     """What a short press of the upper left button does; nothing reaches Steam from it (B17)."""
     armoury_crate_hold: ButtonAction = ButtonAction.NONE
     """What holding the upper left button does, besides the L5 Steam gets from it."""
+    manage_tdp: bool = True
+    """ORIGAMI owns the TDP and writes it again whenever it drops (B04, B05); off, Steam sets it."""
+    power: Power = field(default_factory=Power)
+    """TDP, its headroom and the CPU boost; the factory's limits until the user changes them."""
+    battery_high_tdp: bool = False
+    """The TDP may go over 25 W on the battery too."""
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
@@ -63,7 +70,7 @@ class Settings:
             match key:
                 case "language":
                     parsed[key] = Language(value)
-                case "qam_tab" | "qam_assist" | "gyro_fix":
+                case "qam_tab" | "qam_assist" | "gyro_fix" | "manage_tdp" | "battery_high_tdp":
                     parsed[key] = expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
@@ -79,6 +86,8 @@ class Settings:
                     parsed[key] = None if value is None else Vibration.from_json(value)
                 case "trigger_rumble":
                     parsed[key] = None if value is None else TriggerRumble.from_json(value)
+                case "power":
+                    parsed[key] = Power.from_json(value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
         return replace(self, **parsed)
@@ -99,6 +108,9 @@ class Settings:
             ),
             "armoury_crate": self.armoury_crate.value,
             "armoury_crate_hold": self.armoury_crate_hold.value,
+            "manage_tdp": self.manage_tdp,
+            "power": self.power.to_json(),
+            "battery_high_tdp": self.battery_high_tdp,
         }
 
 
@@ -126,7 +138,7 @@ def _tab_position(value: object) -> int | None:
     raise ValueError(f"Not a quick access tab position: {value!r}")
 
 
-_FIELDS = frozenset(field.name for field in fields(Settings))
+_FIELDS = frozenset(item.name for item in fields(Settings))
 
 
 class SettingsStore:
