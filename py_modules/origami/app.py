@@ -33,7 +33,7 @@ from origami.magnifier import Magnifier
 from origami.power import POLL_SECONDS, HeldPower, PowerKeeper, PowerTarget, resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach, RumbleProgram, RumbleSettings
-from origami.saturation import read_saturation, write_saturation
+from origami.saturation import SRGB_PERCENT, read_saturation, write_saturation
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.tdp import read_limits, reset_to_profile
@@ -301,7 +301,11 @@ class Origami:
 
     async def saturation(self) -> int | None:
         """The saturation gamescope shows now, ORIGAMI's or not; None without gamescope."""
-        return await read_saturation(self._env.root)
+        try:
+            percent = await read_saturation(self._env.root)
+        except CommandError, TimeoutError:
+            return None
+        return SRGB_PERCENT if percent is None else percent
 
     async def restore_saturation(self) -> None:
         """Send the saved saturation again; the frontend calls it whenever Steam's interface loads.
@@ -644,9 +648,13 @@ class Origami:
         if not self._journal.recorded("display", "saturation"):
             return
         original = self._journal.original("display", "saturation")
-        if owner is None and isinstance(original, int) and not isinstance(original, bool):
+        if owner is None:
+            # Nobody had set it before ORIGAMI (None): gamescope showed sRGB then.
+            percent = SRGB_PERCENT
+            if isinstance(original, int) and not isinstance(original, bool):
+                percent = original
             try:
-                await write_saturation(self._env.root, original)
+                await write_saturation(self._env.root, percent)
             except (CommandError, OSError, TimeoutError) as error:
                 log.warning("Saturation not given back: %s", error)
                 return
@@ -708,6 +716,7 @@ class Origami:
         if owner is not None:
             raise RuntimeError(f"{owner} sets the screen colour, so ORIGAMI leaves it alone")
         if not self._journal.recorded("display", "saturation"):
+            # Raises when gamescope cannot be read: nothing is written then, not even the original.
             original = await read_saturation(self._env.root)
             await asyncio.to_thread(self._journal.record, "display", "saturation", original)
         await write_saturation(self._env.root, percent)

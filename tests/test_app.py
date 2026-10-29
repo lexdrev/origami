@@ -30,6 +30,7 @@ from origami.jsonio import JsonValue
 from origami.lighting import CONTROLLER_LIGHTING, Lighting, LightMode
 from origami.magnifier import Magnifier
 from origami.power import Power, PowerKeeper
+from origami.proc import CommandError
 from origami.rumble import SETTINGS_MAP
 from origami.settings import Language, Settings, SettingsStore
 from origami.tdp import Limits
@@ -410,6 +411,59 @@ def test_saturation_is_written_kept_journaled_and_restored(
         screen["now"] = 100
         await app.restore_saturation()
         assert screen["written"] == [150, 150]
+
+    asyncio.run(scenario())
+
+
+def test_saturation_is_not_set_while_gamescope_cannot_be_read(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    screen: dict[str, list[int] | int],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def unreachable(_root: Path) -> int:
+        raise CommandError("gamescope's display is not there")
+
+    monkeypatch.setattr(app_module, "read_saturation", unreachable)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+
+        with pytest.raises(CommandError):
+            await app.update_settings({"saturation": 150})
+
+        assert screen["written"] == []
+        assert await app.changes() == []
+        assert await app.saturation() is None
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_a_saturation_nobody_had_set_is_given_back_as_srgb(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    screen: dict[str, list[int] | int],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def unset(_root: Path) -> None:
+        return None
+
+    monkeypatch.setattr(app_module, "read_saturation", unset)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert await app.saturation() == 100
+
+        await app.update_settings({"saturation": 150})
+        assert await app.changes() == [Change("display", "saturation", None)]
+
+        await app.restore_all()
+
+        assert screen["written"] == [150, 100]
+        app.stop()
 
     asyncio.run(scenario())
 

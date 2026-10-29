@@ -46,7 +46,8 @@ def test_no_saturation_until_the_property_is_set(fake_root: FakeRoot, display: F
     assert display.calls
 
 
-def test_without_gamescope_there_is_no_saturation(fake_root: FakeRoot) -> None:
-    assert asyncio.run(read_saturation(fake_root.path)) is None
+def test_without_gamescope_reading_and_writing_fail(fake_root: FakeRoot) -> None:
+    with pytest.raises(CommandError):
+        asyncio.run(read_saturation(fake_root.path))
     with pytest.raises(CommandError):
         asyncio.run(write_saturation(fake_root.path, 150))

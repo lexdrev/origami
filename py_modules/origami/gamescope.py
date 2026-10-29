@@ -43,11 +43,12 @@ async def _xprop(root: Path, *args: str) -> str:
 
 
 async def read_cardinal(root: Path, atom: str) -> int | None:
-    """A 32-bit CARDINAL property; None when the display or the property is not there."""
-    try:
-        output = await _xprop(root, atom)
-    except CommandError, TimeoutError:
-        return None
+    """A 32-bit CARDINAL property, None while it is not set.
+
+    Raise CommandError or TimeoutError when the display cannot be reached: that is not the same
+    as a property nobody set.
+    """
+    output = await _xprop(root, atom)
     # "ATOM(CARDINAL) = 1056964608", or "ATOM:  not found."
     _, found, value = output.partition("=")
     return int(value.strip()) if found else None

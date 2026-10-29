@@ -16,6 +16,8 @@ from origami.gamescope import read_cardinal, write_cardinal
 
 ATOM = "GAMESCOPE_COLOR_SDR_GAMUT_WIDENESS"
 MAX_PERCENT = 200
+SRGB_PERCENT = 100
+"""What gamescope shows while nobody has set the property."""
 
 
 # The float's bits read as an unsigned 32-bit integer, the way gamescope reads the property.
@@ -29,7 +31,10 @@ def from_cardinal(value: int) -> int:
 
 
 async def read_saturation(root: Path) -> int | None:
-    """The saturation gamescope shows now; None when its display or the property is not there."""
+    """The saturation set now, None while nobody has set it (gamescope then shows sRGB).
+
+    Raise CommandError or TimeoutError when gamescope cannot be reached.
+    """
     value = await read_cardinal(root, ATOM)
     return None if value is None else from_cardinal(value)
 
