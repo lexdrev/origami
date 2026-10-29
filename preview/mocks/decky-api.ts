@@ -6,7 +6,7 @@
 import type { Change, Conflicts, HeldPower, Info, Settings, Telemetry } from "../../src/backend";
 
 const info: Info = {
-  version: "0.1.0",
+  version: "1.0.0",
   device: { board: "RC73XA", product: "ROG Xbox Ally X RC73XA_RC73XA", model: "ROG Xbox Ally X" },
   versions: {
     os: { name: "Bazzite", versionId: "44", imageVersion: "44.20261023" },
