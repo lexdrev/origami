@@ -498,12 +498,19 @@ class Origami:
         )
 
     async def _follow_power(self, settings: Settings) -> None:
-        """Hold the power as set, unless another plugin owns it; the journal remembers first."""
-        if (await self.conflicts()).power is not None:
+        """Hold the power as set, unless another plugin owns it; the journal remembers first.
+
+        With neither the TDP nor the boost left to ORIGAMI, after "restore everything" for one, the
+        keeper holds nothing, and the CPU's frequency cap is not ORIGAMI's to program either.
+        """
+        power = settings.power_for(self._game)
+        if (await self.conflicts()).power is not None or (
+            settings.manage_tdp is not True and power.cpu_boost is None
+        ):
             target = None
         else:
             target = PowerTarget(
-                settings.power_for(self._game),
+                power,
                 tdp=settings.manage_tdp is True,
                 battery_high_tdp=settings.battery_high_tdp,
                 steam_slider=self._steam_tdp_limit,

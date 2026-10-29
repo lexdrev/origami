@@ -1578,6 +1578,38 @@ def test_restoring_everything_gives_the_power_fans_and_gyroscope_back(
     asyncio.run(scenario())
 
 
+@pytest.mark.usefixtures("quick_power")
+def test_after_restoring_the_cpu_cap_is_left_to_the_system(
+    powered: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    caps: list[Path] = []
+
+    async def program(root: Path) -> None:
+        caps.append(root)
+
+    def reset(_root: Path) -> bool:
+        return True
+
+    monkeypatch.setattr(app_module, "program_cap", program)
+    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"cpu_boost": False}})
+        await asyncio.sleep(0.05)
+        caps.clear()
+
+        await app.restore_all()
+        await asyncio.sleep(0.05)
+
+        # Neither the TDP nor the boost is ORIGAMI's now, so the cap is not ORIGAMI's either.
+        assert caps == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
 def test_restoring_everything_gives_the_controller_and_screen_back_and_unsets_the_fixes(
     ally_x: FakeRoot,
     tmp_path: Path,
