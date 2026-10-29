@@ -11,7 +11,7 @@ from typing import cast
 
 from origami.buttons import ButtonAction
 from origami.fans import FanCurve
-from origami.fsutil import atomic_write_text
+from origami.fsutil import atomic_write_text, set_aside
 from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
 from origami.power import GamePower, Power
@@ -219,11 +219,29 @@ class SettingsStore:
             return Settings()
         try:
             data = parse_object(text)
-            # Keys written by a newer version are skipped, so a downgrade keeps working.
-            return Settings().updated({key: data[key] for key in data.keys() & _FIELDS})
         except ValueError as error:
-            log.warning("Ignoring unreadable settings in %s: %s", self._path, error)
+            _set_aside(self._path, "settings", error)
             return Settings()
+        # Keys written by a newer version are skipped, so a downgrade keeps working, and a value
+        # this version cannot read costs only its own setting.
+        settings = Settings()
+        for key in sorted(data.keys() & _FIELDS):
+            try:
+                settings = settings.updated({key: data[key]})
+            except ValueError as error:
+                log.warning("Ignoring the setting %s in %s: %s", key, self._path, error)
+        return settings
 
     def save(self, settings: Settings) -> None:
         atomic_write_text(self._path, json.dumps(settings.to_json(), indent=2) + "\n")
+
+
+def _set_aside(path: Path, what: str, error: ValueError) -> None:
+    try:
+        aside = set_aside(path)
+    except OSError as move_error:
+        log.error("Unreadable %s in %s, not moved aside: %s; %s", what, path, error, move_error)
+        return
+    log.error(
+        "Unreadable %s in %s, kept as %s; starting from defaults: %s", what, path, aside, error
+    )

@@ -35,15 +35,31 @@ def test_keys_from_a_newer_version_are_ignored(tmp_path: Path) -> None:
     assert SettingsStore(path).load() == Settings(language=Language.EN)
 
 
-@pytest.mark.parametrize("content", ["{", "[]", '{"language": "de"}', '{"language": 1}'])
-def test_unreadable_file_falls_back_to_defaults(
+@pytest.mark.parametrize("content", ["{", "[]"])
+def test_unreadable_file_is_set_aside_and_defaults_apply(
     tmp_path: Path, content: str, caplog: pytest.LogCaptureFixture
 ) -> None:
     path = tmp_path / "settings.json"
     path.write_text(content, encoding="utf-8")
 
     assert SettingsStore(path).load() == Settings()
-    assert "Ignoring unreadable settings" in caplog.text
+    assert "Unreadable settings" in caplog.text
+    assert not path.exists()
+    assert (tmp_path / "settings.json.bad").read_text(encoding="utf-8") == content
+
+
+@pytest.mark.parametrize("language", ["de", 1])
+def test_a_bad_value_costs_only_its_own_setting(
+    tmp_path: Path, language: object, caplog: pytest.LogCaptureFixture
+) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps({"language": language, "manage_tdp": False, "vibration": None}),
+        encoding="utf-8",
+    )
+
+    assert SettingsStore(path).load() == Settings(manage_tdp=False, vibration=None)
+    assert "Ignoring the setting language" in caplog.text
 
 
 def test_update_changes_only_the_given_field() -> None:

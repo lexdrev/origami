@@ -28,6 +28,13 @@ def atomic_write_text(path: Path, text: str) -> None:
     _fsync_directory(path.parent)
 
 
+def set_aside(path: Path) -> Path:
+    """Move a file ORIGAMI cannot read next to itself as <name>.bad, so the next save keeps it."""
+    aside = path.with_name(f"{path.name}.bad")
+    path.replace(aside)
+    return aside
+
+
 def _fsync_directory(directory: Path) -> None:
     # Makes the rename durable on power loss. O_DIRECTORY is POSIX-only;
     # the plugin runs on Linux, the check keeps the tests runnable on Windows.

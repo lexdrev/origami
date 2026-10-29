@@ -63,8 +63,13 @@ def test_unreadable_journal_starts_empty(
     path = tmp_path / "changes.json"
     path.write_text(content, encoding="utf-8")
 
-    assert reopened(path).entries() == []
+    journal = reopened(path)
+    journal.record("power", "tdp", None)
+
+    assert journal.entries() == [Change("power", "tdp", None)]
     assert "unreadable" in caplog.text
+    # The originals it held are not written over by the next change.
+    assert (tmp_path / "changes.json.bad").read_text(encoding="utf-8") == content
 
 
 def test_the_original_is_looked_up_by_module_and_key(tmp_path: Path) -> None:

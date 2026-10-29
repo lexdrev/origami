@@ -13,7 +13,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-from origami.fsutil import atomic_write_text
+from origami.fsutil import atomic_write_text, set_aside
 from origami.jsonio import JsonValue, parse_object
 
 log = logging.getLogger(__name__)
@@ -45,9 +45,14 @@ class ChangeJournal:
         try:
             changes = _parse(text)
         except ValueError as error:
-            # Losing originals is serious, but refusing to start would be worse:
-            # modules still know the firmware defaults and can fall back to them.
+            # Losing originals is serious, but refusing to start would be worse: modules still
+            # know the firmware defaults and can fall back to them. The file is set aside, so the
+            # next change does not write over the originals it still holds for a human to read.
             log.error("Change journal %s is unreadable, starting empty: %s", self._path, error)
+            try:
+                log.error("The unreadable journal is kept as %s", set_aside(self._path))
+            except OSError as move_error:
+                log.error("The unreadable journal was not moved aside: %s", move_error)
             changes = []
         with self._lock:
             self._changes = {(change.module, change.key): change for change in changes}
