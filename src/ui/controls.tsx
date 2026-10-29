@@ -317,9 +317,10 @@ export function Slider(props: SliderProps) {
     set(value + (button === GamepadButton.DIR_LEFT ? -1 : 1) * step);
     return true;
   };
+  // A tap lands on the nearest step, as the D-pad would, so presets and the notch stay reachable.
   const onTap = (event: MouseEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
-    set(Math.round(min + ((event.clientX - box.left) / box.width) * span));
+    set(min + Math.round((((event.clientX - box.left) / box.width) * span) / step) * step);
   };
   const stepButton = (direction: -1 | 1, buttonLabel: string) => (
     <div
