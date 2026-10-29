@@ -70,8 +70,8 @@ interface TileProps {
   name: string;
   value: string;
   subtitle: string;
-  /** Opens the block's screen; tiles of blocks without one yet only show values. */
-  onOpen?: () => void;
+  /** Opens the block's screen. */
+  onOpen: () => void;
   /** Takes the focus when it comes into the panel. */
   preferredFocus?: boolean;
   /** How many things the block's screen shows red; a red frame and the number beside the arrow. */
@@ -81,8 +81,11 @@ interface TileProps {
 export function Tile({ icon, name, value, subtitle, onOpen, preferredFocus = false, problems = 0 }: TileProps) {
   const t = useMessages();
   const className = problems > 0 ? "og-tile og-tile--problem" : "og-tile";
-  const content = (
-    <>
+  return (
+    <Pressable className={className} action={t.actions.open} preferredFocus={preferredFocus} onPress={onOpen}>
+      <span className="og-tile__chevron">
+        <ChevronIcon />
+      </span>
       {problems > 0 && (
         <span className="og-tile__problems">
           <WarningIcon size={12} />
@@ -93,17 +96,7 @@ export function Tile({ icon, name, value, subtitle, onOpen, preferredFocus = fal
       <span className="og-tile__name">{name}</span>
       <span className="og-tile__value">{value}</span>
       <span className="og-tile__sub">{subtitle}</span>
-    </>
-  );
-  return onOpen ? (
-    <Pressable className={className} action={t.actions.open} preferredFocus={preferredFocus} onPress={onOpen}>
-      <span className="og-tile__chevron">
-        <ChevronIcon />
-      </span>
-      {content}
     </Pressable>
-  ) : (
-    <div className={className}>{content}</div>
   );
 }
 

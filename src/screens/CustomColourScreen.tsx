@@ -8,7 +8,6 @@ import type { Lighting } from "../backend";
 import { useMessages } from "../i18n";
 import { hex, hsToRgb, rgbToHs, type HueSaturation } from "../lighting";
 import { back } from "../navigation";
-import { UISound } from "../sounds";
 import { previewLighting, settings, updateSettings } from "../state";
 import { latestOnly, useStore } from "../store";
 import { Card, Header, Screen } from "../ui/blocks";
@@ -103,7 +102,7 @@ function CustomColourEditor({ saved }: { saved: Lighting }) {
           <span className="og-colour-value__hex">{hex(hsToRgb(edited))}</span>
         </div>
       </Card>
-      <Card title={t.customColour.hue} aside={<span className="og-card__aside--accent">{`${edited.hue}°`}</span>}>
+      <Card title={t.customColour.hue} aside={<span className="og-card__value">{`${edited.hue}°`}</span>}>
         <Slider
           label={t.customColour.hue}
           value={edited.hue}
@@ -122,7 +121,7 @@ function CustomColourEditor({ saved }: { saved: Lighting }) {
       </Card>
       <Card
         title={t.customColour.saturation}
-        aside={<span className="og-card__aside--accent">{`${edited.saturation}%`}</span>}
+        aside={<span className="og-card__value">{`${edited.saturation}%`}</span>}
       >
         <Slider
           label={t.customColour.saturation}
@@ -151,7 +150,6 @@ function CustomColourEditor({ saved }: { saved: Lighting }) {
         <Pressable
           className="og-button og-button--primary"
           action={t.customColour.apply}
-          sound={UISound.Press}
           onPress={apply}
         >
           {t.customColour.apply}

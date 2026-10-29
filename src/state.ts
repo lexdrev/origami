@@ -102,7 +102,7 @@ export async function reloadFailed(): Promise<void> {
   ]);
 }
 
-export function reloadSettings(): Promise<void> {
+function reloadSettings(): Promise<void> {
   return load(settings, backend.getSettings);
 }
 
@@ -188,7 +188,11 @@ export const setGamePower = liveSetting("gamePower", refreshHeldPower);
 /** Switches the stick lighting on or off; it comes on as ORIGAMI's default the first time. */
 export function toggleLighting(): Promise<boolean> {
   const current = settings.get();
-  if (current.status !== "ready") return Promise.resolve(false);
+  if (current.status !== "ready") {
+    // Pressed before the settings loaded: the error says so, not whatever failed before.
+    actionError.set(currentMessages().errors.backend);
+    return Promise.resolve(false);
+  }
   const lighting = current.value.lighting;
   return updateSettings({ lighting: { ...(lighting ?? DEFAULT_LIGHTING), enabled: !(lighting?.enabled ?? false) } });
 }

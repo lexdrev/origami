@@ -18,7 +18,6 @@ const tokens = `
   --og-muted: #8d98a5;
   --og-dim: #5c6672;
   --og-accent: #ffb020;
-  --og-accent-wash: rgba(255, 176, 32, 0.08);
   --og-accent-focus: rgba(255, 176, 32, 0.1);
   --og-danger: #ff6b4a;
   --og-danger-text: #ff8a70;
@@ -35,11 +34,6 @@ ${fontFaces}
   ${tokens}
 }
 
-.og-root {
-  color: var(--og-text);
-  font-family: var(--og-sans);
-  line-height: 1.3;
-}
 .og-root *, .og-root *::before, .og-root *::after { box-sizing: border-box; }
 
 /* The panel's scrollbar (ui/scrollbar.tsx): placed over the panel's right edge, it takes no space. */
@@ -52,6 +46,9 @@ ${fontFaces}
   flex-direction: column;
   gap: 10px;
   padding: 0 16px 16px;
+  color: var(--og-text);
+  font-family: var(--og-sans);
+  line-height: 1.3;
   font-size: 12px;
 }
 
@@ -329,9 +326,7 @@ ${fontFaces}
 }
 .og-slider__ends--captioned { padding-left: 96px; }
 .og-choices__note { margin-top: -4px; color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-align: center; text-transform: uppercase; }
-.og-card__aside--accent { color: var(--og-accent); }
 
-/* The Power screen's dial: a tick a watt from 7 to 35 W on a 240° arc, every fifth one longer. */
 /* Fans: two cards side by side for the fans and for the temperatures, then the curve. */
 .og-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .og-fan { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border: 1px solid var(--og-border); border-radius: 2px; background: var(--og-surface); }
@@ -364,6 +359,7 @@ ${fontFaces}
 .og-curve__point--picked { stroke: var(--og-text); }
 .og-curve__dot { fill: var(--og-surface); stroke: var(--og-text); stroke-width: 2; }
 
+/* The Power screen's dial: a tick a watt from 7 to 35 W on a 240° arc, every fifth one longer. */
 .og-dial {
   display: flex;
   justify-content: center;

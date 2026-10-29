@@ -97,7 +97,7 @@ export function DisplayIcon() {
       <polygon points="7.55,17.5 10.95,17.5 11.55,20.5 6.95,20.5" {...open} />
       <line x1={4.95} y1={21} x2={13.55} y2={21} />
       {/* The sun sits on the screen corner; a disc in the background colour interrupts the frame. */}
-      <circle cx={17} cy={7} r={4.2} stroke="none" style={{ fill: "var(--og-icon-cutout, var(--og-surface))" }} />
+      <circle cx={17} cy={7} r={4.2} stroke="none" style={{ fill: "var(--og-surface)" }} />
       <circle cx={17} cy={7} r={2.8} {...open} />
       {SUN_RAYS.map(([x1, y1, x2, y2]) => (
         <line key={`${x1}-${y1}`} x1={x1} y1={y1} x2={x2} y2={y2} />

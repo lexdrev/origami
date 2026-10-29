@@ -88,6 +88,7 @@ function RestoreAll({ onRestored }: { onRestored: () => void }) {
         <Pressable
           className={asking ? "og-button" : "og-button og-button--wide"}
           action={asking ? t.changes.cancel : t.changes.restore}
+          sound={UISound.Press}
           disabled={busy}
           onPress={() => {
             setAsking(!asking);

@@ -15,7 +15,6 @@ export const MIN_TDP = 7;
 export const MAX_TDP = 35;
 export const BATTERY_TDP = 25;
 export const TDP_STEP = 1;
-export const DEFAULT_POWER: Power = { tdp: 17, headroom: true, cpuBoost: null };
 
 /** Sustained limits for the choices; a custom cell after them shows any other. */
 export const TDP_PRESETS = [
