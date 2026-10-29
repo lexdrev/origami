@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -72,3 +73,15 @@ def test_the_original_is_looked_up_by_module_and_key(tmp_path: Path) -> None:
 
     assert reopened(tmp_path / "changes.json").original("power", "cpu_boost") is True
     assert journal.original("power", "tdp") is None
+
+
+def test_changes_from_many_threads_all_reach_the_file(tmp_path: Path) -> None:
+    path = tmp_path / "changes.json"
+    journal = reopened(path)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for index in range(40):
+            pool.submit(journal.record, "module", f"key{index}", index)
+
+    assert len(journal.entries()) == 40
+    assert len(reopened(path).entries()) == 40

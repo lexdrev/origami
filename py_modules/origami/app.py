@@ -183,9 +183,11 @@ class Origami:
             return
         finally:
             self._ready.set()
-        await self._restore_controller()
-        await self._restore_gyro()
-        await self._follow_settings()
+        # Frontend calls may come in as soon as the settings are loaded: they wait for these.
+        async with self._settings_lock:
+            await self._restore_controller()
+            await self._restore_gyro()
+            await self._follow_settings()
 
     async def info(self) -> Info:
         await self._started()
@@ -309,6 +311,10 @@ class Origami:
         console), so it is also sent after each resume.
         """
         await self._started()
+        async with self._settings_lock:
+            await self._restore_saturation()
+
+    async def _restore_saturation(self) -> None:
         saturation = self._settings.saturation
         if saturation is None:
             return
@@ -328,7 +334,9 @@ class Origami:
         the Power screen says the slider does nothing. Steam sets the TDP once "Manage TDP" is off.
         """
         await self._started()
-        if on != self._steam_tdp_limit:
+        async with self._settings_lock:
+            if on == self._steam_tdp_limit:
+                return
             self._steam_tdp_limit = on
             log.info("Steam's TDP slider is %s", "on: ORIGAMI writes over it" if on else "off")
             await self._follow_power(self._settings)
@@ -336,7 +344,9 @@ class Origami:
     async def set_game(self, app_id: int | None) -> None:
         """Steam runs this game now, or none: the power follows the game's own profile, if any."""
         await self._started()
-        if app_id != self._game:
+        async with self._settings_lock:
+            if app_id == self._game:
+                return
             self._game = app_id
             own = self._settings.power_for(app_id) is not self._settings.power
             log.info(
@@ -773,8 +783,10 @@ class Origami:
         async with aclosing(resumes()) as wakes:
             async for _ in wakes:
                 await asyncio.sleep(RESUME_SETTLE_SECONDS)
-                await self._restore_controller()
-                await self.restore_saturation()
+                # A change saved meanwhile is not overwritten by what was set before it.
+                async with self._settings_lock:
+                    await self._restore_controller()
+                    await self._restore_saturation()
 
     async def _set_gyro(self, *, on: bool) -> None:
         """Make the gyroscope's axes follow the setting; InputPlumber restarts for a new file."""

@@ -9,6 +9,7 @@ The journal lives on disk so that originals survive a crash or a reboot, and
 
 import json
 import logging
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,9 +29,12 @@ class Change:
 
 
 class ChangeJournal:
+    """The changes, kept on disk; safe to use from the worker threads that change the hardware."""
+
     def __init__(self, path: Path) -> None:
         self._path = path
         self._changes: dict[tuple[str, str], Change] = {}
+        self._lock = threading.Lock()
 
     def load(self) -> None:
         try:
@@ -45,31 +49,38 @@ class ChangeJournal:
             # modules still know the firmware defaults and can fall back to them.
             log.error("Change journal %s is unreadable, starting empty: %s", self._path, error)
             changes = []
-        self._changes = {(change.module, change.key): change for change in changes}
+        with self._lock:
+            self._changes = {(change.module, change.key): change for change in changes}
 
     def entries(self) -> list[Change]:
-        return list(self._changes.values())
+        with self._lock:
+            return list(self._changes.values())
 
     def recorded(self, module: str, key: str) -> bool:
-        return (module, key) in self._changes
+        with self._lock:
+            return (module, key) in self._changes
 
     def original(self, module: str, key: str) -> JsonValue:
         """The value from before ORIGAMI's first change; None also when nothing is recorded."""
-        change = self._changes.get((module, key))
+        with self._lock:
+            change = self._changes.get((module, key))
         return None if change is None else change.original
 
     def record(self, module: str, key: str, original: JsonValue) -> None:
         """Remember the value before the first change; later changes keep that original."""
-        if self.recorded(module, key):
-            return
-        self._changes[module, key] = Change(module, key, original)
-        self._save()
-
-    def forget(self, module: str, key: str) -> None:
-        if self._changes.pop((module, key), None) is not None:
+        with self._lock:
+            if (module, key) in self._changes:
+                return
+            self._changes[module, key] = Change(module, key, original)
             self._save()
 
+    def forget(self, module: str, key: str) -> None:
+        with self._lock:
+            if self._changes.pop((module, key), None) is not None:
+                self._save()
+
     def _save(self) -> None:
+        """Write the journal out; the caller holds the lock, so no other change slips in."""
         if not self._changes:
             self._path.unlink(missing_ok=True)
             return
