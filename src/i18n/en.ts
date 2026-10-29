@@ -26,7 +26,7 @@ export const en: Messages = {
   settings: {
     title: "Settings",
     language: "Language",
-    languages: { auto: "Same as Steam", ru: "Русский", en: "English" },
+    languages: { auto: "Like Steam", ru: "Русский", en: "English" },
     system: "System",
     manageTdp: "Manage TDP",
     manageTdpOn: "ORIGAMI sets the TDP and brings it back after sleep and game starts",
