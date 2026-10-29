@@ -50,6 +50,16 @@ def renew_thermal_caps(root: Path) -> None:
             (device / "cur_state").write_text(f"{state}\n", encoding="utf-8")
 
 
+def cores_under_top(root: Path) -> bool:
+    """Whether some core's cap stays under the top the boost allows it."""
+    return any(
+        cap < top
+        for policy in _policies(root)
+        if (cap := read_int(policy / "scaling_max_freq")) is not None
+        and (top := read_int(policy / "cpuinfo_max_freq")) is not None
+    )
+
+
 def frequency_cap(root: Path) -> int | None:
     """The lowest cap of the cores in kHz, as the kernel applies it; None without cpufreq."""
     caps = [cap for policy in _policies(root) if (cap := _applied_cap(policy))]

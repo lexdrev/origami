@@ -27,7 +27,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
-from origami.cpu import fastest_core, frequency_cap, read_boost, write_boost
+from origami.cpu import (
+    cores_under_top,
+    fastest_core,
+    frequency_cap,
+    read_boost,
+    renew_thermal_caps,
+    write_boost,
+)
 from origami.jsonio import JsonValue, expect_bool
 from origami.tdp import (
     BATTERY_TDP,
@@ -245,6 +252,8 @@ class PowerKeeper:
         self._cap_due: float | None = None
         self._escapes = 0
         self._last_cap = -math.inf
+        self._caps_renewed = False
+        """Whether the CPU's cooling caps were renewed since the boost went on, or since a wake."""
         self._held = HeldPower(None, battery_capped=False, contested=False)
 
     def hold(self, target: PowerTarget | None) -> None:
@@ -320,6 +329,7 @@ class PowerKeeper:
             return
         if seen.asleep - before.asleep > SLEEP_THRESHOLD_SECONDS:
             self._follow(now, RESUME_SETTLE_SECONDS, "resumed")
+            self._caps_renewed = False
         if seen.mains != before.mains:
             self._follow(now, CHARGER_SETTLE_SECONDS, "charger in" if mains else "charger out")
         if seen.profiles != before.profiles:
@@ -406,16 +416,34 @@ class PowerKeeper:
             write_boost(self._root, on=wanted)
             log.info("CPU boost switched %s", "on" if wanted else "off")
             self._cap_due = now + CAP_SETTLE_SECONDS
+            # Switched on, write_boost renewed the cooling caps itself.
+            self._caps_renewed = wanted
             return None
         if boost:
             self._cap_due = None
+            self._renew_caps_under_top()
             return None
+        self._caps_renewed = False
         reason = self._cap_reason(now)
         if reason is not None:
             self._cap_due = None
             self._escapes = 0
             self._last_cap = now
         return reason
+
+    def _renew_caps_under_top(self) -> None:
+        """Renew the CPU's cooling caps once if the boost is on and a core stays under its top.
+
+        Someone else may switch the boost on, as OpenGamepadUI's menu does through PowerStation,
+        and then the cores stay at 2.0 GHz after a sleep with the boost off (B20). A core may also
+        stay under its top by someone's own scaling_max_freq, so ORIGAMI renews them only once
+        each time the boost goes on, and once after each resume.
+        """
+        if self._caps_renewed or not cores_under_top(self._root):
+            return
+        renew_thermal_caps(self._root)
+        self._caps_renewed = True
+        log.info("CPU cooling caps renewed: the boost is on, and a core stayed under its top")
 
     def _cap_reason(self, now: float) -> str | None:
         if self._cap_due is not None and self._cap_due <= now:

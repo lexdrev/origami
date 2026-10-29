@@ -384,6 +384,49 @@ def test_the_cap_is_left_alone_while_the_boost_is_on(console: Console) -> None:
     assert [console.tick() for _ in range(10)] == [None] * 10
 
 
+def test_a_boost_someone_else_switches_on_gets_the_cooling_caps_renewed(
+    console: Console, info: pytest.LogCaptureFixture
+) -> None:
+    console.root.write("sys/class/thermal/cooling_device7/type", "Processor")
+    console.root.write("sys/class/thermal/cooling_device7/cur_state", 0)
+    renewed = "CPU cooling caps renewed"
+    hold(console)
+    console.tick()
+
+    # Switched on from OpenGamepadUI after a sleep with it off: the cores stay at 2.0 GHz (B20).
+    console.root.write(f"{CPUFREQ}/boost", 1)
+    for cpu in range(4):
+        console.root.write(f"{CPUFREQ}/policy{cpu}/cpuinfo_max_freq", 5_090_910)
+    for _ in range(3):
+        console.tick()
+    assert info.text.count(renewed) == 1
+
+    # Once more after a resume, and each time the boost goes on again.
+    console.asleep += 600
+    console.tick()
+    assert info.text.count(renewed) == 2
+
+    console.root.write(f"{CPUFREQ}/boost", 0)
+    console.tick()
+    console.root.write(f"{CPUFREQ}/boost", 1)
+    console.tick()
+    assert info.text.count(renewed) == 3
+
+
+def test_cores_at_their_boosted_top_need_no_renewal(
+    console: Console, info: pytest.LogCaptureFixture
+) -> None:
+    console.root.write(f"{CPUFREQ}/boost", 1)
+    for cpu in range(4):
+        console.root.write(f"{CPUFREQ}/policy{cpu}/cpuinfo_max_freq", 5_090_910)
+        console.root.write(f"{CPUFREQ}/policy{cpu}/scaling_max_freq", 5_090_910)
+    hold(console)
+
+    console.tick()
+
+    assert "CPU cooling caps renewed" not in info.text
+
+
 def test_a_refused_write_is_logged_and_the_keeper_goes_on(
     console: Console, caplog: pytest.LogCaptureFixture
 ) -> None:
