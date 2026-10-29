@@ -159,7 +159,7 @@ export const ru: Messages = {
     lighting: "Подсветка стиков",
     lightingOn: "Включена",
     lightingOff: "Выключена",
-    lightingUnset: "Не задана",
+    lightingUnset: "Не задана · по дефолту",
     mode: "Режим",
     rings: { left: "Левый", right: "Правый" },
     modes: { static: "Цвет", breathing: "Дыхание", rainbow: "Радуга", spiral: "Спираль" },

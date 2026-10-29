@@ -155,7 +155,7 @@ export const en: Messages = {
     lighting: "Stick lighting",
     lightingOn: "On",
     lightingOff: "Off",
-    lightingUnset: "Not set",
+    lightingUnset: "Not set · default",
     mode: "Mode",
     rings: { left: "Left", right: "Right" },
     modes: { static: "Colour", breathing: "Breathing", rainbow: "Rainbow", spiral: "Spiral" },
