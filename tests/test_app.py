@@ -381,14 +381,18 @@ def screen(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[int] | int]:
         assert isinstance(now, int)
         return now
 
-    async def write(_root: Path, percent: int) -> None:
+    def write_blocking(_root: Path, percent: int) -> None:
         written = state["written"]
         assert isinstance(written, list)
         written.append(percent)
         state["now"] = percent
 
+    async def write(root: Path, percent: int) -> None:
+        write_blocking(root, percent)
+
     monkeypatch.setattr(app_module, "read_saturation", read)
     monkeypatch.setattr(app_module, "write_saturation", write)
+    monkeypatch.setattr(app_module, "write_saturation_blocking", write_blocking)
     return state
 
 
@@ -411,6 +415,25 @@ def test_saturation_is_written_kept_journaled_and_restored(
         screen["now"] = 100
         await app.restore_saturation()
         assert screen["written"] == [150, 150]
+
+    asyncio.run(scenario())
+
+
+def test_uninstalling_gives_the_saturation_back_without_waiting(
+    ally_x: FakeRoot, tmp_path: Path, screen: dict[str, list[int] | int]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"saturation": 150})
+        app.stop()
+
+        assert app.uninstall() is None
+
+        assert screen["written"] == [150, 100]
+        assert await app.changes() == []
+        # The setting stays for an update, which installs the plugin again.
+        assert (await app.settings()).saturation == 150
 
     asyncio.run(scenario())
 

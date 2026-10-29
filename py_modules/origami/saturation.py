@@ -12,7 +12,7 @@ sRGB. ORIGAMI shows it as 0-200%.
 from array import array
 from pathlib import Path
 
-from origami.gamescope import read_cardinal, write_cardinal
+from origami.gamescope import read_cardinal, write_cardinal, write_cardinal_blocking
 
 ATOM = "GAMESCOPE_COLOR_SDR_GAMUT_WIDENESS"
 MAX_PERCENT = 200
@@ -42,3 +42,8 @@ async def read_saturation(root: Path) -> int | None:
 async def write_saturation(root: Path, percent: int) -> None:
     """Set the saturation; raise CommandError or TimeoutError when gamescope cannot be reached."""
     await write_cardinal(root, ATOM, to_cardinal(percent))
+
+
+def write_saturation_blocking(root: Path, percent: int) -> None:
+    """write_saturation() for code that cannot await."""
+    write_cardinal_blocking(root, ATOM, to_cardinal(percent))

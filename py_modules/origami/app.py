@@ -33,7 +33,12 @@ from origami.magnifier import Magnifier
 from origami.power import POLL_SECONDS, HeldPower, PowerKeeper, PowerTarget, resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach, RumbleProgram, RumbleSettings
-from origami.saturation import SRGB_PERCENT, read_saturation, write_saturation
+from origami.saturation import (
+    SRGB_PERCENT,
+    read_saturation,
+    write_saturation,
+    write_saturation_blocking,
+)
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.tdp import read_limits, reset_to_profile
@@ -407,9 +412,10 @@ class Origami:
 
         Decky also removes and installs the plugin to update it. Nothing here may wait (see stop),
         so InputPlumber is not restarted: it takes the stock axes when it starts next. The firmware
-        gets its platform profile's own power back, and the CPU boost what it was before ORIGAMI.
-        What another plugin drives now stays as it set it. A part that fails is logged, and the
-        rest is given back all the same.
+        gets its platform profile's own power back, and the CPU boost what it was before ORIGAMI;
+        gamescope gets its saturation back through a blocking xprop, as the magnifier is switched
+        off. What another plugin drives now stays as it set it. A part that fails is logged, and
+        the rest is given back all the same.
         """
         owners = self._read_conflicts()
         try:
@@ -421,6 +427,7 @@ class Origami:
         self._give_back_tdp(owners.power)
         self._give_back_boost(owners.power)
         self._give_back_controller(owners)
+        self._give_back_saturation_now(owners.saturation)
         log.info("ORIGAMI uninstalled")
 
     def stop(self) -> None:
@@ -637,18 +644,32 @@ class Origami:
         """Gamescope's saturation as it was before ORIGAMI, unless a plugin sets it now."""
         if not self._journal.recorded("display", "saturation"):
             return
-        original = self._journal.original("display", "saturation")
         if owner is None:
-            # Nobody had set it before ORIGAMI (None): gamescope showed sRGB then.
-            percent = SRGB_PERCENT
-            if isinstance(original, int) and not isinstance(original, bool):
-                percent = original
             try:
-                await write_saturation(self._env.root, percent)
+                await write_saturation(self._env.root, self._saturation_before())
             except (CommandError, OSError, TimeoutError) as error:
                 log.warning("Saturation not given back: %s", error)
                 return
         await asyncio.to_thread(self._journal.forget, "display", "saturation")
+
+    def _give_back_saturation_now(self, owner: str | None) -> None:
+        """_give_back_saturation() for uninstall, which cannot await."""
+        if not self._journal.recorded("display", "saturation"):
+            return
+        if owner is None:
+            try:
+                write_saturation_blocking(self._env.root, self._saturation_before())
+            except (CommandError, OSError, TimeoutError) as error:
+                log.warning("Saturation not given back: %s", error)
+                return
+        self._journal.forget("display", "saturation")
+
+    def _saturation_before(self) -> int:
+        """The saturation before ORIGAMI; nobody had set it (None) while gamescope showed sRGB."""
+        original = self._journal.original("display", "saturation")
+        if isinstance(original, int) and not isinstance(original, bool):
+            return original
+        return SRGB_PERCENT
 
     def _give_back_boost(self, owner: str | None) -> None:
         """The CPU boost as it was before ORIGAMI, unless a plugin sets the power now."""
