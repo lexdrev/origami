@@ -11,7 +11,7 @@ import { tileTexts } from "./tiles";
 const NBSP = "\u00a0";
 const none = {
   saturation: null,
-  vibration: null,
+  vibration: undefined,
   tdp: null,
   lighting: undefined,
   triggers: undefined,
@@ -62,6 +62,10 @@ describe("tile texts", () => {
     const own = { ...none, vibration: { enabled: true, left: 25, right: 25 } };
 
     expect(tileTexts(allyX, own, en).gamepad.value).toBe("25%");
+  });
+
+  it("show a dash while the strength was never set, as the driver's is not on ORIGAMI's scale", () => {
+    expect(tileTexts(allyX, { ...none, vibration: null }, en).gamepad.value).toBe("—");
   });
 
   it("show what asus-armoury shows while ORIGAMI holds no TDP", () => {

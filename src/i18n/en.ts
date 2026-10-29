@@ -197,6 +197,7 @@ export const en: Messages = {
     off: "Off",
     vibrationOn: "On",
     vibrationStill: "The handle motors are silent",
+    vibrationUnset: "Not set · as without ORIGAMI",
     strength: "Strength",
     handles: "Handles",
     together: "Together",

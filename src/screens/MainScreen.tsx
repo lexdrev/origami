@@ -54,7 +54,7 @@ export function MainScreen() {
     telemetry.status === "ready" ? telemetry.value : null,
     {
       saturation: level,
-      vibration: setting?.vibration ?? null,
+      vibration: setting && others?.vibration === null ? setting.vibration : undefined,
       tdp: held.status === "ready" ? (held.value.limits?.spl ?? null) : null,
       lighting: setting?.lighting && others?.lighting === null ? setting.lighting.enabled : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,

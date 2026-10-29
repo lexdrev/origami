@@ -201,6 +201,7 @@ export const ru: Messages = {
     off: "Выкл",
     vibrationOn: "Включена",
     vibrationStill: "Моторы ручек молчат",
+    vibrationUnset: "Не задана · как без ORIGAMI",
     strength: "Сила",
     handles: "Ручки",
     together: "Вместе",

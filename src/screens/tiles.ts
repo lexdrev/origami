@@ -23,8 +23,11 @@ export interface TileTexts {
 export interface OwnValues {
   /** The saturation gamescope shows. */
   saturation: number | null;
-  /** The saved strength; until there is one, the tile shows the driver's. */
-  vibration: Vibration | null;
+  /**
+   * The saved strength, null until set: the controller's own is not on ORIGAMI's scale, so the tile
+   * shows a dash. Undefined while another plugin drives it, and the tile shows the driver's.
+   */
+  vibration: Vibration | null | undefined;
   /** The sustained limit ORIGAMI holds; while it holds none, the tile shows what asus-armoury shows. */
   tdp: number | null;
   /**
@@ -50,7 +53,7 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
   const number = (value: number, digits = 0) => formatNumber(value, t.locale, digits);
   const power = telemetry?.power;
   const fans = telemetry?.fans;
-  const vibration = currentVibration(own.vibration, telemetry);
+  const vibration = own.vibration === undefined ? currentVibration(null, telemetry) : own.vibration;
   const tdp = own.tdp ?? power?.tdpLimitW ?? null;
 
   const temperatures = [fans?.cpuTempC, fans?.gpuTempC].filter((value) => value != null);

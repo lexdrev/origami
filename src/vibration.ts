@@ -8,7 +8,8 @@ import type { Telemetry, Vibration } from "./backend";
 
 export const MAX_VIBRATION = 100;
 export const VIBRATION_STEP = 5;
-export const FACTORY_VIBRATION: Vibration = { enabled: true, left: MAX_VIBRATION, right: MAX_VIBRATION };
+/** ORIGAMI's strength from the first start (DEFAULT_STRENGTH in the backend), switched on where it was never set. */
+export const DEFAULT_VIBRATION: Vibration = { enabled: true, left: 50, right: 50 };
 
 /** The middle of the scale, marked on the track as the saturation's default is. */
 export const VIBRATION_NOTCH = MAX_VIBRATION / 2;

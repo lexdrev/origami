@@ -217,6 +217,8 @@ export interface Messages {
     vibrationOn: string;
     /** While it is off: games rumble the handles no more. */
     vibrationStill: string;
+    /** Never set: the controller's own strength, without ORIGAMI's lift. */
+    vibrationUnset: string;
     strength: string;
     handles: string;
     together: string;

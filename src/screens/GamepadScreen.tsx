@@ -13,12 +13,10 @@ import {
   gyro,
   refreshConflicts,
   refreshGyro,
-  refreshTelemetry,
   refreshTriggerState,
   setTriggerRumble,
   setVibration,
   settings,
-  telemetry,
   testTriggerRumble,
   testVibration,
   triggerState,
@@ -36,9 +34,8 @@ import { Alert, Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, NavRow, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { PlayIcon } from "../ui/icons";
 import {
-  currentVibration,
   customDetail,
-  FACTORY_VIBRATION,
+  DEFAULT_VIBRATION,
   formatVibration,
   MAX_VIBRATION,
   presetOf,
@@ -60,8 +57,6 @@ export function GamepadScreen() {
     void refreshConflicts();
     void refreshGyro();
     void refreshTriggerState();
-    // What the driver holds, shown until ORIGAMI sets its own strength.
-    void refreshTelemetry();
   }, []);
 
   if (current.status !== "ready" || owners.status !== "ready") {
@@ -123,17 +118,20 @@ export function GamepadScreen() {
 /** One card: the switch in its head, the handles with the test, then the strength: scale and presets. */
 function VibrationSettings({ setting }: { setting: Vibration | null }) {
   const t = useMessages();
-  const readings = useStore(telemetry);
-  const vibration = currentVibration(setting, readings.status === "ready" ? readings.value : null) ?? FACTORY_VIBRATION;
+  // Never set, after "restore everything" for one, the controller keeps its own strength. That is
+  // not on ORIGAMI's scale, as games rumble it without ORIGAMI's lift, so the card shows none.
+  const vibration = setting ?? DEFAULT_VIBRATION;
+  const enabled = setting?.enabled ?? false;
   const [separate, setSeparate] = useState(vibration.left !== vibration.right);
   const preset = separate ? undefined : presetOf(vibration);
+  const state = enabled ? t.gamepad.vibrationOn : t.gamepad.vibrationStill;
 
   return (
     <Card
       title={t.gamepad.vibration}
-      subtitle={vibration.enabled ? t.gamepad.vibrationOn : t.gamepad.vibrationStill}
+      subtitle={setting === null ? t.gamepad.vibrationUnset : state}
       toggle={{
-        value: vibration.enabled,
+        value: enabled,
         action: t.actions.toggle,
         onChange: (enabled) => {
           setVibration({ ...vibration, enabled });
