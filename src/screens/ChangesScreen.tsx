@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Focusable } from "@decky/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useMessages } from "../i18n";
 import { back } from "../navigation";
@@ -67,9 +67,16 @@ function RestoreAll({ onRestored }: { onRestored: () => void }) {
   const t = useMessages();
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const block = useRef<HTMLDivElement>(null);
+
+  // The question opens above the focused button and pushes it past the panel's edge, while Steam
+  // scrolls only when the focus moves: bring the whole question into view.
+  useEffect(() => {
+    if (asking) block.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [asking]);
 
   return (
-    <div className={asking ? "og-restore og-restore--asking" : "og-restore"}>
+    <div ref={block} className={asking ? "og-restore og-restore--asking" : "og-restore"}>
       {asking && (
         <>
           <span className="og-restore__title">{t.changes.restoreAsk}</span>
