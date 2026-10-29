@@ -8,9 +8,11 @@ from pathlib import Path
 import pytest
 
 from origami import controller
+from origami.jsonio import JsonValue
 from origami.vibration import (
     Vibration,
     apply_vibration,
+    original_vibration,
     read_driver_strength,
     start_pulse,
     stop_rumble,
@@ -93,3 +95,19 @@ def test_the_driver_reports_the_strength_it_took(ally_x: FakeRoot) -> None:
 
 def test_no_strength_without_the_driver(fake_root: FakeRoot) -> None:
     assert read_driver_strength(fake_root.path) is None
+
+
+@pytest.mark.parametrize(
+    ("original", "strength"),
+    [
+        ([40, 60], (40, 60)),
+        (None, (100, 100)),
+        ([40], (100, 100)),
+        ([True, 60], (100, 100)),
+        ([40, 160], (100, 100)),
+    ],
+)
+def test_the_original_strength_is_the_drivers_or_the_mcus_own(
+    original: JsonValue, strength: tuple[int, int]
+) -> None:
+    assert original_vibration(original).strengths() == strength

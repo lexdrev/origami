@@ -208,6 +208,7 @@ export const backend = {
   updateSettings: callable<[changes: Partial<Settings>], Settings>("update_settings"),
   getChanges: callable<[], Change[]>("get_changes"),
   getConflicts: callable<[], Conflicts>("get_conflicts"),
+  restoreAll: callable<[], Settings>("restore_all"),
   previewLighting: callable<[lighting: Lighting]>("preview_lighting"),
   testVibration: callable("test_vibration"),
   getTriggerState: callable<[], TriggerState>("get_trigger_state"),

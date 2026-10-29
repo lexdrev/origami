@@ -19,11 +19,11 @@ from origami.gyro import GyroState
 from origami.inputplumber import Chord
 from origami.journal import Change
 from origami.jsonio import JsonValue
-from origami.lighting import Lighting, LightMode
+from origami.lighting import CONTROLLER_LIGHTING, Lighting, LightMode
 from origami.magnifier import Magnifier
 from origami.power import Power, PowerKeeper
 from origami.rumble import SETTINGS_MAP
-from origami.settings import Language, Settings
+from origami.settings import Language, Settings, SettingsStore
 from origami.tdp import Limits
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers, TriggerState
 from origami.vibration import Vibration
@@ -1446,5 +1446,122 @@ def test_new_settings_reach_the_hardware_before_the_next_look(
 
         assert written_limits(powered) == [25, 29, 34]
         app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_restoring_everything_gives_the_power_fans_and_gyroscope_back(
+    powered: FakeRoot,
+    fan_curves: Path,
+    tmp_path: Path,
+    inputplumber: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    boost = powered.path / "sys/devices/system/cpu/cpufreq/boost"
+    given_back: list[Path] = []
+
+    def reset(root: Path) -> bool:
+        given_back.append(root)
+        return True
+
+    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings(
+            {"power": {"tdp": 20, "cpu_boost": True}, "fans": {"enabled": True}, "gyro_fix": True}
+        )
+        await asyncio.sleep(0.05)
+        assert boost.read_text(encoding="utf-8") == "1\n"
+
+        await app.restore_all()
+
+        assert given_back == [powered.path]
+        assert boost.read_text(encoding="utf-8") == "0\n"
+        assert fan_mode(fan_curves) == [2, 2]
+        assert not (powered.path / gyro_module.OVERRIDE).exists()
+        assert inputplumber == ["inputplumber"] * 2
+        assert await app.changes() == []
+        # Nothing comes back: Steam sets the TDP, and the boost is the system's.
+        await asyncio.sleep(0.05)
+        assert (await app.power()).limits is None
+        assert boost.read_text(encoding="utf-8") == "0\n"
+        assert fan_mode(fan_curves) == [2, 2]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_restoring_everything_gives_the_controller_and_screen_back_and_unsets_the_fixes(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    sent_lighting: list[Lighting],
+    sent_vibration: list[Vibration],
+    screen: dict[str, list[int] | int],
+) -> None:
+    # Left by the glow in sleep, a switch of an older version: nothing gives it back.
+    journal = tmp_path / "data" / "changes.json"
+    journal.parent.mkdir(parents=True)
+    journal.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "changes": [{"module": "lighting", "key": "sleep_animation", "original": 0}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings(
+            {
+                "language": "ru",
+                "power": {"tdp": 20},
+                "lighting": RAINBOW,
+                "vibration": {"left": 25, "right": 75},
+                "saturation": 150,
+                "qam_assist": True,
+                "armoury_crate": "origami",
+            }
+        )
+
+        settings = await app.restore_all()
+
+        assert settings == Settings(
+            language=Language.RU, vibration=None, manage_tdp=False, power=Power(tdp=20)
+        )
+        assert SettingsStore(tmp_path / "settings" / "settings.json").load() == settings
+        assert sent_lighting[-1] == CONTROLLER_LIGHTING
+        # The driver held 50 / 50 before ORIGAMI.
+        assert sent_vibration[-1] == Vibration(left=50, right=50)
+        assert screen["written"] == [150, 100]
+        assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_restoring_leaves_what_another_plugin_drives_now(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    sent_lighting: list[Lighting],
+    screen: dict[str, list[int] | int],
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"lighting": RAINBOW, "saturation": 150})
+        install_plugin(tmp_path, "HueSync")
+        install_plugin(tmp_path, "vibrantDeck")
+
+        await app.restore_all()
+
+        assert sent_lighting == [Lighting.from_json(RAINBOW)]
+        assert screen["written"] == [150]
+        assert await app.changes() == []
 
     asyncio.run(scenario())

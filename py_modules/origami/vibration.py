@@ -59,6 +59,17 @@ class Vibration:
         return (self.left, self.right) if self.enabled else (0, 0)
 
 
+def original_vibration(original: JsonValue) -> Vibration:
+    """The strength the driver held before ORIGAMI, as the journal keeps it; else the MCU's 100."""
+    match original:
+        case [int() as left, int() as right] if all(
+            not isinstance(value, bool) and 0 <= value <= MAX_STRENGTH for value in (left, right)
+        ):
+            return Vibration(left=left, right=right)
+        case _:
+            return Vibration(left=MAX_STRENGTH, right=MAX_STRENGTH)
+
+
 def _strength(key: str, value: object) -> int:
     if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= MAX_STRENGTH:
         return value

@@ -299,8 +299,17 @@ export interface Messages {
     kernel: string;
     changed(count: number): string;
     nothingChanged: string;
+    /** After "restore everything": the journal is empty, and the fixes are off. */
+    restored: string;
     /** Labels of journal entries by "module.key". */
     labels: Partial<Record<string, string>>;
+    restore: string;
+    /** The question in place of the button, with what it does and what it brings back. */
+    restoreAsk: string;
+    restoreText: string;
+    restoreNote: string;
+    cancel: string;
+    confirm: string;
   };
   errors: { backend: string };
 }

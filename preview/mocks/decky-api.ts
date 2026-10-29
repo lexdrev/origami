@@ -53,7 +53,33 @@ const conflicts: Conflicts = {
   power: null,
   fans: null,
 };
-const changes: Change[] = [];
+const changes: Change[] = [
+  { module: "power", key: "tdp", original: null },
+  { module: "fans", key: "curve", original: null },
+  { module: "gamepad", key: "vibration", original: [100, 100] },
+];
+
+// Settings.restored in the backend: nothing of the system is left to ORIGAMI.
+function restoreAll(): Settings {
+  const withoutBoost = (power: Settings["power"]) => ({ ...power, cpuBoost: null });
+  settings = {
+    ...settings,
+    qamAssist: null,
+    gyroFix: null,
+    lighting: null,
+    saturation: null,
+    vibration: null,
+    triggerRumble: null,
+    armouryCrate: null,
+    armouryCrateHold: null,
+    manageTdp: false,
+    power: withoutBoost(settings.power),
+    gamePower: settings.gamePower.map((game) => ({ ...game, power: withoutBoost(game.power) })),
+    fans: null,
+  };
+  changes.splice(0);
+  return settings;
+}
 
 function telemetry(): Telemetry {
   const wobble = Math.sin(Date.now() / 4000);
@@ -77,6 +103,7 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   update_settings: (update: Partial<Settings>) => (settings = { ...settings, ...update }),
   get_changes: () => changes,
   get_conflicts: () => conflicts,
+  restore_all: restoreAll,
   get_saturation: () => settings.saturation ?? STEAM_SATURATION,
   restore_saturation: () => undefined,
   test_vibration: () => undefined,

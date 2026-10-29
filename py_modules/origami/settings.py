@@ -82,6 +82,27 @@ class Settings:
                 return profile.power
         return self.power
 
+    def restored(self) -> Settings:
+        """These settings after "restore everything": nothing of the system is left to ORIGAMI.
+
+        The fixes and all ORIGAMI drives are unset again, so the screens show the bugs as problems,
+        and Steam sets the TDP. The interface stays, and so do the TDP and the games' profiles for
+        the next time ORIGAMI manages it, without their CPU boost: that flag is the system's again.
+        """
+        return Settings(
+            language=self.language,
+            qam_tab=self.qam_tab,
+            qam_tab_before=self.qam_tab_before,
+            vibration=None,
+            manage_tdp=False,
+            power=replace(self.power, cpu_boost=None),
+            battery_high_tdp=self.battery_high_tdp,
+            game_power=tuple(
+                replace(profile, power=replace(profile.power, cpu_boost=None))
+                for profile in self.game_power
+            ),
+        )
+
     def updated(self, changes: Mapping[str, object]) -> Settings:
         """Return a copy with the given fields changed; raise ValueError on bad input."""
         parsed: dict[str, object] = {}

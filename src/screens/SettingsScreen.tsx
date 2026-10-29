@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Navigation } from "@decky/ui";
+import { useEffect } from "react";
 
 import type { LanguageSetting } from "../backend";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
-import { changes, info, settings, updateSettings } from "../state";
+import { changes, info, refreshChanges, settings, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Header, Screen, SectionLabel } from "../ui/blocks";
 import { UISound } from "../sounds";
@@ -23,6 +24,10 @@ export function SettingsScreen() {
   const journal = useStore(changes);
   const plugin = useStore(info);
   const column = useStore(quickAccessColumn);
+
+  useEffect(() => {
+    void refreshChanges();
+  }, []);
 
   const languages: Choice<LanguageSetting>[] = (["auto", "ru", "en"] as const).map((value) => ({
     value,

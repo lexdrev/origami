@@ -121,6 +121,36 @@ def test_fixes_stay_unset_until_the_user_sets_them_and_off_is_kept(tmp_path: Pat
     assert loaded.armoury_crate_hold is None
 
 
+def test_restored_settings_leave_the_system_and_keep_the_interface_and_tdp() -> None:
+    game = GamePower(1091500, "Cyberpunk 2077", Power(tdp=25, cpu_boost=True))
+    chosen = Settings().updated(
+        {
+            "language": "en",
+            "qam_tab_before": FIRST_TAB,
+            "qam_assist": True,
+            "gyro_fix": False,
+            "armoury_crate": "origami",
+            "lighting": {"mode": "static"},
+            "saturation": 150,
+            "trigger_rumble": {"enabled": True},
+            "power": {"tdp": 20, "cpu_boost": False},
+            "battery_high_tdp": True,
+            "game_power": [game.to_json()],
+            "fans": {"enabled": True},
+        }
+    )
+
+    assert chosen.restored() == Settings(
+        language=Language.EN,
+        qam_tab_before=FIRST_TAB,
+        vibration=None,
+        manage_tdp=False,
+        power=Power(tdp=20),
+        battery_high_tdp=True,
+        game_power=(GamePower(1091500, "Cyberpunk 2077", Power(tdp=25)),),
+    )
+
+
 def test_lighting_is_unset_until_chosen_and_then_saved(tmp_path: Path) -> None:
     store = SettingsStore(tmp_path / "settings.json")
     assert Settings().lighting is None

@@ -77,6 +77,10 @@ class Lighting:
         return {field.name: _json(getattr(self, field.name)) for field in fields(self)}
 
 
+CONTROLLER_LIGHTING = Lighting(mode=LightMode.RAINBOW)
+"""What the rings show until anybody sets them: the controller's own rainbow (BUGS.md, B12)."""
+
+
 def _member[E: StrEnum](kind: type[E], key: str, value: object) -> E:
     try:
         return kind(value)

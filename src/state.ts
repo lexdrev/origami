@@ -93,6 +93,11 @@ export function refreshConflicts(): Promise<void> {
   return load(conflicts, backend.getConflicts);
 }
 
+/** What ORIGAMI changed follows every setting, so this is read when a screen showing it opens. */
+export function refreshChanges(): Promise<void> {
+  return load(changes, backend.getChanges);
+}
+
 export function reloadSettings(): Promise<void> {
   return load(settings, backend.getSettings);
 }
@@ -107,6 +112,14 @@ async function act(action: () => Promise<unknown>): Promise<boolean> {
     actionError.set(errorMessage(error));
     return false;
   }
+}
+
+/** Gives the system back as it was before ORIGAMI and unsets its fixes; the plugin stays. */
+export function restoreAll(): Promise<boolean> {
+  return act(async () => {
+    settings.set({ status: "ready", value: await backend.restoreAll() });
+    await Promise.all([refreshChanges(), refreshGyro(), refreshHeldPower()]);
+  });
 }
 
 /** Shows lighting on the rings without saving it. */

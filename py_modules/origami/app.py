@@ -28,7 +28,7 @@ from origami.hid_bpf import HidBpfProgram
 from origami.inputplumber import Chord, press_chord
 from origami.journal import Change, ChangeJournal
 from origami.jsonio import JsonValue
-from origami.lighting import Lighting, apply_lighting
+from origami.lighting import CONTROLLER_LIGHTING, Lighting, apply_lighting
 from origami.magnifier import Magnifier
 from origami.power import POLL_SECONDS, HeldPower, PowerKeeper, PowerTarget, resumes
 from origami.proc import CommandError
@@ -54,6 +54,7 @@ from origami.vibration import (
     PULSE_SECONDS,
     Vibration,
     apply_vibration,
+    original_vibration,
     read_driver_strength,
     start_pulse,
     stop_rumble,
@@ -75,6 +76,19 @@ CHORDS = {
 
 RESUME_SETTLE_SECONDS = 2.0
 """The driver resets the controller on resume; ORIGAMI sends its settings after that."""
+
+GIVEN_BACK = frozenset(
+    {
+        ("power", "tdp"),
+        ("power", "cpu_boost"),
+        ("fans", "curve"),
+        ("display", "saturation"),
+        ("lighting", "rings"),
+        ("gamepad", "vibration"),
+        ("gamepad", "gyro"),
+    }
+)
+"""Journal entries ORIGAMI knows how to give back; others, left by older versions, are forgotten."""
 
 
 class Emit(Protocol):
@@ -341,7 +355,42 @@ class Origami:
         return self._journal.entries()
 
     async def conflicts(self) -> Conflicts:
-        enabled = await asyncio.to_thread(enabled_plugins, self._env.decky_home)
+        return await asyncio.to_thread(self._read_conflicts)
+
+    async def restore_all(self) -> Settings:
+        """Give the system back as it was before ORIGAMI, as uninstalling does, and keep running.
+
+        The settings drop all ORIGAMI drives (Settings.restored), so nothing comes back; its file
+        goes and InputPlumber restarts with the stock axes. What could not be given back stays in
+        the journal, so the screen still lists it.
+        """
+        await self._started()
+        async with self._settings_lock:
+            restored = self._settings.restored()
+            await asyncio.to_thread(self._settings_store.save, restored)
+            self._settings = restored
+            # The keeper leaves the TDP and the boost from now on, and the fans go back.
+            await self._follow_settings()
+            await asyncio.to_thread(self._rumble.close)
+            await asyncio.to_thread(self._give_back_tdp)
+            await asyncio.to_thread(self._give_back_boost)
+            owners = await self.conflicts()
+            async with self._controller_lock:
+                await asyncio.to_thread(self._give_back_controller, owners)
+            await self._give_back_saturation(owners.saturation)
+            try:
+                await self._set_gyro(on=False)
+            except (CommandError, OSError, RuntimeError, TimeoutError) as error:
+                log.warning("Gyroscope not given back: %s", error)
+            for change in self._journal.entries():
+                if (change.module, change.key) not in GIVEN_BACK:
+                    log.info("Forgetting %s.%s: nothing gives it back", change.module, change.key)
+                    await asyncio.to_thread(self._journal.forget, change.module, change.key)
+            log.info("Everything given back, %d changes left", len(self._journal.entries()))
+            return self._settings
+
+    def _read_conflicts(self) -> Conflicts:
+        enabled = enabled_plugins(self._env.decky_home)
 
         def owner(names: tuple[str, ...]) -> str | None:
             return next((name for name in names if name in enabled), None)
@@ -367,6 +416,7 @@ class Origami:
         self._give_back_fans()
         self._give_back_tdp()
         self._give_back_boost()
+        self._give_back_controller(self._read_conflicts())
         log.info("ORIGAMI uninstalled")
 
     def stop(self) -> None:
@@ -535,6 +585,40 @@ class Origami:
         self._keeper.write_again("fans given back")
         self._look_now.set()
         log.info("Fans given back to the firmware")
+
+    def _give_back_controller(self, owners: Conflicts) -> None:
+        """The rings and the handles' strength as they were before ORIGAMI; blocks briefly.
+
+        A plugin that drives them now keeps them as it set them: only ORIGAMI's record goes.
+        """
+        if self._journal.recorded("lighting", "rings"):
+            try:
+                if owners.lighting is None:
+                    apply_lighting(self._env.root, CONTROLLER_LIGHTING)
+                self._journal.forget("lighting", "rings")
+            except OSError as error:
+                log.warning("Lighting not given back: %s", error)
+        if self._journal.recorded("gamepad", "vibration"):
+            original = original_vibration(self._journal.original("gamepad", "vibration"))
+            try:
+                if owners.vibration is None:
+                    apply_vibration(self._env.root, original)
+                self._journal.forget("gamepad", "vibration")
+            except OSError as error:
+                log.warning("Vibration strength not given back: %s", error)
+
+    async def _give_back_saturation(self, owner: str | None) -> None:
+        """Gamescope's saturation as it was before ORIGAMI, unless a plugin sets it now."""
+        if not self._journal.recorded("display", "saturation"):
+            return
+        original = self._journal.original("display", "saturation")
+        if owner is None and isinstance(original, int) and not isinstance(original, bool):
+            try:
+                await write_saturation(self._env.root, original)
+            except (CommandError, OSError, TimeoutError) as error:
+                log.warning("Saturation not given back: %s", error)
+                return
+        await asyncio.to_thread(self._journal.forget, "display", "saturation")
 
     def _give_back_boost(self) -> None:
         original = self._journal.original("power", "cpu_boost")

@@ -484,6 +484,14 @@ ${fontFaces}
 .og-button.og-focused { border-color: var(--og-accent); color: var(--og-accent); }
 .og-button.og-button--primary { border-color: var(--og-accent); background: var(--og-accent); color: #14100a; }
 .og-button.og-button--primary.og-focused { color: #14100a; box-shadow: 0 0 0 2px var(--og-panel), 0 0 0 4px var(--og-accent); }
+.og-button--wide { grid-column: 1 / -1; }
+
+/* "Restore everything": the button, and the question that opens in its place. */
+.og-restore { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.og-restore--asking { padding: 12px; border: 1px solid var(--og-border); border-radius: 2px; background: var(--og-surface); }
+.og-restore__title { font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.og-restore__text { color: var(--og-text-soft); font-size: 11px; line-height: 1.45; }
+.og-restore__note { color: var(--og-muted); font-size: 11px; line-height: 1.45; }
 
 .og-disabled { opacity: 0.4; }
 
