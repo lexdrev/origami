@@ -1265,6 +1265,28 @@ def test_origami_holds_its_fan_curve_and_gives_the_fans_back(
 
 
 @pytest.mark.usefixtures("quick_power")
+def test_uninstalling_goes_on_when_the_gyroscope_file_cannot_go(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refuse(_root: Path) -> bool:
+        raise PermissionError("read-only")
+
+    monkeypatch.setattr(app_module, "remove_fix", refuse)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"fans": {"enabled": True}})
+        app.stop()
+
+        app.uninstall()
+
+        assert fan_mode(fan_curves) == [2, 2]
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
 def test_uninstalling_gives_the_fans_back(
     powered: FakeRoot, fan_curves: Path, tmp_path: Path
 ) -> None:
@@ -1547,6 +1569,40 @@ def test_restoring_everything_gives_the_controller_and_screen_back_and_unsets_th
         # The driver held 50 / 50 before ORIGAMI.
         assert sent_vibration[-1] == Vibration(left=50, right=50)
         assert screen["written"] == [150, 100]
+        assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_restoring_leaves_the_power_and_fans_another_plugin_drives_now(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    boost = powered.path / "sys/devices/system/cpu/cpufreq/boost"
+    given_back: list[Path] = []
+
+    def reset(root: Path) -> bool:
+        given_back.append(root)
+        return True
+
+    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+    owner = next(plugin for plugin in POWER_OWNERS if plugin in FAN_OWNERS)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"tdp": 20, "cpu_boost": True}})
+        await app.update_settings({"fans": {"enabled": True}})
+        await asyncio.sleep(0.05)
+        install_plugin(tmp_path, owner)
+
+        await app.restore_all()
+
+        # The other plugin's TDP, boost and fan curve stay; ORIGAMI only forgets its own.
+        assert given_back == []
+        assert boost.read_text(encoding="utf-8") == "1\n"
+        assert fan_mode(fan_curves) == [1, 1]
         assert await app.changes() == []
         app.stop()
 
