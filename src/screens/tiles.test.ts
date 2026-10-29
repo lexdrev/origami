@@ -49,7 +49,7 @@ describe("tile texts", () => {
     const texts = tileTexts(allyX, none, en);
 
     expect(texts.display.subtitle).toBe("Saturation");
-    expect(texts.gamepad.subtitle).toBe("Handle rumble");
+    expect(texts.gamepad.subtitle).toBe("Handle vibration");
   });
 
   it("show both handles when they differ", () => {

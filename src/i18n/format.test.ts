@@ -32,8 +32,8 @@ describe("plural forms", () => {
   });
 
   it.each([
-    [1, "1 change · restore all"],
-    [7, "7 changes · restore all"],
+    [1, "1 change · restore everything"],
+    [7, "7 changes · restore everything"],
   ])("English, %i", (count, text) => {
     expect(en.settings.changesSummary(count)).toBe(text);
   });

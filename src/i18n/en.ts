@@ -19,7 +19,7 @@ export const en: Messages = {
     boost: (on) => (on ? "CPU\u00a0boost\u00a0on" : "CPU\u00a0boost\u00a0off"),
     displaySub: "Saturation",
     lighting: (on) => (on ? "lighting\u00a0on" : "lighting\u00a0off"),
-    gamepadSub: "Handle rumble",
+    gamepadSub: "Handle vibration",
     triggers: { off: "triggers\u00a0off", steady: "triggers\u00a0on", taps: "trigger\u00a0taps" },
     curve: (name) => `curve\u00a0·\u00a0${name}`,
   },
@@ -43,8 +43,8 @@ export const en: Messages = {
     changesSummary: (count) =>
       count === 0
         ? "ORIGAMI has changed nothing"
-        : `${count} ${pluralForm(locale, count, { one: "change", other: "changes" })} · restore all`,
-    slogan: ["Every fold unfolds.", "Fold your handheld your way."],
+        : `${count} ${pluralForm(locale, count, { one: "change", other: "changes" })} · restore everything`,
+    slogan: ["Every fold unfolds", "Fold your handheld your way"],
     openProject: "Project page",
   },
   qamTab: {
@@ -107,13 +107,13 @@ export const en: Messages = {
     profileWaits: "The game runs the general · its profile is kept",
     differs: (general) => (general === undefined ? "≠\u00a0general" : `≠\u00a0general\u00a0${general}`),
     profiles: "Game profiles",
-    profilesSub: "No game running · general applies",
-    profilesTitleSub: "Power · settings of games",
+    profilesSub: "No game running · general in use",
+    profilesTitleSub: "Power · per-game settings",
     profilesHint:
       "To add a game, start it and pick its name at the top of the Power screen. Its profile starts as a copy of the general one.",
     profileSub: "Game profile · the game is not running",
     tdpBoost: (on) => (on ? "TDP\u00a0boost\u00a0on" : "TDP\u00a0boost\u00a0off"),
-    profileWaiting: "General applies",
+    profileWaiting: "General in use",
     removeProfile: "Remove",
     removeAgain: "Press again to remove",
   },
@@ -148,7 +148,7 @@ export const en: Messages = {
     title: "Display & Light",
     saturation: "Saturation",
     saturationSub: "Whole screen · games and Steam",
-    presets: { default: "Default", brighter: "Brighter", vivid: "Vivid", max: "Max", custom: "Custom" },
+    presets: { default: "Default", brighter: "Bright", vivid: "Vivid", max: "Max", custom: "Custom" },
     saturationOwnedBy: (plugin) => `${plugin} controls the saturation`,
     saturationOwnedText: (plugin) =>
       `${plugin} writes the screen colour past Steam's setting, so ORIGAMI leaves it alone. Switch off or remove ${plugin} in Decky, and the saturation appears here.`,
@@ -209,7 +209,7 @@ export const en: Messages = {
     vibrationOwnedBy: (plugin) => `${plugin} controls the vibration`,
     vibrationOwnedText: (plugin) =>
       `Only one plugin can set the motor strength, so ORIGAMI leaves it alone. Switch off or remove ${plugin} in Decky, and the vibration settings appear here.`,
-    triggers: "Trigger rumble",
+    triggers: "Trigger vibration",
     triggersStill: "The trigger motors are silent",
     triggersOn: "On · only from games",
     triggerChoices: { right: "Right", both: "Both" },
