@@ -43,13 +43,19 @@ function CustomColourEditor({ saved }: { saved: Lighting }) {
   const [colours, setColours] = useState(() => ({ left: rgbToHs(saved.left), right: rgbToHs(saved.right) }));
   const preview = useMemo(() => latestOnly(previewLighting), []);
   const finished = useRef(false);
+  // The saved lighting can change while the editor is open (another save comes back): leaving takes
+  // the newest, and that change alone must not put the saved colours on the rings mid-edit.
+  const latestSaved = useRef(saved);
+  useEffect(() => {
+    latestSaved.current = saved;
+  }, [saved]);
 
   // Leaving any other way than Apply (B, the back button, the menu closing) puts the saved colours back.
   useEffect(
     () => () => {
-      if (!finished.current) preview.send(saved);
+      if (!finished.current) preview.send(latestSaved.current);
     },
-    [preview, saved],
+    [preview],
   );
 
   const lighting: Lighting = { ...saved, left: hsToRgb(colours.left), right: hsToRgb(colours.right) };
