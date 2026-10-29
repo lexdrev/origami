@@ -11,7 +11,7 @@ from origami.saturation import ATOM, from_cardinal, read_saturation, to_cardinal
 from fakes import FakeDisplay, FakeRoot
 
 SRGB = 1056964608
-"""0.5 as a CARDINAL, what the console's display has without vibrantDeck."""
+"""0.5 as a CARDINAL, what the console's display has while nothing else sets it."""
 
 
 def test_percent_and_gamescope_value_convert_both_ways() -> None:

@@ -234,7 +234,7 @@ export const en: Messages = {
     gyroFixRestart: "Switching restarts the controller for a few seconds",
     gyroForeign: "Another file sets the gyro axes",
     gyroForeignText:
-      "Someone else's axis setting lies in\u00a0/etc/inputplumber (Ally Fix, for one), so ORIGAMI leaves it alone. Remove it, and the fix appears here.",
+      "Someone else's axis setting lies in\u00a0/etc/inputplumber, so ORIGAMI leaves it alone. Remove it, and the fix appears here.",
   },
   armouryCrate: {
     title: "Armoury Crate button",

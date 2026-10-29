@@ -3,7 +3,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createOwnTab, placeTab, repairDeckyTabs } from "./qamTab";
+import { createOwnTab, KNOWN_ARRANGERS, placeTab, repairDeckyTabs } from "./qamTab";
 import { ORIGAMI_TAB } from "./quickAccess";
 import type { Store } from "./store";
 import { FIRST_TAB, quickAccessColumn } from "./tabPosition";
@@ -71,7 +71,7 @@ class DeckyTabsHook {
 
 /**
  * Decky's hook with its render replaced by another plugin's reconciler, which keeps Decky's
- * entries in line with the list and, like Panel de Control's, fails for good once anyone else
+ * entries in line with the list and, like the known ones, fails for good once anyone else
  * has changed them since its last render.
  */
 function reconcilingHook() {
@@ -303,15 +303,15 @@ describe("ORIGAMI's own tab when another plugin replaced Decky's render", () => 
     expect(quickAccessColumn.get().arranger).toEqual({ name: null });
   });
 
-  it("names Panel de Control by the mark it leaves on Decky's hook", async () => {
+  it.each(KNOWN_ARRANGERS)("names $name by the mark it leaves on Decky's hook", async (known) => {
     const { hook } = reconcilingHook();
-    Object.defineProperty(hook, Symbol.for("panel-de-control.qam-render-adapter"), { value: {} });
+    Object.defineProperty(hook, known.marker, { value: {} });
     setUp(hook);
 
     renderMenu(steamColumn(), hook);
     await Promise.resolve();
 
-    expect(quickAccessColumn.get().arranger).toEqual({ name: "Panel de Control" });
+    expect(quickAccessColumn.get().arranger).toEqual({ name: known.name });
   });
 
   it("leaves taking its entry out to that plugin when the plugin unloads", () => {

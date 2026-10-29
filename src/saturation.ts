@@ -5,7 +5,7 @@ import { backend } from "./backend";
 import { updateSettings } from "./state";
 import { createStore, latestOnly } from "./store";
 
-// The screen saturation ORIGAMI writes to gamescope (origami.saturation), as vibrantDeck does:
+// The screen saturation ORIGAMI writes to gamescope itself (origami.saturation):
 // Steam's own Color Vibrance never reaches gamescope on this console. 0–200%, 100 being sRGB.
 
 export const DEFAULT_SATURATION = 100;

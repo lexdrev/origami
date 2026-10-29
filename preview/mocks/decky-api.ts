@@ -43,7 +43,7 @@ let settings: Settings = {
   ],
   fans: { enabled: true, points: [0, 10, 25, 40, 55, 75, 100] },
 };
-// Steam's value, as gamescope shows it on the console without vibrantDeck.
+// Steam's value, as gamescope shows it on the console while nothing else sets it.
 const STEAM_SATURATION = 100;
 const conflicts: Conflicts = {
   lighting: null,

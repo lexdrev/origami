@@ -4,7 +4,7 @@
 """Lighting of the stick rings.
 
 The driver's LED class passes only blue on kernel 7.2.9-ogc3 (it clips the packed colour to
-255), so ORIGAMI sends the MCU's lighting commands itself, as HHD did. The driver still writes
+255), so ORIGAMI sends the MCU's lighting commands itself. The driver still writes
 its cached colour into the MCU on every suspend, and nobody fills that cache, so the rings go
 dark after sleep until the lighting is sent again (BUGS.md, B12).
 """
@@ -98,7 +98,7 @@ def _json(value: object) -> JsonValue:
     return value.value if isinstance(value, StrEnum) else cast("JsonValue", value)
 
 
-# MCU commands, the same in HHD and the hid-asus-ally driver:
+# MCU commands, as the hid-asus-ally driver sends them:
 #   5a b3 <zone> <mode> <r g b> <speed> <direction> 00 <r g b>   mode and colours of a zone
 #   5a b4 / 5a b5                                                apply / store the modes sent
 #   5a ba c5 c4 <0-3>                                            brightness

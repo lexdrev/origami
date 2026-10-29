@@ -7,7 +7,7 @@ import { en } from "./i18n/en";
 import { ru } from "./i18n/ru";
 import { FIRST_TAB, ownTabIndex, ownTabSummary, positionAt, tabName } from "./tabPosition";
 
-// Steam's column on the console with Panel de Control installed (2026-10-26).
+// Steam's column on the console with another plugin's tab in it (2026-10-26).
 const column = [
   { key: 5260355, title: "Панель управления" },
   ...[0, 3, 4, 5, 7, 6, 999].map((key) => ({ key, title: null })),
@@ -57,10 +57,10 @@ describe("summary in the settings", () => {
   });
 
   it("names the plugin that arranges the column, when it is known", () => {
-    const known = ownTabSummary(true, 7, { tabs: column, arranger: { name: "Panel de Control" } }, ru);
+    const known = ownTabSummary(true, 7, { tabs: column, arranger: { name: "Tabs Plugin" } }, ru);
     const unknown = ownTabSummary(true, 7, { tabs: column, arranger: { name: null } }, ru);
 
-    expect(known).toBe("Вкл · место задаёт Panel de Control");
+    expect(known).toBe("Вкл · место задаёт Tabs Plugin");
     expect(unknown).toBe("Вкл · место задаёт другой плагин");
   });
 });

@@ -64,16 +64,16 @@ describe("problems on the tiles", () => {
 
   it("count other plugins that own a feature, a plugin that owns both vibrations once", () => {
     const conflicts: Conflicts = {
-      lighting: "HueSync",
-      saturation: "vibrantDeck",
-      vibration: "Ally Fix",
-      triggers: "Ally Fix",
-      power: "Panel de Control",
-      fans: "Panel de Control",
+      lighting: "Lighting Plugin",
+      saturation: "Saturation Plugin",
+      vibration: "Rumble Plugin",
+      triggers: "Rumble Plugin",
+      power: "Power Plugin",
+      fans: "Power Plugin",
     };
 
     expect(tileProblems(sources({ conflicts }))).toEqual({ power: 1, fans: 1, display: 2, gamepad: 4 });
-    expect(tileProblems(sources({ conflicts: { ...alone, triggers: "Ally Fix" } })).gamepad).toBe(4);
+    expect(tileProblems(sources({ conflicts: { ...alone, triggers: "Rumble Plugin" } })).gamepad).toBe(4);
   });
 
   it("count what fights ORIGAMI over the TDP while it keeps it", () => {
@@ -86,7 +86,7 @@ describe("problems on the tiles", () => {
     const restored = { ...fresh, manageTdp: null };
     expect(tileProblems(sources({ settings: restored, steamTdpSlider: true, contested: true })).power).toBe(1);
     // Another plugin owns the power, and its own block already says so.
-    const owned = { ...alone, power: "Panel de Control" };
+    const owned = { ...alone, power: "Power Plugin" };
     expect(tileProblems(sources({ settings: restored, conflicts: owned })).power).toBe(1);
   });
 });

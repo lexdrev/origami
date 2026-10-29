@@ -238,7 +238,7 @@ export const ru: Messages = {
     gyroFixRestart: "Переключение перезапустит контроллер на\u00a0пару секунд",
     gyroForeign: "Оси гироскопа задаёт другой файл",
     gyroForeignText:
-      "В\u00a0/etc/inputplumber лежит чужая настройка осей (например, от\u00a0Ally Fix), поэтому ORIGAMI её не\u00a0трогает. Уберите её — исправление появится здесь.",
+      "В\u00a0/etc/inputplumber лежит чужая настройка осей, поэтому ORIGAMI её не\u00a0трогает. Уберите её — исправление появится здесь.",
   },
   armouryCrate: {
     title: "Кнопка Armoury Crate",

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 lexdrev
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Screen saturation, written to gamescope the way vibrantDeck does it.
+"""Screen saturation, written to gamescope directly.
 
 Steam's own Color Vibrance does not reach gamescope on this console: whatever Steam shows, the
 root-window property gamescope reads stays at 0.5. So ORIGAMI sets that property itself:

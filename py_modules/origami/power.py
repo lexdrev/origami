@@ -63,7 +63,7 @@ QUIET_SECONDS = 5.0
 WATCH_SECONDS = 30.0
 WATCH_LOOK_SECONDS = 0.25
 """After a change the keeper looks this often: Steam writes late, and the CPU's cap slips again
-about ten seconds later (probe 21; Ally Fix watches as long)."""
+about ten seconds later (probe 21)."""
 FOREIGN_WINDOW_SECONDS = 60.0
 FOREIGN_LIMIT = 3
 """Writes over ORIGAMI's limits in a window that it answers; one more and it stops holding them."""

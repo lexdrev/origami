@@ -20,8 +20,8 @@ describe("trigger rumble", () => {
   it("names a plugin that owns the triggers once on the screen", () => {
     const none = { lighting: null, saturation: null, vibration: null, triggers: null, power: null, fans: null };
     expect(separateTriggerOwner(none)).toBeNull();
-    // Ally Fix sets the vibration too: its block for the vibration speaks for the triggers.
-    expect(separateTriggerOwner({ ...none, vibration: "Ally Fix", triggers: "Ally Fix" })).toBeNull();
-    expect(separateTriggerOwner({ ...none, vibration: "Ally Vibe Control", triggers: "Ally Fix" })).toBe("Ally Fix");
+    // One plugin sets the vibration too: its block for the vibration speaks for the triggers.
+    expect(separateTriggerOwner({ ...none, vibration: "Rumble Plugin", triggers: "Rumble Plugin" })).toBeNull();
+    expect(separateTriggerOwner({ ...none, vibration: "Vibration Plugin", triggers: "Rumble Plugin" })).toBe("Rumble Plugin");
   });
 });

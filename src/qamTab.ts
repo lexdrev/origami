@@ -40,7 +40,7 @@ export interface OwnTab {
 // tabs and, whenever the menu renders, adds them to Steam's list with its error boundary and the
 // visibility state @decky/api reads. Steam memoizes that list, and Decky's render only counts its
 // own entries in it: when the count is off it appends every tab again, and it never takes one out.
-// Plugins that change tabs at runtime (Panel de Control) replace the render with a reconciler of
+// Plugins that change tabs at runtime may replace the render with a reconciler of
 // their own, which fails once anyone else edits Decky's entries. ORIGAMI never replaces the render
 // and edits Decky's entries only while Decky's own render is in place.
 interface DeckyTabsHook {
@@ -77,7 +77,7 @@ function deckyRendersTabs(hook: DeckyTabsHook): boolean {
 
 // Plugins known to replace Decky's render, by the global symbol each leaves on the hook while its
 // replacement is in place, with their names as Decky lists them.
-const KNOWN_ARRANGERS = [{ marker: Symbol.for("panel-de-control.qam-render-adapter"), name: "Panel de Control" }];
+export const KNOWN_ARRANGERS = [{ marker: Symbol.for("panel-de-control.qam-render-adapter"), name: "Panel de Control" }];
 
 /** The plugin that arranges the column, or null when Decky's own render is in place. */
 function arrangerOf(hook: DeckyTabsHook): Arranger | null {

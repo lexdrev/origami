@@ -20,7 +20,7 @@ vi.mock("./backend", () => ({
   backend: {
     updateSettings: (changes: Partial<Settings>) => {
       fake.sent.push(changes.vibration);
-      if (fake.refuse) return Promise.reject(new Error("Ally Vibe Control sets the vibration strength"));
+      if (fake.refuse) return Promise.reject(new Error("Vibration Plugin sets the vibration strength"));
       fake.kept = changes.vibration ?? null;
       return Promise.resolve({ vibration: fake.kept });
     },
@@ -71,7 +71,7 @@ describe("vibration strength", () => {
     await settle();
 
     expect(shown()).toBeNull();
-    expect(actionError.get()).toMatch("Ally Vibe Control");
+    expect(actionError.get()).toMatch("Vibration Plugin");
   });
 
   it("waits for the settings to load", () => {

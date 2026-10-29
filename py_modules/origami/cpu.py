@@ -8,7 +8,7 @@ plugged in or out, or a game starts, the fast cores may run far above the cap, u
 the boost flags and every scaling_max_freq still read capped (probes 20 and 21): the cap did not
 reach the CPU. Switching the boost on and off again does not help, and neither does lowering the
 cap and raising it back at once. ORIGAMI lowers it on every core, waits a moment, and raises it
-back; Ally Fix does the same.
+back.
 """
 
 import asyncio

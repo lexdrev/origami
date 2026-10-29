@@ -60,7 +60,7 @@ vi.mock("@decky/ui", () => ({
 vi.mock("./state", async () => {
   const { ru: messages } = await import("./i18n/ru");
   return {
-    actionError: { get: () => "HueSync drives the stick lighting" },
+    actionError: { get: () => "Lighting Plugin drives the stick lighting" },
     currentMessages: () => messages,
     toggleLighting: () => Promise.resolve(steam.lightingSwitches),
   };
@@ -92,7 +92,7 @@ describe("what a press does to the quick access menu", () => {
     const decky = QuickAccessTab.Decky;
     const origami = { kind: "open", tab: decky, deckyPlugin: "ORIGAMI" };
     expect(stepFor("origami", closed, false)).toEqual(origami);
-    expect(stepFor("origami", openOn(decky, "HueSync"), false)).toEqual(origami);
+    expect(stepFor("origami", openOn(decky, "Another Plugin"), false)).toEqual(origami);
     expect(stepFor("origami", openOn(decky, "ORIGAMI"), false)).toEqual({ kind: "close" });
   });
 
@@ -197,7 +197,7 @@ describe("carrying out a press", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(steam.toasts).toEqual([{ title: "Подсветка стиков", body: "HueSync drives the stick lighting" }]);
+    expect(steam.toasts).toEqual([{ title: "Подсветка стиков", body: "Lighting Plugin drives the stick lighting" }]);
     stop();
   });
 

@@ -15,6 +15,14 @@ from origami import power as power_module
 from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
 from origami.buttons import ButtonAction
+from origami.decky_plugins import (
+    FAN_OWNERS,
+    LIGHTING_OWNERS,
+    POWER_OWNERS,
+    SATURATION_OWNERS,
+    TRIGGER_OWNERS,
+    VIBRATION_OWNERS,
+)
 from origami.gyro import GyroState
 from origami.inputplumber import Chord
 from origami.journal import Change
@@ -252,17 +260,17 @@ def test_lighting_is_sent_kept_and_journaled(
     asyncio.run(scenario())
 
 
-def test_lighting_is_left_alone_while_huesync_runs(
+def test_lighting_is_left_alone_while_a_lighting_plugin_runs(
     ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting]
 ) -> None:
-    install_plugin(tmp_path, "HueSync")
+    install_plugin(tmp_path, LIGHTING_OWNERS[0])
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
         await app.start()
-        assert (await app.conflicts()).lighting == "HueSync"
+        assert (await app.conflicts()).lighting == LIGHTING_OWNERS[0]
 
-        with pytest.raises(RuntimeError, match="HueSync"):
+        with pytest.raises(RuntimeError, match=LIGHTING_OWNERS[0]):
             await app.update_settings({"lighting": RAINBOW})
 
         assert sent_lighting == []
@@ -347,15 +355,15 @@ def test_stop_cancels_background_work_without_waiting(ally_x: FakeRoot, tmp_path
     asyncio.run(scenario())
 
 
-def test_vibrantdeck_owns_the_saturation(ally_x: FakeRoot, tmp_path: Path) -> None:
-    install_plugin(tmp_path, "vibrantDeck")
+def test_a_saturation_plugin_owns_the_saturation(ally_x: FakeRoot, tmp_path: Path) -> None:
+    install_plugin(tmp_path, SATURATION_OWNERS[0])
 
     conflicts = asyncio.run(make_app(ally_x, tmp_path).conflicts())
 
-    assert (conflicts.lighting, conflicts.saturation) == (None, "vibrantDeck")
+    assert (conflicts.lighting, conflicts.saturation) == (None, SATURATION_OWNERS[0])
 
 
-@pytest.mark.parametrize("plugin", ["Ally Vibe Control", "Ally Fix"])
+@pytest.mark.parametrize("plugin", VIBRATION_OWNERS)
 def test_vibration_plugins_own_the_vibration(ally_x: FakeRoot, tmp_path: Path, plugin: str) -> None:
     install_plugin(tmp_path, plugin)
 
@@ -440,16 +448,16 @@ def test_saturation_comes_back_after_sleep(
     asyncio.run(scenario())
 
 
-def test_saturation_is_left_alone_while_vibrantdeck_runs(
+def test_saturation_is_left_alone_while_a_saturation_plugin_runs(
     ally_x: FakeRoot, tmp_path: Path, screen: dict[str, list[int] | int]
 ) -> None:
-    install_plugin(tmp_path, "vibrantDeck")
+    install_plugin(tmp_path, SATURATION_OWNERS[0])
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
         await app.start()
 
-        with pytest.raises(RuntimeError, match="vibrantDeck"):
+        with pytest.raises(RuntimeError, match=SATURATION_OWNERS[0]):
             await app.update_settings({"saturation": 150})
 
         assert screen["written"] == []
@@ -492,10 +500,10 @@ def test_the_first_start_sets_the_handles_to_the_middle_level(
     asyncio.run(scenario())
 
 
-def test_the_first_start_leaves_the_vibration_to_ally_vibe_control(
+def test_the_first_start_leaves_the_vibration_to_a_vibration_plugin(
     ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
 ) -> None:
-    install_plugin(tmp_path, "Ally Vibe Control")
+    install_plugin(tmp_path, VIBRATION_OWNERS[0])
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path, first_start=True)
@@ -508,16 +516,16 @@ def test_the_first_start_leaves_the_vibration_to_ally_vibe_control(
     asyncio.run(scenario())
 
 
-def test_vibration_is_left_alone_while_ally_vibe_control_runs(
+def test_vibration_is_left_alone_while_a_vibration_plugin_runs(
     ally_x: FakeRoot, tmp_path: Path, sent_vibration: list[Vibration]
 ) -> None:
-    install_plugin(tmp_path, "Ally Vibe Control")
+    install_plugin(tmp_path, VIBRATION_OWNERS[0])
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
         await app.start()
 
-        with pytest.raises(RuntimeError, match="Ally Vibe Control"):
+        with pytest.raises(RuntimeError, match=VIBRATION_OWNERS[0]):
             await app.update_settings({"vibration": {"left": 30, "right": 30}})
 
         assert sent_vibration == []
@@ -634,17 +642,17 @@ def test_saved_trigger_rumble_comes_back_at_start(ally_x: FakeRoot, tmp_path: Pa
     asyncio.run(scenario())
 
 
-def test_ally_fix_owns_the_triggers(ally_x: FakeRoot, tmp_path: Path) -> None:
+def test_a_trigger_plugin_owns_the_triggers(ally_x: FakeRoot, tmp_path: Path) -> None:
     ally_x.ally_controller()
-    install_plugin(tmp_path, "Ally Fix")
+    install_plugin(tmp_path, TRIGGER_OWNERS[0])
     bpf = FakeHidBpf()
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path, bpf=bpf)
         await app.start()
-        assert (await app.conflicts()).triggers == "Ally Fix"
+        assert (await app.conflicts()).triggers == TRIGGER_OWNERS[0]
 
-        with pytest.raises(RuntimeError, match="Ally Fix"):
+        with pytest.raises(RuntimeError, match=TRIGGER_OWNERS[0]):
             await app.update_settings({"trigger_rumble": {"enabled": True, "triggers": "right"}})
 
         assert bpf.programs == []
@@ -712,7 +720,7 @@ def test_grips_are_left_alone_while_another_plugin_sets_the_strength(
         await first.start()
         await first.update_settings({"vibration": {"left": 80, "right": 80}})
         first.stop()
-        install_plugin(tmp_path, "Ally Vibe Control")
+        install_plugin(tmp_path, VIBRATION_OWNERS[0])
 
         app = make_app(ally_x, tmp_path, bpf=bpf)
         await app.start()
@@ -1088,7 +1096,7 @@ def test_uninstalling_removes_the_gyroscope_fix_without_waiting(
 def test_another_programs_gyroscope_file_is_left_alone(
     ally_x: FakeRoot, tmp_path: Path, inputplumber: list[str]
 ) -> None:
-    (ally_x.path / gyro_module.OVERRIDE).write_text("# Ally Fix\n", encoding="utf-8")
+    (ally_x.path / gyro_module.OVERRIDE).write_text("# another program's axes\n", encoding="utf-8")
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
@@ -1274,7 +1282,7 @@ def test_uninstalling_gives_the_fans_back(
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("plugin", ["Panel de Control", "Ally Fix"])
+@pytest.mark.parametrize("plugin", FAN_OWNERS)
 @pytest.mark.usefixtures("quick_power")
 def test_fan_plugins_own_the_fans(
     powered: FakeRoot, fan_curves: Path, tmp_path: Path, plugin: str
@@ -1296,7 +1304,7 @@ def test_fan_plugins_own_the_fans(
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("plugin", ["Panel de Control", "SimpleDeckyTDP", "PowerTools"])
+@pytest.mark.parametrize("plugin", POWER_OWNERS)
 @pytest.mark.usefixtures("quick_power")
 def test_power_plugins_own_the_power(powered: FakeRoot, tmp_path: Path, plugin: str) -> None:
     install_plugin(tmp_path, plugin)
@@ -1555,8 +1563,8 @@ def test_restoring_leaves_what_another_plugin_drives_now(
         app = make_app(ally_x, tmp_path)
         await app.start()
         await app.update_settings({"lighting": RAINBOW, "saturation": 150})
-        install_plugin(tmp_path, "HueSync")
-        install_plugin(tmp_path, "vibrantDeck")
+        install_plugin(tmp_path, LIGHTING_OWNERS[0])
+        install_plugin(tmp_path, SATURATION_OWNERS[0])
 
         await app.restore_all()
 
