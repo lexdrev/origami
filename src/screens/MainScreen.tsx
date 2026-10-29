@@ -56,7 +56,7 @@ export function MainScreen() {
       saturation: level,
       vibration: setting?.vibration ?? null,
       tdp: held.status === "ready" ? (held.value.limits?.spl ?? null) : null,
-      lighting: setting && others?.lighting === null ? (setting.lighting?.enabled ?? false) : undefined,
+      lighting: setting?.lighting && others?.lighting === null ? setting.lighting.enabled : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
       fanCurve: setting && others?.fans === null ? setting.fans : undefined,
     },

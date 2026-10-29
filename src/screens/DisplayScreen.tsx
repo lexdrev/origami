@@ -144,7 +144,7 @@ function LightingSettings({ lighting }: { lighting: Lighting | null }) {
   return (
     <Card
       title={t.display.lighting}
-      subtitle={enabled ? t.display.lightingOn : t.display.lightingOff}
+      subtitle={lighting === null ? t.display.lightingUnset : enabled ? t.display.lightingOn : t.display.lightingOff}
       toggle={{
         value: enabled,
         action: t.actions.toggle,

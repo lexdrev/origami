@@ -27,7 +27,10 @@ export interface OwnValues {
   vibration: Vibration | null;
   /** The sustained limit ORIGAMI holds; while it holds none, the tile shows what asus-armoury shows. */
   tdp: number | null;
-  /** Whether the stick lighting is on; undefined while another plugin drives it. */
+  /**
+   * Whether the stick lighting is on; undefined while another plugin drives it or it was never set,
+   * as "not set" does not fit the tile on its line.
+   */
   lighting: boolean | undefined;
   /** The trigger rumble as chosen, null until then; undefined where ORIGAMI rumbles no triggers. */
   triggers: TriggerRumble | null | undefined;

@@ -59,6 +59,8 @@ export interface Messages {
     manageTdpOff: string;
     /** When to switch it off. */
     manageTdpNote: string;
+    /** When to switch it on again. */
+    manageTdpOffNote: string;
     qamTab: string;
     qamTabOff: string;
     qamTabFirst: string;
@@ -180,6 +182,8 @@ export interface Messages {
     lighting: string;
     lightingOn: string;
     lightingOff: string;
+    /** Never set: the controller keeps its own lighting. */
+    lightingUnset: string;
     mode: string;
     rings: { left: string; right: string };
     modes: Record<LightMode, string>;

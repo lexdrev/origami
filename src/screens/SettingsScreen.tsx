@@ -52,7 +52,7 @@ export function SettingsScreen() {
         <ToggleRow
           title={t.settings.manageTdp}
           subtitle={current.value.manageTdp ? t.settings.manageTdpOn : t.settings.manageTdpOff}
-          note={t.settings.manageTdpNote}
+          note={current.value.manageTdp ? t.settings.manageTdpNote : t.settings.manageTdpOffNote}
           value={current.value.manageTdp}
           action={t.actions.toggle}
           onChange={(manageTdp) => void updateSettings({ manageTdp })}
