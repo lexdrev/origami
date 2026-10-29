@@ -14,10 +14,11 @@ back.
 import asyncio
 from pathlib import Path
 
-from origami.sysfs import read_int
+from origami.sysfs import read_int, read_text
 
 BOOST = Path("sys/devices/system/cpu/cpufreq/boost")
 CPUFREQ = Path("sys/devices/system/cpu/cpufreq")
+THERMAL = Path("sys/class/thermal")
 KICK_KHZ = 30_000
 """How far the cap is lowered for a moment to program it again."""
 KICK_HOLD_SECONDS = 0.2
@@ -31,6 +32,22 @@ def read_boost(root: Path) -> bool | None:
 
 def write_boost(root: Path, *, on: bool) -> None:
     (root / BOOST).write_text("1\n" if on else "0\n", encoding="utf-8")
+    if on:
+        renew_thermal_caps(root)
+
+
+def renew_thermal_caps(root: Path) -> None:
+    """Have the CPU's cooling devices work their caps out again from the top the boost gives.
+
+    Each one caps the cores at a share of the top they had when its state was last set, and the
+    kernel sets it again on waking from sleep: woken with the boost off, the cores stayed at
+    2.0 GHz once the boost was on (kernel 7.2.11-ogc4.1). Its state written back as it is renews
+    the cap.
+    """
+    for device in sorted((root / THERMAL).glob("cooling_device*")):
+        state = read_int(device / "cur_state")
+        if read_text(device / "type") == "Processor" and state is not None:
+            (device / "cur_state").write_text(f"{state}\n", encoding="utf-8")
 
 
 def frequency_cap(root: Path) -> int | None:

@@ -22,6 +22,33 @@ def test_the_boost_flag(powered: FakeRoot) -> None:
     assert (powered.path / CPUFREQ / "boost").read_text(encoding="utf-8") == "1\n"
 
 
+def test_switching_the_boost_on_renews_the_cpu_cooling_caps(
+    powered: FakeRoot, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for index, kind, state in ((0, "Fan", 1), (7, "Processor", 0), (8, "Processor", 2)):
+        powered.write(f"sys/class/thermal/cooling_device{index}/type", kind)
+        powered.write(f"sys/class/thermal/cooling_device{index}/cur_state", state)
+    writes: list[tuple[str, str]] = []
+    write_text = Path.write_text
+
+    def recorded(path: Path, text: str, encoding: str | None = None) -> int:
+        writes.append((path.parent.name, text))
+        return write_text(path, text, encoding=encoding)
+
+    monkeypatch.setattr(Path, "write_text", recorded)
+
+    write_boost(powered.path, on=False)
+    write_boost(powered.path, on=True)
+
+    # Only the processors, each with the state it has; the fan is not the CPU's.
+    assert writes == [
+        ("cpufreq", "0\n"),
+        ("cpufreq", "1\n"),
+        ("cooling_device7", "0\n"),
+        ("cooling_device8", "2\n"),
+    ]
+
+
 def test_the_cap_and_the_fastest_core(powered: FakeRoot) -> None:
     powered.write(f"{CPUFREQ}/policy2/scaling_cur_freq", 3_500_000)
 
