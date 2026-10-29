@@ -17,7 +17,10 @@ multiarch="/usr/include/$(uname -m)-linux-gnu"
 mkdir -p "$project/bin"
 for source in "$project"/bpf/*.bpf.c; do
     object="$project/bin/$(basename "${source%.c}").o"
-    "$clang" -target bpf -O2 -g -Wall -Werror -I"$project/bpf" -I"$multiarch" -c "$source" -o "$object"
+    # The file names in the line info start from the project, not from this machine's folders, so
+    # the object is the same wherever it is built and carries no local path into the zip.
+    "$clang" -target bpf -O2 -g -Wall -Werror -ffile-prefix-map="$project"=. \
+        -I"$project/bpf" -I"$multiarch" -c "$source" -o "$object"
     "$strip" -g "$object"
     echo "$object"
 done
