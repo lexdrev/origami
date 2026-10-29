@@ -296,8 +296,6 @@ export const ru: Messages = {
       "fans.curve": "Кривая вентиляторов · прошивка",
       "display.saturation": "Насыщенность · gamescope",
       "lighting.rings": "Подсветка стиков · контроллер",
-      // Left by the sleep glow of early builds; restoring forgets it.
-      "lighting.sleep_animation": "Свечение во сне · контроллер",
       "gamepad.vibration": "Сила вибрации · контроллер",
       "gamepad.gyro": "Оси гироскопа · файл в\u00a0/etc",
     },

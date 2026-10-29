@@ -56,7 +56,7 @@ class Settings:
     """Screen saturation in percent (100 = sRGB); None until the user sets it."""
     vibration: Vibration | None = field(default_factory=Vibration)
     """Handle vibration strength, the middle level from the first start: the controller's own 100%
-    is too strong. None leaves the controller's own, as settings saved before this default do."""
+    is too strong. None, after "restore everything", leaves the controller's own until it is set."""
     trigger_rumble: TriggerRumble | None = None
     """Rumble of the impulse triggers (B19); None until the user chooses, and they stay still."""
     armoury_crate: ButtonAction | None = None

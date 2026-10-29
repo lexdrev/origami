@@ -45,9 +45,6 @@ LEVEL_STRENGTH = {
 }
 """Strength of a trigger at a game's full rumble, in percent, for each level."""
 
-FORMER_LEVELS = {"min": TriggerLevel.SOFT, "max": TriggerLevel.STRONG}
-"""Levels of earlier versions, read as the nearest of today's."""
-
 TAP_SECONDS = 0.06
 """One tap of the test, as long as the program's (TAP_NS in bpf/rumble.bpf.c)."""
 TAPS_IN_TEST = 3
@@ -77,18 +74,10 @@ class TriggerRumble:
             raise ValueError("trigger rumble must be an object")
         data = cast("dict[str, object]", value)
         defaults = cls()
-        triggers = data.get("triggers", defaults.triggers)
-        # Saved before the switch: then "off" was one of the triggers, and the others meant on.
-        if "enabled" not in data and "triggers" in data:
-            data = {**data, "enabled": triggers != "off"}
-            triggers = defaults.triggers if triggers == "off" else triggers
-        level = data.get("level", defaults.level)
-        if isinstance(level, str):
-            level = FORMER_LEVELS.get(level, level)
         return cls(
             enabled=expect_bool("enabled", data.get("enabled", defaults.enabled)),
-            triggers=Triggers(triggers),
-            level=TriggerLevel(level),
+            triggers=Triggers(data.get("triggers", defaults.triggers)),
+            level=TriggerLevel(data.get("level", defaults.level)),
             taps=expect_bool("taps", data.get("taps", defaults.taps)),
         )
 

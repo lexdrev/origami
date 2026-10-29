@@ -48,26 +48,13 @@ def test_json_round_trip() -> None:
     assert TriggerRumble.from_json({"enabled": True}) == on(Triggers.RIGHT, MEDIUM)
 
 
-def test_settings_saved_before_the_switch() -> None:
-    # Then "off" was one of the triggers, and a trigger meant on.
-    off = TriggerRumble.from_json({"triggers": "off", "level": "soft"})
-    both = TriggerRumble.from_json({"triggers": "both", "level": "medium"})
-
-    assert off == TriggerRumble(level=SOFT)
-    assert both == on(Triggers.BOTH, MEDIUM)
-
-
-def test_levels_of_earlier_versions_read_as_the_nearest() -> None:
-    assert TriggerRumble.from_json({"enabled": True, "level": "min"}).level is SOFT
-    assert TriggerRumble.from_json({"enabled": True, "level": "max"}).level is STRONG
-
-
 @pytest.mark.parametrize(
     "value",
     [
         None,
         {"triggers": "left"},
         {"enabled": True, "triggers": "off"},
+        {"enabled": True, "level": "max"},
         {"enabled": "yes"},
         {"triggers": "right", "level": "loud"},
         {"triggers": "right", "level": 60},

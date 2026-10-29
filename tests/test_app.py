@@ -62,8 +62,8 @@ def make_app(
 ) -> Origami:
     settings = tmp_path / "settings" / "settings.json"
     if not first_start and not settings.exists():
-        # Saved by an install before the handles' default strength: the controller keeps its
-        # own, so a test sees only what it sets itself.
+        # The handles' strength not set, as after "restore everything": the controller keeps
+        # its own, so a test sees only what it sets itself.
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text('{"vibration": null}\n', encoding="utf-8")
     environment = Environment(
@@ -682,7 +682,7 @@ def test_saved_trigger_rumble_comes_back_at_start(ally_x: FakeRoot, tmp_path: Pa
         first = make_app(ally_x, tmp_path, bpf=bpf)
         await first.start()
         await first.update_settings(
-            {"trigger_rumble": {"enabled": True, "triggers": "both", "level": "max"}}
+            {"trigger_rumble": {"enabled": True, "triggers": "both", "level": "strong"}}
         )
         first.stop()
 
@@ -1617,19 +1617,6 @@ def test_restoring_everything_gives_the_controller_and_screen_back_and_unsets_th
     sent_vibration: list[Vibration],
     screen: dict[str, list[int] | int],
 ) -> None:
-    # Left by the glow in sleep, a switch of an older version: nothing gives it back.
-    journal = tmp_path / "data" / "changes.json"
-    journal.parent.mkdir(parents=True)
-    journal.write_text(
-        json.dumps(
-            {
-                "version": 1,
-                "changes": [{"module": "lighting", "key": "sleep_animation", "original": 0}],
-            }
-        ),
-        encoding="utf-8",
-    )
-
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
         await app.start()

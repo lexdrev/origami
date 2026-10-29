@@ -292,8 +292,6 @@ export const en: Messages = {
       "fans.curve": "Fan curve · firmware",
       "display.saturation": "Saturation · gamescope",
       "lighting.rings": "Stick lighting · controller",
-      // Left by the sleep glow of early builds; restoring forgets it.
-      "lighting.sleep_animation": "Sleep glow · controller",
       "gamepad.vibration": "Vibration strength · controller",
       "gamepad.gyro": "Gyroscope axes · file in\u00a0/etc",
     },

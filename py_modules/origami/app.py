@@ -77,19 +77,6 @@ CHORDS = {
 RESUME_SETTLE_SECONDS = 2.0
 """The driver resets the controller on resume; ORIGAMI sends its settings after that."""
 
-GIVEN_BACK = frozenset(
-    {
-        ("power", "tdp"),
-        ("power", "cpu_boost"),
-        ("fans", "curve"),
-        ("display", "saturation"),
-        ("lighting", "rings"),
-        ("gamepad", "vibration"),
-        ("gamepad", "gyro"),
-    }
-)
-"""Journal entries ORIGAMI knows how to give back; others, left by older versions, are forgotten."""
-
 
 class Emit(Protocol):
     """Sends an event with its arguments to the frontend (decky.emit)."""
@@ -397,10 +384,6 @@ class Origami:
                 await self._set_gyro(on=False)
             except (CommandError, OSError, RuntimeError, TimeoutError) as error:
                 log.warning("Gyroscope not given back: %s", error)
-            for change in self._journal.entries():
-                if (change.module, change.key) not in GIVEN_BACK:
-                    log.info("Forgetting %s.%s: nothing gives it back", change.module, change.key)
-                    await asyncio.to_thread(self._journal.forget, change.module, change.key)
             log.info("Everything given back, %d changes left", len(self._journal.entries()))
             return self._settings
 
