@@ -15,6 +15,7 @@ import { Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, Slider } from "../ui/controls";
 import { ThermometerIcon } from "../ui/icons";
 import { useTelemetry } from "../useTelemetry";
+import { LoadFailed } from "./LoadFailed";
 import { OwnedBy } from "./OwnedBy";
 
 type FanReadings = Telemetry["fans"];
@@ -43,6 +44,7 @@ export function FansScreen() {
       <Header onBack={back} title={t.fans.title} />
       <FanCards fans={fans} />
       <Temperatures fans={fans} />
+      <LoadFailed loads={[current, owners]} />
       {current.status === "ready" &&
         owners.status === "ready" &&
         (owner !== null ? (

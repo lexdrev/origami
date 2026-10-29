@@ -9,6 +9,7 @@ import { useStore } from "../store";
 import { Header, Screen, SectionLabel } from "../ui/blocks";
 import { OptionList } from "../ui/controls";
 import { HOLD_ACTIONS, holdText, PRESS_ACTIONS, pressText } from "./armouryCrate";
+import { LoadFailed } from "./LoadFailed";
 
 export function ArmouryCrateScreen() {
   const t = useMessages();
@@ -19,6 +20,7 @@ export function ArmouryCrateScreen() {
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={t.armouryCrate.title} subtitle={t.armouryCrate.subtitle} />
+      <LoadFailed loads={[current]} />
       {current.status === "ready" && (
         <>
           <SectionLabel>{t.armouryCrate.press}</SectionLabel>

@@ -20,6 +20,7 @@ import {
 import { Alert, Header, Screen, SectionLabel } from "../ui/blocks";
 import { IconButton, Pressable, ToggleRow } from "../ui/controls";
 import { DownIcon, UpIcon } from "../ui/icons";
+import { LoadFailed } from "./LoadFailed";
 
 /** Whether ORIGAMI has its own quick access tab, and where it stands in the column. */
 export function QamTabScreen() {
@@ -31,6 +32,7 @@ export function QamTabScreen() {
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={t.qamTab.title} subtitle={t.qamTab.subtitle} />
+      <LoadFailed loads={[current]} />
       {current.status === "ready" && (
         <>
           <ToggleRow

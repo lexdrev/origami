@@ -15,6 +15,7 @@ import { UISound } from "../sounds";
 import { ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
 import { FoxMark, GearIcon } from "../ui/icons";
 import { ownTabSummary, quickAccessColumn } from "../tabPosition";
+import { LoadFailed } from "./LoadFailed";
 
 const REPOSITORY = "github.com/lexdrev/origami";
 const LICENSE = "GPL-3.0";
@@ -49,6 +50,7 @@ export function SettingsScreen() {
       />
 
       <SectionLabel>{t.settings.system}</SectionLabel>
+      <LoadFailed loads={[current]} />
       {current.status === "ready" && (
         <ToggleRow
           title={t.settings.manageTdp}

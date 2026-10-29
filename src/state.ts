@@ -93,6 +93,15 @@ export function refreshChanges(): Promise<void> {
   return load(changes, backend.getChanges);
 }
 
+/** Loads again what failed to load: the backend may have started late. Runs as the plugin opens. */
+export async function reloadFailed(): Promise<void> {
+  await Promise.all([
+    info.get().status === "failed" && load(info, backend.getInfo),
+    settings.get().status === "failed" && load(settings, backend.getSettings),
+    changes.get().status === "failed" && load(changes, backend.getChanges),
+  ]);
+}
+
 export function reloadSettings(): Promise<void> {
   return load(settings, backend.getSettings);
 }

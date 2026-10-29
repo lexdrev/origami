@@ -46,6 +46,7 @@ import {
   VIBRATION_STEP,
 } from "../vibration";
 import { armouryCrateSummary } from "./armouryCrate";
+import { LoadFailed } from "./LoadFailed";
 import { OwnedBy } from "./OwnedBy";
 
 export function GamepadScreen() {
@@ -63,6 +64,7 @@ export function GamepadScreen() {
     return (
       <Screen onBack={back}>
         <Header onBack={back} title={t.gamepad.title} />
+        <LoadFailed loads={[current, owners]} />
       </Screen>
     );
   }

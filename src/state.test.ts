@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Settings, Vibration } from "./backend";
-import { actionError, setVibration, settings } from "./state";
+import { actionError, reloadFailed, setVibration, settings } from "./state";
 
 // The backend, which Decky reaches only inside Steam; it keeps what it accepts.
 const fake = vi.hoisted(() => {
@@ -94,5 +94,15 @@ describe("vibration strength", () => {
 
     expect(settings.get()).toEqual({ status: "loading" });
     expect(fake.sent).toEqual([]);
+  });
+});
+
+describe("loading again", () => {
+  it("loads the settings again when they failed, as the plugin opens", async () => {
+    settings.set({ status: "failed", error: "ORIGAMI failed to start" });
+
+    await reloadFailed();
+
+    expect(settings.get()).toEqual({ status: "ready", value: { vibration: null } });
   });
 });

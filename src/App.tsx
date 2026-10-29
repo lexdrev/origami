@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
 
 import { I18nProvider, useMessages } from "./i18n";
 import { useCurrentScreen, type ScreenId } from "./navigation";
@@ -16,7 +16,7 @@ import { GameProfilesScreen } from "./screens/GameProfilesScreen";
 import { GameProfileScreen, PowerScreen } from "./screens/PowerScreen";
 import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
-import { actionError, useLanguage } from "./state";
+import { actionError, reloadFailed, useLanguage } from "./state";
 import { useStore } from "./store";
 import { Alert } from "./ui/blocks";
 import { ScrollBar } from "./ui/scrollbar";
@@ -39,6 +39,10 @@ const screens: Record<ScreenId, ComponentType> = {
 
 export function App() {
   const CurrentScreen = screens[useCurrentScreen()];
+  // The quick access menu mounts the view each time it opens: what failed then gets another try.
+  useEffect(() => {
+    void reloadFailed();
+  }, []);
 
   return (
     <I18nProvider language={useLanguage()}>

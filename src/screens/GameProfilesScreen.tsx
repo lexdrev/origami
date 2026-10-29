@@ -11,6 +11,7 @@ import { setGamePower, settings } from "../state";
 import { useStore } from "../store";
 import { Header, Screen } from "../ui/blocks";
 import { NavRow } from "../ui/controls";
+import { LoadFailed } from "./LoadFailed";
 
 /** A second press of X within this time removes the profile; the first only asks for it. */
 const REMOVE_WINDOW_MS = 3000;
@@ -32,7 +33,14 @@ export function GameProfilesScreen() {
   }, [asked]);
 
   const header = <Header onBack={back} title={t.power.profiles} subtitle={t.power.profilesTitleSub} />;
-  if (current.status !== "ready") return <Screen onBack={back}>{header}</Screen>;
+  if (current.status !== "ready") {
+    return (
+      <Screen onBack={back}>
+        {header}
+        <LoadFailed loads={[current]} />
+      </Screen>
+    );
+  }
   const { gamePower } = current.value;
   return (
     <Screen onBack={back}>

@@ -31,6 +31,7 @@ import { Alert, Card, CardTitles, Header, Screen, SwitchLine } from "../ui/block
 import { ChoiceGroup, filledTrack, NavRow, Pressable, Slider, ToggleRow } from "../ui/controls";
 import { Dial, DialFace, DialReadout, type DialStatus } from "../ui/dial";
 import { useTelemetry } from "../useTelemetry";
+import { LoadFailed } from "./LoadFailed";
 import { OwnedBy } from "./OwnedBy";
 
 /** Drawing less than this share of the limit, the SoC has nothing to do that needs it. */
@@ -79,6 +80,7 @@ function PowerView({ title, subtitle, game }: PowerViewProps) {
     return (
       <Screen onBack={back}>
         <Header onBack={back} title={title} subtitle={subtitle} />
+        <LoadFailed loads={[current, owners]} />
       </Screen>
     );
   }

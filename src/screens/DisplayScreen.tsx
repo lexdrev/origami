@@ -35,6 +35,7 @@ import { useStore } from "../store";
 import { Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, Pressable, Slider } from "../ui/controls";
 import { Rings } from "../ui/rings";
+import { LoadFailed } from "./LoadFailed";
 import { OwnedBy } from "./OwnedBy";
 
 export function DisplayScreen() {
@@ -51,6 +52,7 @@ export function DisplayScreen() {
     return (
       <Screen onBack={back}>
         <Header onBack={back} title={t.display.title} />
+        <LoadFailed loads={[owners]} />
       </Screen>
     );
   }
@@ -67,6 +69,7 @@ export function DisplayScreen() {
           text={t.display.saturationOwnedText(saturationOwner)}
         />
       )}
+      <LoadFailed loads={[current]} />
       {lightingOwner === null ? (
         current.status === "ready" && <LightingSettings lighting={current.value.lighting} />
       ) : (
