@@ -162,6 +162,7 @@ class Origami:
         self._look_now = asyncio.Event()
         """Wakes the keeper before its next look: a supply changed, or there is news to write."""
         self._power = BackgroundTask("origami-power", self._hold_power)
+        self._supplies = BackgroundTask("origami-supplies", self._watch_supplies)
         self._fans = BackgroundTask("origami-fans", self._hold_fans)
         self._fans_written: tuple[int, ...] | None = None
         """The points last sent to the fans while ORIGAMI holds them."""
@@ -437,6 +438,7 @@ class Origami:
         self._buttons.cancel()
         self._after_resume.cancel()
         self._power.cancel()
+        self._supplies.cancel()
         self._fans.cancel()
         # A look at the hardware still running in its thread ends before this returns.
         self._keeper.hold(None)
@@ -653,7 +655,7 @@ class Origami:
 
     async def _hold_power(self) -> None:
         """Let the keeper look when it asks to, and at once when something changes."""
-        watcher = asyncio.create_task(self._watch_supplies())
+        self._supplies.start()
         try:
             while True:
                 # Cleared before the look: a change meanwhile brings the next one at once.
@@ -669,7 +671,7 @@ class Origami:
                     async with asyncio.timeout(self._keeper.next_look()):
                         await self._look_now.wait()
         finally:
-            watcher.cancel()
+            self._supplies.cancel()
 
     async def _watch_supplies(self) -> None:
         try:

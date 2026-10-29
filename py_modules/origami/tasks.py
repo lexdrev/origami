@@ -23,7 +23,8 @@ class BackgroundTask:
             await self.stop()
 
     def start(self) -> None:
-        if self._task is None:
+        """Start the work unless it runs; work that ended or failed starts again."""
+        if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._work(), name=self._name)
             self._task.add_done_callback(self._log_failure)
 
