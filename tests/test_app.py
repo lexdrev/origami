@@ -1532,7 +1532,7 @@ def test_restoring_everything_gives_the_controller_and_screen_back_and_unsets_th
         settings = await app.restore_all()
 
         assert settings == Settings(
-            language=Language.RU, vibration=None, manage_tdp=False, power=Power(tdp=20)
+            language=Language.RU, vibration=None, manage_tdp=None, power=Power(tdp=20)
         )
         assert SettingsStore(tmp_path / "settings" / "settings.json").load() == settings
         assert sent_lighting[-1] == CONTROLLER_LIGHTING

@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import type { LanguageSetting } from "../backend";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
+import { unset } from "../problems";
 import { changes, info, refreshChanges, settings, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Header, Screen, SectionLabel } from "../ui/blocks";
@@ -53,7 +54,8 @@ export function SettingsScreen() {
           title={t.settings.manageTdp}
           subtitle={current.value.manageTdp ? t.settings.manageTdpOn : t.settings.manageTdpOff}
           note={current.value.manageTdp ? t.settings.manageTdpNote : t.settings.manageTdpOffNote}
-          value={current.value.manageTdp}
+          problem={unset(current.value.manageTdp)}
+          value={current.value.manageTdp ?? false}
           action={t.actions.toggle}
           onChange={(manageTdp) => void updateSettings({ manageTdp })}
         />

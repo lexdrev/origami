@@ -174,8 +174,11 @@ export interface Settings {
   armouryCrate: ButtonAction | null;
   /** What holding the upper left button does, besides the L5 Steam gets from it. Null until set: nothing. */
   armouryCrateHold: ButtonAction | null;
-  /** ORIGAMI owns the TDP and writes it again whenever it drops; off, Steam sets it. */
-  manageTdp: boolean;
+  /**
+   * ORIGAMI owns the TDP and writes it again whenever it drops; off, Steam sets it. Null after
+   * "restore everything" until the user decides: off all the same, but a problem.
+   */
+  manageTdp: boolean | null;
   power: Power;
   /** The TDP may go over 25 W on the battery too. */
   batteryHighTdp: boolean;

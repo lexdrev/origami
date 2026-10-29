@@ -144,7 +144,7 @@ def test_restored_settings_leave_the_system_and_keep_the_interface_and_tdp() -> 
         language=Language.EN,
         qam_tab_before=FIRST_TAB,
         vibration=None,
-        manage_tdp=False,
+        manage_tdp=None,
         power=Power(tdp=20),
         battery_high_tdp=True,
         game_power=(GamePower(1091500, "Cyberpunk 2077", Power(tdp=25)),),
@@ -230,6 +230,16 @@ def test_origami_owns_the_tdp_at_the_factorys_limits_until_changed(tmp_path: Pat
     assert store.load() == Settings(
         manage_tdp=False, power=Power(25, headroom=False, cpu_boost=False), battery_high_tdp=True
     )
+
+
+def test_the_tdp_left_to_steam_by_restoring_stays_undecided_until_the_user_sets_it(
+    tmp_path: Path,
+) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save(Settings().restored())
+
+    assert store.load().manage_tdp is None
+    assert store.load().updated({"manage_tdp": False}).manage_tdp is False
 
 
 def test_games_keep_their_own_power_through_a_save(tmp_path: Path) -> None:

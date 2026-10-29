@@ -72,7 +72,7 @@ function restoreAll(): Settings {
     triggerRumble: null,
     armouryCrate: null,
     armouryCrateHold: null,
-    manageTdp: false,
+    manageTdp: null,
     power: withoutBoost(settings.power),
     gamePower: settings.gamePower.map((game) => ({ ...game, power: withoutBoost(game.power) })),
     fans: null,

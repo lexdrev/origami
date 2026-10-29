@@ -58,9 +58,15 @@ const count = (...red: boolean[]) => red.filter(Boolean).length;
 export function tileProblems(sources: ProblemSources): TileProblems {
   const { settings, conflicts, gyro, triggers } = sources;
   // Off, Steam sets the TDP by the user's choice; then neither the slider nor other writers matter.
-  const ownTdp = conflicts.power === null && settings.manageTdp;
+  // Left to Steam by "restore everything", the TDP drops again until the user decides.
+  const ownTdp = conflicts.power === null && settings.manageTdp === true;
   return {
-    power: count(conflicts.power !== null, ownTdp && sources.steamTdpSlider, ownTdp && sources.contested),
+    power: count(
+      conflicts.power !== null,
+      conflicts.power === null && unset(settings.manageTdp),
+      ownTdp && sources.steamTdpSlider,
+      ownTdp && sources.contested,
+    ),
     fans: count(conflicts.fans !== null),
     display: count(conflicts.saturation !== null, conflicts.lighting !== null),
     gamepad: count(

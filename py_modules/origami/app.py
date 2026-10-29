@@ -231,7 +231,7 @@ class Origami:
             if bool(updated.gyro_fix) != bool(self._settings.gyro_fix):
                 await self._set_gyro(on=bool(updated.gyro_fix))
             await asyncio.to_thread(self._settings_store.save, updated)
-            gave_up_tdp = self._settings.manage_tdp and not updated.manage_tdp
+            gave_up_tdp = self._settings.manage_tdp is True and updated.manage_tdp is not True
             self._settings = updated
             await self._follow_settings()
             if gave_up_tdp:
@@ -482,7 +482,7 @@ class Origami:
         else:
             target = PowerTarget(
                 settings.power_for(self._game),
-                tdp=settings.manage_tdp,
+                tdp=settings.manage_tdp is True,
                 battery_high_tdp=settings.battery_high_tdp,
                 steam_slider=self._steam_tdp_limit,
             )

@@ -81,6 +81,14 @@ describe("problems on the tiles", () => {
     const steamSets = { ...fresh, manageTdp: false };
     expect(tileProblems(sources({ settings: steamSets, steamTdpSlider: true, contested: true })).power).toBe(0);
   });
+
+  it("count the TDP left to Steam by restoring until the user decides", () => {
+    const restored = { ...fresh, manageTdp: null };
+    expect(tileProblems(sources({ settings: restored, steamTdpSlider: true, contested: true })).power).toBe(1);
+    // Another plugin owns the power, and its own block already says so.
+    const owned = { ...alone, power: "Panel de Control" };
+    expect(tileProblems(sources({ settings: restored, conflicts: owned })).power).toBe(1);
+  });
 });
 
 describe("red fixes", () => {

@@ -21,6 +21,7 @@ import {
   TDP_PRESETS,
   TDP_STEP,
 } from "../power";
+import { unset } from "../problems";
 import { mainWindow, QuickAccessTab, steamTab } from "../quickAccess";
 import { UISound } from "../sounds";
 import { conflicts, heldPower, refreshConflicts, setGamePower, setPower, updateSettings } from "../state";
@@ -96,8 +97,8 @@ function PowerView({ title, subtitle, game }: PowerViewProps) {
       ) : (
         <>
           <DrawnDial power={power} />
-          {/* The user switched it off, so this is their choice, not a problem. */}
-          <Alert title={t.power.steamSets} problem={false}>
+          {/* Switched off by the user, it is their choice; left to Steam by "restore everything", a problem. */}
+          <Alert title={t.power.steamSets} problem={unset(current.value.manageTdp)}>
             {t.power.steamSetsText}
           </Alert>
           <BoostRow power={current.value.power} general={null} readings={power} onChange={setPower} />

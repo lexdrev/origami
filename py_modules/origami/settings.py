@@ -64,8 +64,10 @@ class Settings:
     None until the user sets it, and nothing then too."""
     armoury_crate_hold: ButtonAction | None = None
     """What holding the upper left button does, besides the L5 Steam gets from it."""
-    manage_tdp: bool = True
-    """ORIGAMI owns the TDP and writes it again whenever it drops (B04, B05); off, Steam sets it."""
+    manage_tdp: bool | None = True
+    """ORIGAMI owns the TDP and writes it again whenever it drops (B04, B05); off, Steam sets it.
+    None after "restore everything" until the user decides: off all the same, but a problem, as
+    an unset fix is."""
     power: Power = field(default_factory=Power)
     """TDP, its headroom and the CPU boost; the factory's limits until the user changes them."""
     battery_high_tdp: bool = False
@@ -86,15 +88,16 @@ class Settings:
         """These settings after "restore everything": nothing of the system is left to ORIGAMI.
 
         The fixes and all ORIGAMI drives are unset again, so the screens show the bugs as problems,
-        and Steam sets the TDP. The interface stays, and so do the TDP and the games' profiles for
-        the next time ORIGAMI manages it, without their CPU boost: that flag is the system's again.
+        and Steam sets the TDP, which is a problem too until the user decides. The interface stays,
+        and so do the TDP and the games' profiles for the next time ORIGAMI manages it, without
+        their CPU boost: that flag is the system's again.
         """
         return Settings(
             language=self.language,
             qam_tab=self.qam_tab,
             qam_tab_before=self.qam_tab_before,
             vibration=None,
-            manage_tdp=False,
+            manage_tdp=None,
             power=replace(self.power, cpu_boost=None),
             battery_high_tdp=self.battery_high_tdp,
             game_power=tuple(
@@ -110,9 +113,9 @@ class Settings:
             match key:
                 case "language":
                     parsed[key] = Language(value)
-                case "qam_tab" | "manage_tdp" | "battery_high_tdp":
+                case "qam_tab" | "battery_high_tdp":
                     parsed[key] = expect_bool(key, value)
-                case "qam_assist" | "gyro_fix":
+                case "qam_assist" | "gyro_fix" | "manage_tdp":
                     parsed[key] = None if value is None else expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
