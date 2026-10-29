@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Package the plugin as the zip that Decky installs: one Origami/ folder inside.
+"""Package the plugin as the zip that Decky installs: ORIGAMI-<version>.zip, one Origami/ folder
+inside.
 
 The archive is reproducible: entries are sorted, timestamps come from
 SOURCE_DATE_EPOCH (or the zip epoch, 1980-01-01) and permissions are fixed.
@@ -16,6 +17,7 @@ import time
 import zipfile
 from pathlib import Path
 
+NAME = "ORIGAMI"
 FOLDER = "Origami"
 FILES = (
     "plugin.json",
@@ -51,7 +53,7 @@ def timestamp() -> tuple[int, int, int, int, int, int]:
 
 def build(project: Path, output_dir: Path) -> Path:
     version = json.loads((project / "package.json").read_text(encoding="utf-8"))["version"]
-    archive = output_dir / f"{FOLDER}-{version}.zip"
+    archive = output_dir / f"{NAME}-{version}.zip"
     output_dir.mkdir(parents=True, exist_ok=True)
     date_time = timestamp()
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
