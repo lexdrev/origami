@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 lexdrev
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Decky entry point: a thin adapter over the backend in py_modules/origami."""

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 lexdrev
+// SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Rumble of the ROG Xbox Ally X as a game means it: impulse triggers (BUGS.md, B19) and grip strength.

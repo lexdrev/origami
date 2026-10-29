@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";

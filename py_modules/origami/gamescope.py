@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 lexdrev
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Properties of the root window of gamescope's first Xwayland display, where Steam runs.

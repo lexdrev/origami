@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 lexdrev
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """ORIGAMI's power settings, held through sleep, the charger, profile changes and game starts.

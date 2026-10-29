@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 lexdrev
+// SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import monoCyrillic500 from "@fontsource/jetbrains-mono/files/jetbrains-mono-cyrillic-500-normal.woff2";

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 lexdrev
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import importlib.util
@@ -32,6 +32,7 @@ def project(tmp_path: Path) -> Path:
         "main.py": "",
         "LICENSE": "GPL",
         "README.md": "",
+        "THIRD_PARTY_NOTICES.md": "",
         "dist/index.js": "",
         "bin/rumble.bpf.o": "",
         "bpf/rumble.bpf.c": "",
@@ -54,6 +55,7 @@ def test_archive_has_one_folder_with_plugin_files_only(project: Path, tmp_path: 
         assert zf.namelist() == [
             "Origami/LICENSE",
             "Origami/README.md",
+            "Origami/THIRD_PARTY_NOTICES.md",
             "Origami/bin/rumble.bpf.o",
             "Origami/dist/index.js",
             "Origami/main.py",

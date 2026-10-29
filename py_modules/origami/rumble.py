@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 lexdrev
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """The rumble program: HID-BPF on the gamepad's rumble report (bpf/rumble.bpf.c).

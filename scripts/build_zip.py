@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 lexdrev
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Package the plugin as the zip that Decky installs: one Origami/ folder inside.
@@ -23,6 +23,7 @@ FILES = (
     "main.py",
     "LICENSE",
     "README.md",
+    "THIRD_PARTY_NOTICES.md",
     "dist/index.js",
     "bin/rumble.bpf.o",
 )

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Type stub for the module Decky Loader injects at runtime; only what ORIGAMI uses.
 
 DECKY_VERSION: str

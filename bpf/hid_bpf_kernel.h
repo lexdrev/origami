@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2026 lexdrev */
+/* SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev) */
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * The few kernel types ORIGAMI's HID-BPF programs need, instead of a whole vmlinux.h.
