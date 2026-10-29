@@ -5,18 +5,13 @@ import {
   backend,
   type Change,
   type Conflicts,
-  type FanCurve,
-  type GamePower,
   type GyroState,
   type HeldPower,
   type Info,
   type Lighting,
-  type Power,
   type Settings,
   type Telemetry,
-  type TriggerRumble,
   type TriggerState,
-  type Vibration,
 } from "./backend";
 import { messagesFor, resolveLanguage, type Language, type Messages } from "./i18n";
 import { DEFAULT_LIGHTING } from "./lighting";
@@ -144,68 +139,42 @@ export function updateSettings(changes: Partial<Settings>): Promise<boolean> {
   });
 }
 
-// A slider moved quickly saves only its newest strength; a refused one brings the saved settings back.
-const saveVibration = latestOnly(async (vibration: Vibration) => {
-  if (!(await updateSettings({ vibration }))) await reloadSettings();
-});
-
-/** Saves the vibration strength, shown at once so the slider follows a held D-pad. */
-export function setVibration(vibration: Vibration): void {
-  const current = settings.get();
-  if (current.status !== "ready") return;
-  settings.set({ status: "ready", value: { ...current.value, vibration } });
-  saveVibration.send(vibration);
+/**
+ * A setting shown at once and saved in the background, so a slider follows a held D-pad. Quick
+ * changes save only the newest value, and the backend's answer is shown only while no newer value
+ * waits: an answer for a value the user has left would move the slider back. A refused value brings
+ * the saved settings back.
+ */
+function liveSetting<K extends keyof Settings>(key: K, after?: () => Promise<void>) {
+  const saver = latestOnly(async (value: Settings[K]) => {
+    try {
+      const saved = await backend.updateSettings({ [key]: value });
+      actionError.set(null);
+      if (!saver.waiting()) settings.set({ status: "ready", value: saved });
+    } catch (error) {
+      actionError.set(errorMessage(error));
+      if (!saver.waiting()) await reloadSettings();
+    }
+    await after?.();
+  });
+  return (value: Settings[K]): void => {
+    const current = settings.get();
+    if (current.status !== "ready") return;
+    settings.set({ status: "ready", value: { ...current.value, [key]: value } });
+    saver.send(value);
+  };
 }
 
-const saveTriggerRumble = latestOnly(async (triggerRumble: TriggerRumble) => {
-  if (!(await updateSettings({ triggerRumble }))) await reloadSettings();
-});
-
-/** Saves the trigger rumble, shown at once like the vibration strength. */
-export function setTriggerRumble(triggerRumble: TriggerRumble): void {
-  const current = settings.get();
-  if (current.status !== "ready") return;
-  settings.set({ status: "ready", value: { ...current.value, triggerRumble } });
-  saveTriggerRumble.send(triggerRumble);
-}
-
-const savePower = latestOnly(async (power: Power) => {
-  if (!(await updateSettings({ power }))) await reloadSettings();
-  await refreshHeldPower();
-});
-
-/** Saves the power settings, shown at once so the TDP slider follows a held D-pad. */
-export function setPower(power: Power): void {
-  const current = settings.get();
-  if (current.status !== "ready") return;
-  settings.set({ status: "ready", value: { ...current.value, power } });
-  savePower.send(power);
-}
-
-const saveFans = latestOnly(async (fans: FanCurve) => {
-  if (!(await updateSettings({ fans }))) await reloadSettings();
-});
-
-/** Saves the fan curve, shown at once so a point follows a held D-pad. */
-export function setFans(fans: FanCurve): void {
-  const current = settings.get();
-  if (current.status !== "ready") return;
-  settings.set({ status: "ready", value: { ...current.value, fans } });
-  saveFans.send(fans);
-}
-
-const saveGamePower = latestOnly(async (gamePower: GamePower[]) => {
-  if (!(await updateSettings({ gamePower }))) await reloadSettings();
-  await refreshHeldPower();
-});
-
-/** Saves the games' own power settings, shown at once as the general ones are. */
-export function setGamePower(gamePower: GamePower[]): void {
-  const current = settings.get();
-  if (current.status !== "ready") return;
-  settings.set({ status: "ready", value: { ...current.value, gamePower } });
-  saveGamePower.send(gamePower);
-}
+/** Saves the vibration strength. */
+export const setVibration = liveSetting("vibration");
+/** Saves the trigger rumble. */
+export const setTriggerRumble = liveSetting("triggerRumble");
+/** Saves the power settings; the limits ORIGAMI holds follow them. */
+export const setPower = liveSetting("power", refreshHeldPower);
+/** Saves the fan curve. */
+export const setFans = liveSetting("fans");
+/** Saves the games' own power settings; the limits held follow them too. */
+export const setGamePower = liveSetting("gamePower", refreshHeldPower);
 
 /** Switches the stick lighting on or off; it comes on as ORIGAMI's default the first time. */
 export function toggleLighting(): Promise<boolean> {

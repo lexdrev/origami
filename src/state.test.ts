@@ -62,6 +62,21 @@ describe("vibration strength", () => {
     expect(shown()).toEqual({ enabled: true, left: 65, right: 65 });
   });
 
+  it("never shows a strength the user has left while a newer one waits", async () => {
+    loaded();
+    const lefts: (number | undefined)[] = [];
+    const unsubscribe = settings.subscribe(() => lefts.push(shown()?.left));
+
+    setVibration({ enabled: true, left: 55, right: 55 });
+    setVibration({ enabled: true, left: 60, right: 60 });
+    await settle();
+    await settle();
+    unsubscribe();
+
+    // The answer for 55 came while 60 waited: it is not shown, only the answer for 60.
+    expect(lefts).toEqual([55, 60, 60]);
+  });
+
   it("goes back to the saved strength when the backend refuses a change", async () => {
     loaded();
     fake.refuse = true;

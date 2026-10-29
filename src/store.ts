@@ -64,6 +64,10 @@ export function latestOnly<T>(send: (value: T) => Promise<unknown>) {
     drop(): void {
       pending = null;
     },
+    /** Whether a newer value waits to be sent: an answer for an older one is out of date then. */
+    waiting(): boolean {
+      return pending !== null;
+    },
   };
 }
 

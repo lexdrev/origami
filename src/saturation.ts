@@ -33,10 +33,11 @@ export async function refreshSaturation(): Promise<void> {
   }
 }
 
-// A slider moved quickly saves only its newest value; the screen then shows what gamescope took.
+// A slider moved quickly saves only its newest value; the screen then shows what gamescope took,
+// unless a newer value waits: the slider would move back to one the user has left.
 const save = latestOnly(async (value: number) => {
   await updateSettings({ saturation: value });
-  await refreshSaturation();
+  if (!save.waiting()) await refreshSaturation();
 });
 
 export function setSaturation(percent: number): void {
