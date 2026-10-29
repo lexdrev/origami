@@ -101,7 +101,7 @@ need it.
 ### Feedback
 
 Open an [issue](https://github.com/lexdrev/origami/issues) and add your console, the Bazzite version (ORIGAMI shows
-it in **Settings → System changes**), what you did and the latest ORIGAMI log from `~/homebrew/logs/`.
+it in **Settings → System changes**), what you did and the latest log from `~/homebrew/logs/Origami/`.
 
 ### Thanks
 
@@ -203,7 +203,7 @@ ORIGAMI не выходит в сеть и ничего не собирает. �
 ### Обратная связь
 
 Создайте [issue](https://github.com/lexdrev/origami/issues): консоль, версия Bazzite (ORIGAMI показывает её в
-**Настройки → Изменения в системе**), что вы делали, и последний журнал ORIGAMI из `~/homebrew/logs/`.
+**Настройки → Изменения в системе**), что вы делали, и последний журнал из `~/homebrew/logs/Origami/`.
 
 ### Благодарности
 
