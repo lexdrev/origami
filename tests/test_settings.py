@@ -95,11 +95,30 @@ def test_own_tab_settings_are_saved(tmp_path: Path) -> None:
 
 def test_qam_assist_is_off_until_switched_on(tmp_path: Path) -> None:
     store = SettingsStore(tmp_path / "settings.json")
-    assert Settings().qam_assist is False
+    assert Settings().qam_assist is None
 
     store.save(Settings().updated({"qam_assist": True}))
 
     assert store.load() == Settings(qam_assist=True)
+
+
+def test_fixes_stay_unset_until_the_user_sets_them_and_off_is_kept(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    unset = Settings()
+    fixes = (unset.qam_assist, unset.gyro_fix, unset.armoury_crate, unset.armoury_crate_hold)
+    assert fixes == (None, None, None, None)
+    store.save(unset)
+    assert store.load() == unset
+
+    store.save(unset.updated({"qam_assist": False, "gyro_fix": False, "armoury_crate": "none"}))
+
+    loaded = store.load()
+    assert (loaded.qam_assist, loaded.gyro_fix, loaded.armoury_crate) == (
+        False,
+        False,
+        ButtonAction.NONE,
+    )
+    assert loaded.armoury_crate_hold is None
 
 
 def test_lighting_is_unset_until_chosen_and_then_saved(tmp_path: Path) -> None:

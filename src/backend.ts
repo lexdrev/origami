@@ -158,10 +158,10 @@ export interface Settings {
   qamTab: boolean;
   /** Steam tab that ORIGAMI's tab stands before; -1 on top, null at the end. */
   qamTabBefore: number | null;
-  /** ORIGAMI opens the quick access menu when Steam misses a press of its button. */
-  qamAssist: boolean;
-  /** ORIGAMI turns the gyroscope's yaw the right way for Steam. */
-  gyroFix: boolean;
+  /** ORIGAMI opens the quick access menu when Steam misses a press of its button; null until the user sets it. */
+  qamAssist: boolean | null;
+  /** ORIGAMI turns the gyroscope's yaw the right way for Steam; null until the user sets it. */
+  gyroFix: boolean | null;
   /** Null until the user sets it; the controller keeps its own lighting until then. */
   lighting: Lighting | null;
   /** Screen saturation in percent (100 = sRGB); null until the user sets it. */
@@ -170,10 +170,10 @@ export interface Settings {
   vibration: Vibration | null;
   /** Null until the user chooses; the triggers stay still until then. */
   triggerRumble: TriggerRumble | null;
-  /** What a short press of the upper left button does; nothing reaches Steam from it. */
-  armouryCrate: ButtonAction;
-  /** What holding the upper left button does, besides the L5 Steam gets from it. */
-  armouryCrateHold: ButtonAction;
+  /** What a short press of the upper left button does; nothing reaches Steam from it. Null until set: nothing. */
+  armouryCrate: ButtonAction | null;
+  /** What holding the upper left button does, besides the L5 Steam gets from it. Null until set: nothing. */
+  armouryCrateHold: ButtonAction | null;
   /** ORIGAMI owns the TDP and writes it again whenever it drops; off, Steam sets it. */
   manageTdp: boolean;
   power: Power;

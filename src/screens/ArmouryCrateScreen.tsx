@@ -25,7 +25,7 @@ export function ArmouryCrateScreen() {
           <OptionList
             label={t.armouryCrate.press}
             options={options(PRESS_ACTIONS, pressText)}
-            value={current.value.armouryCrate}
+            value={current.value.armouryCrate ?? "none"}
             action={t.actions.select}
             onChange={(armouryCrate) => void updateSettings({ armouryCrate })}
           />
@@ -35,7 +35,7 @@ export function ArmouryCrateScreen() {
           <OptionList
             label={t.armouryCrate.hold}
             options={options(HOLD_ACTIONS, holdText)}
-            value={current.value.armouryCrateHold}
+            value={current.value.armouryCrateHold ?? "none"}
             action={t.actions.select}
             onChange={(armouryCrateHold) => void updateSettings({ armouryCrateHold })}
           />

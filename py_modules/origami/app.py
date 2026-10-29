@@ -213,8 +213,9 @@ class Origami:
                     log.warning("Grips not lifted: %s", error)
             if updated.fans != self._settings.fans:
                 await self._send_fans(updated.fans)
-            if updated.gyro_fix != self._settings.gyro_fix:
-                await self._set_gyro(on=updated.gyro_fix)
+            # Unset and off are the same axes: switching off a fix never set changes nothing.
+            if bool(updated.gyro_fix) != bool(self._settings.gyro_fix):
+                await self._set_gyro(on=bool(updated.gyro_fix))
             await asyncio.to_thread(self._settings_store.save, updated)
             gave_up_tdp = self._settings.manage_tdp and not updated.manage_tdp
             self._settings = updated
@@ -689,7 +690,7 @@ class Origami:
     async def _restore_gyro(self) -> None:
         """Keep the axes as set: InputPlumber may have been updated, or the file may be gone."""
         try:
-            await self._set_gyro(on=self._settings.gyro_fix)
+            await self._set_gyro(on=bool(self._settings.gyro_fix))
         except (CommandError, OSError, RuntimeError, TimeoutError) as error:
             log.warning("Gyroscope not restored: %s", error)
 
@@ -702,9 +703,9 @@ class Origami:
                         # whether Steam registered this one and opens the menu itself if not.
                         await self._emit(QAM_PRESSED)
                     case Button.ARMOURY_CRATE:
-                        await self._act(self._settings.armoury_crate)
+                        await self._act(self._settings.armoury_crate or ButtonAction.NONE)
                     case Button.ARMOURY_CRATE_HOLD:
-                        await self._act(self._settings.armoury_crate_hold)
+                        await self._act(self._settings.armoury_crate_hold or ButtonAction.NONE)
 
     async def _act(self, action: ButtonAction) -> None:
         """Do what the backend can do itself; have the frontend do the rest in Steam's interface."""
@@ -736,8 +737,8 @@ def _power_changed(before: Settings, after: Settings) -> bool:
 def _driven_buttons(settings: Settings) -> frozenset[Button]:
     """The buttons whose presses ORIGAMI needs with these settings."""
     driven = {
-        Button.QUICK_ACCESS: settings.qam_assist,
-        Button.ARMOURY_CRATE: settings.armoury_crate is not ButtonAction.NONE,
-        Button.ARMOURY_CRATE_HOLD: settings.armoury_crate_hold is not ButtonAction.NONE,
+        Button.QUICK_ACCESS: settings.qam_assist is True,
+        Button.ARMOURY_CRATE: settings.armoury_crate not in {None, ButtonAction.NONE},
+        Button.ARMOURY_CRATE_HOLD: settings.armoury_crate_hold not in {None, ButtonAction.NONE},
     }
     return frozenset(button for button, needed in driven.items() if needed)

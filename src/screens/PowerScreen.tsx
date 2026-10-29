@@ -96,7 +96,10 @@ function PowerView({ title, subtitle, game }: PowerViewProps) {
       ) : (
         <>
           <DrawnDial power={power} />
-          <Alert title={t.power.steamSets}>{t.power.steamSetsText}</Alert>
+          {/* The user switched it off, so this is their choice, not a problem. */}
+          <Alert title={t.power.steamSets} problem={false}>
+            {t.power.steamSetsText}
+          </Alert>
           <BoostRow power={current.value.power} general={null} readings={power} onChange={setPower} />
         </>
       )}

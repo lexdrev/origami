@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { TriggerRumble, Vibration } from "../backend";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
+import { buttonUnset, gyroProblem, unset } from "../problems";
 import { UISound } from "../sounds";
 import {
   conflicts,
@@ -72,7 +73,8 @@ export function GamepadScreen() {
   }
   const vibrationOwner = owners.value.vibration;
   const triggerOwner = separateTriggerOwner(owners.value);
-  const buttonSummary = armouryCrateSummary(current.value.armouryCrate, current.value.armouryCrateHold, t);
+  const { armouryCrate, armouryCrateHold } = current.value;
+  const buttonSummary = armouryCrateSummary(armouryCrate ?? "none", armouryCrateHold ?? "none", t);
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={t.gamepad.title} />
@@ -99,16 +101,16 @@ export function GamepadScreen() {
       <ToggleRow
         title={t.gamepad.qamAssist}
         subtitle={current.value.qamAssist ? t.gamepad.qamAssistOn : t.gamepad.qamAssistOff}
-        problem={!current.value.qamAssist}
-        value={current.value.qamAssist}
+        problem={unset(current.value.qamAssist)}
+        value={current.value.qamAssist ?? false}
         action={t.actions.toggle}
         onChange={(qamAssist) => void updateSettings({ qamAssist })}
       />
-      <GyroFix enabled={current.value.gyroFix} />
+      <GyroFix fix={current.value.gyroFix} />
       <NavRow
         title={t.gamepad.armouryCrate}
         subtitle={buttonSummary ?? t.gamepad.armouryCrateUnassigned}
-        problem={buttonSummary === null}
+        problem={buttonUnset(armouryCrate, armouryCrateHold)}
         action={t.actions.open}
         onPress={() => {
           navigate("armouryCrate");
@@ -130,7 +132,6 @@ function VibrationSettings({ setting }: { setting: Vibration | null }) {
     <Card
       title={t.gamepad.vibration}
       subtitle={vibration.enabled ? t.gamepad.vibrationOn : t.gamepad.vibrationStill}
-      problem={!vibration.enabled}
       toggle={{
         value: vibration.enabled,
         action: t.actions.toggle,
@@ -256,7 +257,7 @@ function TestButton({ disabled = false, onPress }: { disabled?: boolean; onPress
   );
 }
 
-/** Shown only on consoles with trigger motors; off, they stay still, which is the problem (as QAM assist). */
+/** Shown only on consoles with trigger motors; they stay still, a problem until the user chooses (as QAM assist). */
 function TriggerRumbleSettings({ setting }: { setting: TriggerRumble | null }) {
   const t = useMessages();
   const state = useStore(triggerState);
@@ -267,7 +268,7 @@ function TriggerRumbleSettings({ setting }: { setting: TriggerRumble | null }) {
     <Card
       title={t.gamepad.triggers}
       subtitle={rumble.enabled ? t.gamepad.triggersOn : t.gamepad.triggersStill}
-      problem={!rumble.enabled}
+      problem={unset(setting)}
       toggle={{
         value: rumble.enabled,
         action: t.actions.toggle,
@@ -317,10 +318,11 @@ function TriggerRumbleSettings({ setting }: { setting: TriggerRumble | null }) {
 }
 
 /** Shown only where ORIGAMI knows the axes are wrong: on other devices and fixed systems there is nothing to do. */
-function GyroFix({ enabled }: { enabled: boolean }) {
+function GyroFix({ fix }: { fix: boolean | null }) {
   const t = useMessages();
   const state = useStore(gyro);
   if (state.status !== "ready") return null;
+  const enabled = fix ?? false;
   switch (state.value) {
     case "foreign":
       return <Alert title={t.gamepad.gyroForeign}>{t.gamepad.gyroForeignText}</Alert>;
@@ -331,7 +333,7 @@ function GyroFix({ enabled }: { enabled: boolean }) {
         <ToggleRow
           title={t.gamepad.gyroFix}
           subtitle={enabled ? t.gamepad.gyroFixOn : t.gamepad.gyroFixOff}
-          problem={!enabled}
+          problem={gyroProblem(state.value, fix)}
           note={t.gamepad.gyroFixRestart}
           value={enabled}
           action={t.actions.toggle}

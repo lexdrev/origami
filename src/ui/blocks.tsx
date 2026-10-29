@@ -74,12 +74,21 @@ interface TileProps {
   onOpen?: () => void;
   /** Takes the focus when it comes into the panel. */
   preferredFocus?: boolean;
+  /** How many things the block's screen shows red; a red frame and the number beside the arrow. */
+  problems?: number | undefined;
 }
 
-export function Tile({ icon, name, value, subtitle, onOpen, preferredFocus = false }: TileProps) {
+export function Tile({ icon, name, value, subtitle, onOpen, preferredFocus = false, problems = 0 }: TileProps) {
   const t = useMessages();
+  const className = problems > 0 ? "og-tile og-tile--problem" : "og-tile";
   const content = (
     <>
+      {problems > 0 && (
+        <span className="og-tile__problems">
+          <WarningIcon size={12} />
+          {problems}
+        </span>
+      )}
       <span className="og-tile__icon">{icon}</span>
       <span className="og-tile__name">{name}</span>
       <span className="og-tile__value">{value}</span>
@@ -87,14 +96,14 @@ export function Tile({ icon, name, value, subtitle, onOpen, preferredFocus = fal
     </>
   );
   return onOpen ? (
-    <Pressable className="og-tile" action={t.actions.open} preferredFocus={preferredFocus} onPress={onOpen}>
+    <Pressable className={className} action={t.actions.open} preferredFocus={preferredFocus} onPress={onOpen}>
       <span className="og-tile__chevron">
         <ChevronIcon />
       </span>
       {content}
     </Pressable>
   ) : (
-    <div className="og-tile">{content}</div>
+    <div className={className}>{content}</div>
   );
 }
 
@@ -232,10 +241,17 @@ export function Notice({ icon, children }: { icon: ReactNode; children: ReactNod
   );
 }
 
+interface AlertProps {
+  title: string;
+  children: ReactNode;
+  /** False for a state the user chose, such as Steam setting the TDP: the same block in grey. */
+  problem?: boolean;
+}
+
 /** Red block: something is broken right now (style B2: red means a problem or a conflict). */
-export function Alert({ title, children }: { title: string; children: ReactNode }) {
+export function Alert({ title, children, problem = true }: AlertProps) {
   return (
-    <div className="og-alert" role="alert">
+    <div className={problem ? "og-alert" : "og-alert og-alert--chosen"} role={problem ? "alert" : undefined}>
       <span className="og-alert__icon">
         <WarningIcon />
       </span>

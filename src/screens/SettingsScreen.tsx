@@ -47,7 +47,6 @@ export function SettingsScreen() {
         <ToggleRow
           title={t.settings.manageTdp}
           subtitle={current.value.manageTdp ? t.settings.manageTdpOn : t.settings.manageTdpOff}
-          problem={!current.value.manageTdp}
           note={t.settings.manageTdpNote}
           value={current.value.manageTdp}
           action={t.actions.toggle}

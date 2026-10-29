@@ -6,9 +6,21 @@ import { useEffect } from "react";
 
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
+import { steamTdpSlider } from "../power";
+import { tileProblems } from "../problems";
 import { ENTER_PREFERRED_CHILD } from "../quickAccess";
 import { refreshSaturation, saturation } from "../saturation";
-import { conflicts, heldPower, info, refreshConflicts, refreshTriggerState, settings, triggerState } from "../state";
+import {
+  conflicts,
+  gyro,
+  heldPower,
+  info,
+  refreshConflicts,
+  refreshGyro,
+  refreshTriggerState,
+  settings,
+  triggerState,
+} from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
@@ -25,12 +37,15 @@ export function MainScreen() {
   const held = useStore(heldPower);
   const owners = useStore(conflicts);
   const motors = useStore(triggerState);
+  const axes = useStore(gyro);
+  const slider = useStore(steamTdpSlider) === true;
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.
   useEffect(() => {
     void refreshSaturation();
     void refreshConflicts();
     void refreshTriggerState();
+    void refreshGyro();
   }, []);
   const setting = current.status === "ready" ? current.value : null;
   const others = owners.status === "ready" ? owners.value : null;
@@ -47,6 +62,18 @@ export function MainScreen() {
     },
     t,
   );
+  // Each tile counts what its screen shows red; nothing while the settings or the owners are unknown.
+  const problems =
+    setting && others
+      ? tileProblems({
+          settings: setting,
+          conflicts: others,
+          gyro: axes.status === "ready" ? axes.value : null,
+          triggers: motors.status === "ready" ? motors.value : null,
+          steamTdpSlider: slider,
+          contested: held.status === "ready" && held.value.contested,
+        })
+      : null;
 
   return (
     <Screen>
@@ -65,6 +92,7 @@ export function MainScreen() {
           name={t.main.tiles.power}
           preferredFocus
           {...tiles.power}
+          problems={problems?.power}
           onOpen={() => {
             navigate("power");
           }}
@@ -73,6 +101,7 @@ export function MainScreen() {
           icon={<FansIcon />}
           name={t.main.tiles.fans}
           {...tiles.fans}
+          problems={problems?.fans}
           onOpen={() => {
             navigate("fans");
           }}
@@ -81,6 +110,7 @@ export function MainScreen() {
           icon={<DisplayIcon />}
           name={t.main.tiles.display}
           {...tiles.display}
+          problems={problems?.display}
           onOpen={() => {
             navigate("display");
           }}
@@ -89,6 +119,7 @@ export function MainScreen() {
           icon={<GamepadIcon />}
           name={t.main.tiles.gamepad}
           {...tiles.gamepad}
+          problems={problems?.gamepad}
           onOpen={() => {
             navigate("gamepad");
           }}

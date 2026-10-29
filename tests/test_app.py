@@ -180,7 +180,7 @@ def test_qam_assist_forwards_presses_while_it_is_on(ally_x: FakeRoot, tmp_path: 
         writer = os.open(node, os.O_RDWR | os.O_NONBLOCK)
         app = make_app(ally_x, tmp_path, emit)
         await app.start()
-        assert (await app.settings()).qam_assist is False
+        assert (await app.settings()).qam_assist is None
 
         await app.update_settings({"qam_assist": True})
         await asyncio.sleep(0.05)
@@ -903,7 +903,10 @@ def test_buttons_are_not_read_until_something_is_assigned(ally_x: FakeRoot, tmp_
         await app.start()
         settings = await app.settings()
 
-        assert (settings.armoury_crate, settings.armoury_crate_hold) == (ButtonAction.NONE,) * 2
+        assert (settings.armoury_crate, settings.armoury_crate_hold) == (None, None)
+        assert not any(task.get_name() == "origami-buttons" for task in asyncio.all_tasks())
+
+        await app.update_settings({"armoury_crate": "none"})
         assert not any(task.get_name() == "origami-buttons" for task in asyncio.all_tasks())
 
     asyncio.run(scenario())
@@ -1025,6 +1028,22 @@ def test_the_gyroscope_fix_is_written_and_taken_back(
     asyncio.run(scenario())
 
 
+def test_switching_off_a_gyroscope_fix_never_set_leaves_inputplumber_alone(
+    ally_x: FakeRoot, tmp_path: Path, inputplumber: list[str]
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+
+        settings = await app.update_settings({"gyro_fix": False})
+
+        assert settings.gyro_fix is False
+        assert not (ally_x.path / gyro_module.OVERRIDE).exists()
+        assert inputplumber == []
+
+    asyncio.run(scenario())
+
+
 def test_the_gyroscope_fix_follows_inputplumber_updates_at_start(
     ally_x: FakeRoot, tmp_path: Path, inputplumber: list[str]
 ) -> None:
@@ -1079,7 +1098,7 @@ def test_another_programs_gyroscope_file_is_left_alone(
         with pytest.raises(RuntimeError, match="gyroscope"):
             await app.update_settings({"gyro_fix": True})
 
-        assert (await app.settings()).gyro_fix is False
+        assert (await app.settings()).gyro_fix is None
         assert inputplumber == []
 
     asyncio.run(scenario())

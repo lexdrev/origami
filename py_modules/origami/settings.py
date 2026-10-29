@@ -44,9 +44,11 @@ class Settings:
     """ORIGAMI has its own tab in the quick access menu, besides its place inside Decky."""
     qam_tab_before: int | None = SOUNDTRACKS_TAB
     """Steam tab that ORIGAMI's tab stands before; FIRST_TAB puts it on top, None at the end."""
-    qam_assist: bool = False
+    # Fixes of system bugs are None until the user sets them: off all the same, but the screens show
+    # them as problems until then. Switched off by hand, they are the user's choice.
+    qam_assist: bool | None = None
     """ORIGAMI opens the quick access menu when Steam misses a press of its button (B16)."""
-    gyro_fix: bool = False
+    gyro_fix: bool | None = None
     """ORIGAMI turns the gyroscope's yaw the right way for Steam (B08)."""
     lighting: Lighting | None = None
     """Lighting of the stick rings; None until the user sets it, so the controller keeps its own."""
@@ -57,9 +59,10 @@ class Settings:
     is too strong. None leaves the controller's own, as settings saved before this default do."""
     trigger_rumble: TriggerRumble | None = None
     """Rumble of the impulse triggers (B19); None until the user chooses, and they stay still."""
-    armoury_crate: ButtonAction = ButtonAction.NONE
-    """What a short press of the upper left button does; nothing reaches Steam from it (B17)."""
-    armoury_crate_hold: ButtonAction = ButtonAction.NONE
+    armoury_crate: ButtonAction | None = None
+    """What a short press of the upper left button does; nothing reaches Steam from it (B17).
+    None until the user sets it, and nothing then too."""
+    armoury_crate_hold: ButtonAction | None = None
     """What holding the upper left button does, besides the L5 Steam gets from it."""
     manage_tdp: bool = True
     """ORIGAMI owns the TDP and writes it again whenever it drops (B04, B05); off, Steam sets it."""
@@ -86,8 +89,10 @@ class Settings:
             match key:
                 case "language":
                     parsed[key] = Language(value)
-                case "qam_tab" | "qam_assist" | "gyro_fix" | "manage_tdp" | "battery_high_tdp":
+                case "qam_tab" | "manage_tdp" | "battery_high_tdp":
                     parsed[key] = expect_bool(key, value)
+                case "qam_assist" | "gyro_fix":
+                    parsed[key] = None if value is None else expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
                 case "lighting" | "vibration" | "trigger_rumble" | "fans":
@@ -95,9 +100,9 @@ class Settings:
                 case "saturation":
                     parsed[key] = _saturation(value)
                 case "armoury_crate":
-                    parsed[key] = ButtonAction(value)
+                    parsed[key] = None if value is None else ButtonAction(value)
                 case "armoury_crate_hold":
-                    parsed[key] = _hold_action(value)
+                    parsed[key] = None if value is None else _hold_action(value)
                 case "power":
                     parsed[key] = Power.from_json(value)
                 case "game_power":
@@ -120,8 +125,10 @@ class Settings:
             "trigger_rumble": (
                 None if self.trigger_rumble is None else self.trigger_rumble.to_json()
             ),
-            "armoury_crate": self.armoury_crate.value,
-            "armoury_crate_hold": self.armoury_crate_hold.value,
+            "armoury_crate": None if self.armoury_crate is None else self.armoury_crate.value,
+            "armoury_crate_hold": (
+                None if self.armoury_crate_hold is None else self.armoury_crate_hold.value
+            ),
             "manage_tdp": self.manage_tdp,
             "power": self.power.to_json(),
             "battery_high_tdp": self.battery_high_tdp,
