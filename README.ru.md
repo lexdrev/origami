@@ -67,7 +67,7 @@ ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomeb
 - ROG Xbox Ally X (плата RC73XA)
 - Bazzite 44.20261026, ядро 7.2.11-ogc4.1, InputPlumber 0.83.0, Decky Loader 3.3.1
 
-ORIGAMI знает и ROG Xbox Ally X20 (плата RC74XA), но на ней его ещё не проверяли.
+ORIGAMI знает и ROG Xbox Ally X20 (плата RC74XA), но на ней его ещё не проверяли, как и на SteamOS.
 
 ## Установка
 
@@ -103,7 +103,7 @@ ORIGAMI не выходит в сеть и ничего не собирает. �
 
 ## Обратная связь
 
-Создайте [issue](https://github.com/lexdrev/origami/issues): консоль, версия Bazzite (ORIGAMI показывает её в
+Создайте [issue](https://github.com/lexdrev/origami/issues): консоль, система и её версия (ORIGAMI показывает их в
 **Настройки → Изменения в системе**), что вы делали, и последний журнал из `~/homebrew/logs/Origami/`.
 
 ## Благодарности

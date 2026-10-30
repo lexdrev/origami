@@ -66,7 +66,7 @@ Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or 
 - ROG Xbox Ally X (board RC73XA)
 - Bazzite 44.20261026, kernel 7.2.11-ogc4.1, InputPlumber 0.83.0, Decky Loader 3.3.1
 
-ORIGAMI also knows the ROG Xbox Ally X20 (board RC74XA), but it has not been tried on one yet.
+ORIGAMI also knows the ROG Xbox Ally X20 (board RC74XA), but it has not been tried on one yet, nor on SteamOS.
 
 ## Install
 
@@ -102,8 +102,8 @@ need it.
 
 ## Feedback
 
-Open an [issue](https://github.com/lexdrev/origami/issues) and add your console, the Bazzite version (ORIGAMI shows
-it in **Settings → System changes**), what you did and the latest log from `~/homebrew/logs/Origami/`.
+Open an [issue](https://github.com/lexdrev/origami/issues) and add your console, the system and its version (ORIGAMI
+shows them in **Settings → System changes**), what you did and the latest log from `~/homebrew/logs/Origami/`.
 
 ## Thanks
 

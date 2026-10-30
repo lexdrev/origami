@@ -35,12 +35,13 @@ body:
       required: true
 
   - type: input
-    id: bazzite-version
+    id: system
     attributes:
-      label: Bazzite version · Версия Bazzite
+      label: System and version · Система и версия
       description: >-
-        In ORIGAMI: Settings → System changes. · В ORIGAMI: Настройки → Изменения в системе.
-      placeholder: "44.20261026"
+        In ORIGAMI: Settings → System changes, under the console. ·
+        В ORIGAMI: Настройки → Изменения в системе, под консолью.
+      placeholder: "Bazzite 44.20261026 / SteamOS 3.9.5"
     validations:
       required: true
 
