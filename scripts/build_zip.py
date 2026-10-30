@@ -25,6 +25,7 @@ FILES = (
     "main.py",
     "LICENSE",
     "README.md",
+    "README.ru.md",
     "THIRD_PARTY_NOTICES.md",
     "dist/index.js",
     "bin/rumble.bpf.o",

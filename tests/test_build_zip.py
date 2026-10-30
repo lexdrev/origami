@@ -32,6 +32,7 @@ def project(tmp_path: Path) -> Path:
         "main.py": "",
         "LICENSE": "GPL",
         "README.md": "",
+        "README.ru.md": "",
         "THIRD_PARTY_NOTICES.md": "",
         "dist/index.js": "",
         "bin/rumble.bpf.o": "",
@@ -55,6 +56,7 @@ def test_archive_has_one_folder_with_plugin_files_only(project: Path, tmp_path: 
         assert zf.namelist() == [
             "Origami/LICENSE",
             "Origami/README.md",
+            "Origami/README.ru.md",
             "Origami/THIRD_PARTY_NOTICES.md",
             "Origami/bin/rumble.bpf.o",
             "Origami/dist/index.js",
