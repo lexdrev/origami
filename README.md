@@ -72,14 +72,18 @@ ORIGAMI also knows the ROG Xbox Ally X20 (board RC74XA), but it has not been tri
 
 ### Install
 
-1. Install [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation) if you do not have it.
-2. Download the ORIGAMI zip from the [latest release](https://github.com/lexdrev/origami/releases/latest).
-3. In Game Mode, open Decky's settings, switch on **Developer mode**, then choose **Developer → Install Plugin from
-   Zip** and pick the file.
-4. Open ORIGAMI from the quick access menu.
+You need [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation). In Game Mode, open
+Decky's settings and switch on **Developer mode**. Then, on the **Developer** page:
 
-To update, install the newer zip the same way: your settings stay. Installing restarts Decky, and Decky reloads
-Steam's interface, so close your game first.
+- **By link:** in **Install Plugin from URL**, enter
+  `github.com/lexdrev/origami/releases/latest/download/ORIGAMI.zip` and choose **Install**.
+- **From a file:** download `ORIGAMI.zip` from the [latest release](https://github.com/lexdrev/origami/releases/latest),
+  choose **Install Plugin from ZIP File → Browse** and pick it.
+
+Decky warns that its team has not reviewed the plugin; confirm, and open ORIGAMI from the quick access menu.
+
+To update, install it again the same way: the link always leads to the latest release, and your settings stay.
+Installing restarts Decky, and Decky reloads Steam's interface, so close your game first.
 
 ### Undo everything
 
@@ -174,14 +178,18 @@ ORIGAMI знает и ROG Xbox Ally X20 (плата RC74XA), но на ней е
 
 ### Установка
 
-1. Установите [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation), если его ещё нет.
-2. Скачайте zip ORIGAMI из [последнего выпуска](https://github.com/lexdrev/origami/releases/latest).
-3. В игровом режиме откройте настройки Decky, включите **режим разработчика**, затем выберите
-   **Разработчик → Установить плагин из ZIP файла** и укажите файл.
-4. Откройте ORIGAMI в быстром меню.
+Нужен [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation). В игровом режиме откройте
+настройки Decky и включите **Режим разработчика**. Затем на странице **Разработчик**:
 
-Обновление — так же, новым zip: настройки сохраняются. Установка перезапускает Decky, а Decky перезагружает
-интерфейс Steam, поэтому сначала закройте игру.
+- **По ссылке:** в **Установить плагин из URL** введите
+  `github.com/lexdrev/origami/releases/latest/download/ORIGAMI.zip` и нажмите **Установить**.
+- **Из файла:** скачайте `ORIGAMI.zip` из [последнего выпуска](https://github.com/lexdrev/origami/releases/latest),
+  выберите **Установить плагин из ZIP файла → Обзор** и укажите файл.
+
+Decky предупредит, что его команда этот плагин не проверяла, — подтвердите и откройте ORIGAMI в быстром меню.
+
+Обновление — так же: ссылка всегда ведёт на последний выпуск, настройки сохраняются. Установка перезапускает
+Decky, а Decky перезагружает интерфейс Steam, поэтому сначала закройте игру.
 
 ### Как всё вернуть
 
