@@ -50,7 +50,7 @@ def project(tmp_path: Path) -> Path:
 def test_archive_has_one_folder_with_plugin_files_only(project: Path, tmp_path: Path) -> None:
     archive = build_zip.build(project, tmp_path / "out")
 
-    assert archive.name == "ORIGAMI-1.2.3.zip"
+    assert archive.name == "ORIGAMI.zip"
     with zipfile.ZipFile(archive) as zf:
         assert zf.namelist() == [
             "Origami/LICENSE",
@@ -79,9 +79,9 @@ def test_archive_is_reproducible(
 
 def test_checksum_file(project: Path, tmp_path: Path) -> None:
     archive = build_zip.build(project, tmp_path / "out")
-    checksum = archive.with_name("ORIGAMI-1.2.3.zip.sha256").read_text(encoding="utf-8")
+    checksum = archive.with_name("ORIGAMI.zip.sha256").read_text(encoding="utf-8")
 
-    assert checksum.endswith("  ORIGAMI-1.2.3.zip\n")
+    assert checksum.endswith("  ORIGAMI.zip\n")
     assert len(checksum.split()[0]) == 64
 
 
