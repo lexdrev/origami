@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Bug report
+description: Something in ORIGAMI does not work as it should. · Что-то в ORIGAMI работает не так.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for telling us. English or Russian, both are fine.
+        Спасибо, что рассказали. Можно писать по-английски или по-русски.
+
+  - type: dropdown
+    id: console
+    attributes:
+      label: Console · Консоль
+      options:
+        - ROG Xbox Ally X
+        - ROG Xbox Ally X20
+        - ROG Xbox Ally
+        - ROG Ally X
+        - ROG Ally
+        - Other · Другая
+    validations:
+      required: true
+
+  - type: input
+    id: origami-version
+    attributes:
+      label: ORIGAMI version · Версия ORIGAMI
+      description: At the bottom of ORIGAMI's Settings. · Внизу настроек ORIGAMI.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: bazzite-version
+    attributes:
+      label: Bazzite version · Версия Bazzite
+      description: >-
+        In ORIGAMI: Settings → System changes. · В ORIGAMI: Настройки → Изменения в системе.
+      placeholder: "44.20261026"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened? · Что случилось?
+      description: >-
+        What you did, what you expected and what happened instead. ·
+        Что вы делали, чего ожидали и что случилось вместо этого.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to repeat it · Как повторить
+      description: Step by step, if you know. · По шагам, если знаете.
+      placeholder: |
+        1.
+        2.
+        3.
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log · Журнал
+      description: >-
+        Drag the latest file from ~/homebrew/logs/Origami/ here. ·
+        Перетащите сюда последний файл из ~/homebrew/logs/Origami/.

@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Feature request
+description: Something you would like ORIGAMI to do. · Что бы вы хотели в ORIGAMI.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        English or Russian, both are fine. · Можно писать по-английски или по-русски.
+
+  - type: textarea
+    id: wish
+    attributes:
+      label: What would you like? · Чего бы хотелось?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: What for? · Зачем?
+      description: >-
+        What it would help with, in a game or every day. ·
+        С чем это поможет — в игре или каждый день.
+
+  - type: dropdown
+    id: console
+    attributes:
+      label: Console · Консоль
+      options:
+        - ROG Xbox Ally X
+        - ROG Xbox Ally X20
+        - ROG Xbox Ally
+        - ROG Ally X
+        - ROG Ally
+        - Other · Другая

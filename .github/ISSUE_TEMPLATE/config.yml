@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Every issue starts from a form, so a bug always comes with the console and the versions.
+blank_issues_enabled: false
