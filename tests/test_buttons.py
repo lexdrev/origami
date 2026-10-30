@@ -7,7 +7,15 @@ from contextlib import aclosing
 
 import pytest
 
-from origami.buttons import Button, KeyboardPresses, button_presses, parse_press
+from origami.buttons import (
+    ALLY,
+    X20,
+    Button,
+    KeyboardPresses,
+    button_presses,
+    layout_for,
+    parse_press,
+)
 
 from fakes import FakeRoot
 
@@ -33,6 +41,30 @@ QUICK_ACCESS = frozenset({Button.QUICK_ACCESS})
 )
 def test_vendor_reports(report: bytes, button: Button | None) -> None:
     assert parse_press(report) is button
+
+
+@pytest.mark.parametrize(
+    ("code", "ally", "x20"),
+    [
+        ("93", Button.QUICK_ACCESS, None),
+        ("a0", None, Button.QUICK_ACCESS),
+        ("a6", Button.ARMOURY_CRATE, Button.ARMOURY_CRATE),
+        ("38", None, Button.ARMOURY_CRATE_HOLD),
+    ],
+)
+def test_the_x20_reports_its_buttons_with_codes_of_its_own(
+    code: str, ally: Button | None, x20: Button | None
+) -> None:
+    report = bytes.fromhex(f"5a{code}00000000")
+
+    assert parse_press(report, layout_for("RC73XA")) is ally
+    assert parse_press(report, layout_for("RC74XA")) is x20
+
+
+def test_boards_without_a_layout_of_their_own_get_the_xbox_ally_x_one() -> None:
+    assert layout_for(None) is ALLY
+    assert layout_for("RC72LA") is ALLY
+    assert layout_for("RC74XA") is X20
 
 
 def test_a_held_key_is_one_press() -> None:
@@ -95,6 +127,22 @@ def test_both_interfaces_are_read_for_the_armoury_crate_button(fake_root: FakeRo
             assert await asyncio.wait_for(anext(presses), 1) is Button.ARMOURY_CRATE
         os.close(config_writer)
         os.close(keyboard_writer)
+
+    asyncio.run(scenario())
+
+
+def test_the_x20_holds_its_armoury_crate_button_on_the_configuration_interface(
+    fake_root: FakeRoot,
+) -> None:
+    async def scenario() -> None:
+        config = os.open(fake_root.ally_controller(), os.O_RDWR | os.O_NONBLOCK)
+        buttons = frozenset({Button.ARMOURY_CRATE, Button.ARMOURY_CRATE_HOLD})
+        async with aclosing(button_presses(fake_root.path, buttons, layout=X20)) as presses:
+            next_press = asyncio.ensure_future(anext(presses))
+            await asyncio.sleep(0.05)
+            os.write(config, bytes.fromhex("5a3800000000"))
+            assert await asyncio.wait_for(next_press, 1) is Button.ARMOURY_CRATE_HOLD
+        os.close(config)
 
     asyncio.run(scenario())
 

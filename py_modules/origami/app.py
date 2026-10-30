@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from origami.buttons import Button, ButtonAction, button_presses
+from origami.buttons import Button, ButtonAction, button_presses, layout_for
 from origami.cpu import program_cap, read_boost, write_boost
 from origami.decky_plugins import (
     FAN_OWNERS,
@@ -834,7 +834,9 @@ class Origami:
             log.warning("Gyroscope not restored: %s", error)
 
     async def _forward_buttons(self) -> None:
-        async with aclosing(button_presses(self._env.root, self._buttons_read)) as presses:
+        layout = layout_for(self._info.device.board if self._info else None)
+        presses = button_presses(self._env.root, self._buttons_read, layout=layout)
+        async with aclosing(presses):
             async for button in presses:
                 match button:
                     case Button.QUICK_ACCESS:
