@@ -14,6 +14,7 @@ from origami import gyro as gyro_module
 from origami import power as power_module
 from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
+from origami.blocks import fans as fans_block
 from origami.buttons import ButtonAction
 from origami.decky_plugins import (
     FAN_OWNERS,
@@ -1293,7 +1294,7 @@ def test_the_chosen_boost_is_journaled_and_given_back_on_uninstall(
 @pytest.fixture
 def fan_curves(powered: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> Path:
     """The firmware's curve device on its own curve; the fan keeper looks every few milliseconds."""
-    monkeypatch.setattr(app_module, "FAN_POLL_SECONDS", 0.005)
+    monkeypatch.setattr(fans_block, "POLL_SECONDS", 0.005)
     return powered.hwmon(8, "asus_custom_fan_curve", pwm1_enable=2, pwm2_enable=2)
 
 

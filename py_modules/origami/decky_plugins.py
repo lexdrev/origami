@@ -8,6 +8,7 @@ switched off by name in settings/loader.json ("disabled_plugins").
 """
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 
 from origami.jsonio import parse_object
@@ -26,6 +27,34 @@ POWER_OWNERS = ("Panel de Control", "SimpleDeckyTDP", "PowerTools")
 """Plugins that set the TDP or the CPU boost and frequency; ORIGAMI then shows the power only."""
 FAN_OWNERS = ("Panel de Control", "Ally Fix")
 """Plugins that write the fan curves; ORIGAMI then shows the fans only."""
+
+
+@dataclass(frozen=True, slots=True)
+class Conflicts:
+    """Enabled plugins that drive hardware ORIGAMI also drives; ORIGAMI then leaves it alone."""
+
+    lighting: str | None
+    saturation: str | None
+    vibration: str | None
+    triggers: str | None
+    power: str | None
+    fans: str | None
+
+
+def read_conflicts(decky_home: Path) -> Conflicts:
+    enabled = enabled_plugins(decky_home)
+
+    def owner(names: tuple[str, ...]) -> str | None:
+        return next((name for name in names if name in enabled), None)
+
+    return Conflicts(
+        lighting=owner(LIGHTING_OWNERS),
+        saturation=owner(SATURATION_OWNERS),
+        vibration=owner(VIBRATION_OWNERS),
+        triggers=owner(TRIGGER_OWNERS),
+        power=owner(POWER_OWNERS),
+        fans=owner(FAN_OWNERS),
+    )
 
 
 def enabled_plugins(decky_home: Path) -> frozenset[str]:
