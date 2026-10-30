@@ -1,62 +1,40 @@
 # SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+"""The plugin backend: the settings, the journal of changes, and the blocks that drive hardware."""
+
 import asyncio
 import logging
-from collections.abc import Awaitable, Mapping
+from collections.abc import Mapping
 from contextlib import aclosing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
 
-from origami.blocks import Context
+from origami.blocks import Context, Emit
+from origami.blocks.buttons import ButtonsBlock
 from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
 from origami.blocks.gamepad import GamepadBlock
 from origami.blocks.power import PowerBlock, power_settings_changed
-from origami.buttons import Button, ButtonAction, button_presses, layout_for
 from origami.decky_plugins import Conflicts, read_conflicts
 from origami.device import Device, read_device
 from origami.gyro import GyroState
 from origami.hid_bpf import HidBpfProgram
-from origami.inputplumber import Chord, press_chord
 from origami.journal import Change, ChangeJournal
-from origami.jsonio import JsonValue
 from origami.lighting import Lighting
-from origami.magnifier import Magnifier
 from origami.power import HeldPower, resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
-from origami.triggers import (
-    TriggerState,
-)
+from origami.triggers import TriggerState
 from origami.versions import Versions, read_versions
 
 log = logging.getLogger(__name__)
 
-QAM_PRESSED = "qam_pressed"
-"""Event sent to the frontend on every press of the quick access button while QAM assist is on."""
-BUTTON_ACTION = "button_action"
-"""Event sent to the frontend with the action of a button ORIGAMI drives, on every press of it."""
-
-CHORDS = {
-    ButtonAction.SCREENSHOT: Chord.SCREENSHOT,
-    ButtonAction.KEYBOARD: Chord.KEYBOARD,
-    ButtonAction.L5: Chord.L5,
-}
-"""Actions that are buttons Steam knows, which ORIGAMI presses through InputPlumber."""
-
 RESUME_SETTLE_SECONDS = 2.0
 """The driver resets the controller on resume; ORIGAMI sends its settings after that."""
-
-
-class Emit(Protocol):
-    """Sends an event with its arguments to the frontend (decky.emit)."""
-
-    def __call__(self, event: str, /, *args: JsonValue) -> Awaitable[None]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,7 +59,10 @@ class Info:
 
 
 class Origami:
-    """The plugin backend, independent of Decky.
+    """The plugin backend, independent of Decky: it keeps the settings and calls the blocks.
+
+    Every tile has its block in origami.blocks, and the buttons have one too. A change goes to the
+    blocks before the settings keep it, so a change the hardware did not take is not kept.
 
     Decky starts `start()` as a separate task and may forward frontend calls
     before it finishes, so calls that need the loaded state wait for it.
@@ -91,8 +72,6 @@ class Origami:
         self, environment: Environment, *, emit: Emit, attach_bpf: Attach = HidBpfProgram
     ) -> None:
         self._env = environment
-        self._emit = emit
-        self._magnifier = Magnifier(environment.root)
         self._settings_store = SettingsStore(environment.settings_dir / "settings.json")
         self._journal = ChangeJournal(environment.data_dir / "changes.json")
         context = Context(environment.root, self._journal, self.conflicts)
@@ -103,10 +82,9 @@ class Origami:
         self._info: Info | None = None
         self._ready = asyncio.Event()
         self._start_error: Exception | None = None
-        self._buttons = BackgroundTask("origami-buttons", self._forward_buttons)
-        self._buttons_read: frozenset[Button] = frozenset()
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
         self._power = PowerBlock(context)
+        self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
         self._display = DisplayBlock(context, self._controller_lock)
         self._gamepad = GamepadBlock(
             context,
@@ -115,7 +93,7 @@ class Origami:
             attach_bpf=attach_bpf,
             board=self._board,
         )
-        self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
+        self._buttons = ButtonsBlock(context, emit=emit, board=self._board_now)
 
     async def start(self) -> None:
         try:
@@ -305,27 +283,18 @@ class Origami:
         is stopped right away, the rumble program leaves the controller, and the magnifier goes
         off with the right stick given back to the game.
         """
-        self._buttons.cancel()
         self._after_resume.cancel()
         self._fans.stop()
         self._power.stop()
         self._gamepad.stop()
-        try:
-            self._magnifier.close()
-        except (CommandError, TimeoutError) as error:
-            log.warning("Magnifier not switched off: %s", error)
+        self._buttons.stop()
         log.info("ORIGAMI stopped")
 
     async def _follow_settings(self) -> None:
         settings = self._settings
         await self._power.follow(settings)
         await self._fans.follow(settings)
-        buttons = _driven_buttons(settings)
-        if buttons != self._buttons_read:
-            # The reader opens only the interfaces its buttons come from.
-            await self._buttons.stop()
-            self._buttons_read = buttons
-        await self._buttons.run_while(on=bool(buttons))
+        await self._buttons.follow(settings)
         # The controller forgets ORIGAMI's lighting and vibration in sleep, and may come back as
         # new devices without the rumble program; the saturation goes back to Steam's on resume.
         await self._after_resume.run_while(
@@ -360,48 +329,13 @@ class Origami:
                     await self._restore_controller()
                     await self._display.restore_saturation(self._settings)
 
-    async def _forward_buttons(self) -> None:
-        layout = layout_for(self._info.device.board if self._info else None)
-        presses = button_presses(self._env.root, self._buttons_read, layout=layout)
-        async with aclosing(presses):
-            async for button in presses:
-                match button:
-                    case Button.QUICK_ACCESS:
-                        # Steam misses some presses while a game runs (B16). The frontend sees
-                        # whether Steam registered this one and opens the menu itself if not.
-                        await self._emit(QAM_PRESSED)
-                    case Button.ARMOURY_CRATE:
-                        await self._act(self._settings.armoury_crate or ButtonAction.NONE)
-                    case Button.ARMOURY_CRATE_HOLD:
-                        await self._act(self._settings.armoury_crate_hold or ButtonAction.NONE)
-
-    async def _act(self, action: ButtonAction) -> None:
-        """Do what the backend can do itself; have the frontend do the rest in Steam's interface."""
-        chord = CHORDS.get(action)
-        try:
-            if chord is not None:
-                await asyncio.to_thread(press_chord, self._env.root, chord)
-            elif action is ButtonAction.MAGNIFIER:
-                await asyncio.to_thread(self._magnifier.toggle)
-            elif action is not ButtonAction.NONE:
-                await self._emit(BUTTON_ACTION, action.value)
-        except (CommandError, TimeoutError, ValueError) as error:
-            log.warning("%s not done: %s", action.value, error)
-
     async def _board(self) -> str | None:
         return (await self.info()).device.board
+
+    def _board_now(self) -> str | None:
+        return self._info.device.board if self._info else None
 
     async def _started(self) -> None:
         await self._ready.wait()
         if self._start_error is not None:
             raise RuntimeError("ORIGAMI failed to start, see the plugin log") from self._start_error
-
-
-def _driven_buttons(settings: Settings) -> frozenset[Button]:
-    """The buttons whose presses ORIGAMI needs with these settings."""
-    driven = {
-        Button.QUICK_ACCESS: settings.qam_assist is True,
-        Button.ARMOURY_CRATE: settings.armoury_crate not in {None, ButtonAction.NONE},
-        Button.ARMOURY_CRATE_HOLD: settings.armoury_crate_hold not in {None, ButtonAction.NONE},
-    }
-    return frozenset(button for button, needed in driven.items() if needed)

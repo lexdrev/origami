@@ -12,9 +12,17 @@ the journal and calls the blocks in turn.
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from origami.decky_plugins import Conflicts
 from origami.journal import ChangeJournal
+from origami.jsonio import JsonValue
+
+
+class Emit(Protocol):
+    """Sends an event with its arguments to the frontend (decky.emit)."""
+
+    def __call__(self, event: str, /, *args: JsonValue) -> Awaitable[None]: ...
 
 
 @dataclass(frozen=True, slots=True)

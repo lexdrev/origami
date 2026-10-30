@@ -13,11 +13,13 @@ from origami import app as app_module
 from origami import gyro as gyro_module
 from origami import power as power_module
 from origami import versions
-from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
+from origami.app import Emit, Environment, Origami
+from origami.blocks import buttons as buttons_block
 from origami.blocks import display as display_block
 from origami.blocks import fans as fans_block
 from origami.blocks import gamepad as gamepad_block
 from origami.blocks import power as power_block
+from origami.blocks.buttons import BUTTON_ACTION, QAM_PRESSED
 from origami.buttons import ButtonAction
 from origami.decky_plugins import (
     FAN_OWNERS,
@@ -1010,7 +1012,7 @@ def test_steam_buttons_are_pressed_and_other_actions_go_to_the_frontend(
     def press(_root: Path, chord: Chord) -> None:
         pressed.append(chord)
 
-    monkeypatch.setattr(app_module, "press_chord", press)
+    monkeypatch.setattr(buttons_block, "press_chord", press)
 
     async def scenario() -> None:
         config = ally_x.ally_controller()
