@@ -4,15 +4,15 @@
 import asyncio
 import logging
 from collections.abc import Awaitable, Mapping
-from contextlib import aclosing, suppress
+from contextlib import aclosing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 from origami.blocks import Context
 from origami.blocks.fans import FansBlock
+from origami.blocks.power import PowerBlock, power_settings_changed
 from origami.buttons import Button, ButtonAction, button_presses, layout_for
-from origami.cpu import program_cap, read_boost, write_boost
 from origami.decky_plugins import Conflicts, read_conflicts
 from origami.device import Device, read_device
 from origami.gyro import GyroState, read_gyro_state, remove_fix, restart_inputplumber, write_fix
@@ -22,7 +22,7 @@ from origami.journal import Change, ChangeJournal
 from origami.jsonio import JsonValue
 from origami.lighting import CONTROLLER_LIGHTING, Lighting, apply_lighting
 from origami.magnifier import Magnifier
-from origami.power import POLL_SECONDS, HeldPower, PowerKeeper, PowerTarget, resumes
+from origami.power import HeldPower, resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach, RumbleProgram, RumbleSettings
 from origami.saturation import (
@@ -33,7 +33,6 @@ from origami.saturation import (
 )
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
-from origami.tdp import read_limits, reset_to_profile
 from origami.telemetry import Telemetry, read_telemetry
 from origami.triggers import (
     TAP_GAP_SECONDS,
@@ -44,7 +43,6 @@ from origami.triggers import (
     read_trigger_state,
     start_trigger_pulse,
 )
-from origami.uevents import supply_changes
 from origami.versions import Versions, read_versions
 from origami.vibration import (
     GRIP_AT_GAME_FULL,
@@ -128,17 +126,8 @@ class Origami:
         self._buttons = BackgroundTask("origami-buttons", self._forward_buttons)
         self._buttons_read: frozenset[Button] = frozenset()
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
-        self._keeper = PowerKeeper(environment.root)
-        self._steam_tdp_limit = False
-        self._game: int | None = None
-        """The game Steam runs now, whose own power applies while it has an active profile."""
-        self._look_now = asyncio.Event()
-        """Wakes the keeper before its next look: a supply changed, or there is news to write."""
-        self._power = BackgroundTask("origami-power", self._hold_power)
-        self._supplies = BackgroundTask("origami-supplies", self._watch_supplies)
-        self._fans = FansBlock(
-            context, limits_again=self._keeper.write_again, look=self._look_now.set
-        )
+        self._power = PowerBlock(context)
+        self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
         self._pulsing = False
 
     async def start(self) -> None:
@@ -181,7 +170,7 @@ class Origami:
             updated = self._settings.updated(changes)
             if updated == self._settings:
                 return self._settings
-            if _power_changed(self._settings, updated):
+            if power_settings_changed(self._settings, updated):
                 owner = (await self.conflicts()).power
                 if owner is not None:
                     raise RuntimeError(f"{owner} sets the power, so ORIGAMI leaves it alone")
@@ -211,7 +200,8 @@ class Origami:
             self._settings = updated
             await self._follow_settings()
             if gave_up_tdp:
-                await asyncio.to_thread(self._give_back_tdp, (await self.conflicts()).power)
+                owner = (await self.conflicts()).power
+                await asyncio.to_thread(self._power.give_back_tdp, owner)
             return self._settings
 
     async def preview_lighting(self, lighting: Lighting) -> None:
@@ -302,41 +292,23 @@ class Origami:
 
     async def power(self) -> HeldPower:
         """The limits ORIGAMI holds now, for the Power screen."""
-        return self._keeper.held()
+        return self._power.held()
 
     async def set_steam_tdp_limit(self, *, on: bool) -> None:
-        """Steam's TDP slider was switched on or off (in the performance profile, where it works).
-
-        While ORIGAMI manages the TDP, it keeps it: the slider's writes are answered at once, and
-        the Power screen says the slider does nothing. Steam sets the TDP once "Manage TDP" is off.
-        """
+        """Steam's TDP slider was switched on or off; see PowerBlock.set_steam_tdp_limit."""
         await self._started()
         async with self._settings_lock:
-            if on == self._steam_tdp_limit:
-                return
-            self._steam_tdp_limit = on
-            log.info("Steam's TDP slider is %s", "on: ORIGAMI writes over it" if on else "off")
-            await self._follow_power(self._settings)
+            await self._power.set_steam_tdp_limit(self._settings, on=on)
 
     async def set_game(self, app_id: int | None) -> None:
         """Steam runs this game now, or none: the power follows the game's own profile, if any."""
         await self._started()
         async with self._settings_lock:
-            if app_id == self._game:
-                return
-            self._game = app_id
-            own = self._settings.power_for(app_id) is not self._settings.power
-            log.info(
-                "Running game: %s, power: %s",
-                app_id or "none",
-                "its own profile" if own else "general",
-            )
-            await self._follow_power(self._settings)
+            await self._power.set_game(self._settings, app_id)
 
     async def game_started(self) -> None:
         """Steam started a game: it writes its own limits meanwhile, so ORIGAMI writes again."""
-        self._keeper.game_started()
-        self._look_now.set()
+        self._power.game_started()
 
     async def changes(self) -> list[Change]:
         await self._started()
@@ -361,8 +333,8 @@ class Origami:
             await self._follow_settings()
             await asyncio.to_thread(self._rumble.close)
             owners = await self.conflicts()
-            await asyncio.to_thread(self._give_back_tdp, owners.power)
-            await asyncio.to_thread(self._give_back_boost, owners.power)
+            await asyncio.to_thread(self._power.give_back_tdp, owners.power)
+            await asyncio.to_thread(self._power.give_back_boost, owners.power)
             async with self._controller_lock:
                 await asyncio.to_thread(self._give_back_controller, owners)
             await self._give_back_saturation(owners.saturation)
@@ -393,8 +365,8 @@ class Origami:
         except OSError as error:
             log.warning("Gyroscope fix not removed: %s", error)
         self._fans.give_back(owners.fans)
-        self._give_back_tdp(owners.power)
-        self._give_back_boost(owners.power)
+        self._power.give_back_tdp(owners.power)
+        self._power.give_back_boost(owners.power)
         self._give_back_controller(owners)
         self._give_back_saturation_now(owners.saturation)
         log.info("ORIGAMI uninstalled")
@@ -410,11 +382,8 @@ class Origami:
         """
         self._buttons.cancel()
         self._after_resume.cancel()
-        self._power.cancel()
-        self._supplies.cancel()
         self._fans.stop()
-        # A look at the hardware still running in its thread ends before this returns.
-        self._keeper.hold(None)
+        self._power.stop()
         self._end_pulse()
         self._rumble.close()
         try:
@@ -439,7 +408,7 @@ class Origami:
 
     async def _follow_settings(self) -> None:
         settings = self._settings
-        await self._follow_power(settings)
+        await self._power.follow(settings)
         await self._fans.follow(settings)
         buttons = _driven_buttons(settings)
         if buttons != self._buttons_read:
@@ -455,52 +424,6 @@ class Origami:
             or settings.trigger_rumble is not None
             or settings.saturation is not None
         )
-
-    async def _follow_power(self, settings: Settings) -> None:
-        """Hold the power as set, unless another plugin owns it; the journal remembers first.
-
-        With neither the TDP nor the boost left to ORIGAMI, after "restore everything" for one, the
-        keeper holds nothing, and the CPU's frequency cap is not ORIGAMI's to program either.
-        """
-        power = settings.power_for(self._game)
-        if (await self.conflicts()).power is not None or (
-            settings.manage_tdp is not True and power.cpu_boost is None
-        ):
-            target = None
-        else:
-            target = PowerTarget(
-                power,
-                tdp=settings.manage_tdp is True,
-                battery_high_tdp=settings.battery_high_tdp,
-                steam_slider=self._steam_tdp_limit,
-            )
-            await asyncio.to_thread(self._record_power, target)
-        self._keeper.hold(target)
-        self._look_now.set()
-        await self._power.run_while(on=target is not None)
-
-    def _record_power(self, target: PowerTarget) -> None:
-        if target.tdp and read_limits(self._env.root) is not None:
-            # The firmware's power before ORIGAMI is its platform profile's own, not a value.
-            self._journal.record("power", "tdp", None)
-        if target.power.cpu_boost is not None and not self._journal.recorded("power", "cpu_boost"):
-            self._journal.record("power", "cpu_boost", read_boost(self._env.root))
-
-    def _give_back_tdp(self, owner: str | None) -> None:
-        """Let the firmware run its platform profile's own power again; blocks briefly.
-
-        A plugin that sets the power now keeps it as it set it: only ORIGAMI's record goes.
-        """
-        if not self._journal.recorded("power", "tdp"):
-            return
-        if owner is None:
-            try:
-                reset_to_profile(self._env.root)
-            except OSError as error:
-                log.warning("TDP not given back to the platform profile: %s", error)
-                return
-            log.info("TDP given back to the platform profile")
-        self._journal.forget("power", "tdp")
 
     def _give_back_controller(self, owners: Conflicts) -> None:
         """The rings and the handles' strength as they were before ORIGAMI; blocks briefly.
@@ -553,49 +476,6 @@ class Origami:
         if isinstance(original, int) and not isinstance(original, bool):
             return original
         return SRGB_PERCENT
-
-    def _give_back_boost(self, owner: str | None) -> None:
-        """The CPU boost as it was before ORIGAMI, unless a plugin sets the power now."""
-        original = self._journal.original("power", "cpu_boost")
-        if owner is None and isinstance(original, bool):
-            try:
-                write_boost(self._env.root, on=original)
-            except OSError as error:
-                log.warning("CPU boost not given back: %s", error)
-                return
-        self._journal.forget("power", "cpu_boost")
-
-    async def _hold_power(self) -> None:
-        """Let the keeper look when it asks to, and at once when something changes."""
-        self._supplies.start()
-        try:
-            while True:
-                # Cleared before the look: a change meanwhile brings the next one at once.
-                self._look_now.clear()
-                cap_due = await asyncio.to_thread(self._keeper.tick)
-                if cap_due is not None:
-                    try:
-                        await program_cap(self._env.root)
-                        log.info("CPU frequency cap programmed again: %s", cap_due)
-                    except OSError as error:
-                        log.warning("CPU frequency cap not programmed: %s", error)
-                with suppress(TimeoutError):
-                    async with asyncio.timeout(self._keeper.next_look()):
-                        await self._look_now.wait()
-        finally:
-            self._supplies.cancel()
-
-    async def _watch_supplies(self) -> None:
-        try:
-            async with aclosing(supply_changes()) as changes:
-                async for _ in changes:
-                    self._look_now.set()
-        except OSError as error:
-            log.warning(
-                "No kernel events about the charger, it is looked for every %s s: %s",
-                POLL_SECONDS,
-                error,
-            )
 
     async def _send_lighting(self, lighting: Lighting) -> None:
         owner = (await self.conflicts()).lighting
@@ -748,14 +628,6 @@ class Origami:
         await self._ready.wait()
         if self._start_error is not None:
             raise RuntimeError("ORIGAMI failed to start, see the plugin log") from self._start_error
-
-
-def _power_changed(before: Settings, after: Settings) -> bool:
-    return (before.power, before.battery_high_tdp, before.game_power) != (
-        after.power,
-        after.battery_high_tdp,
-        after.game_power,
-    )
 
 
 def _driven_buttons(settings: Settings) -> frozenset[Button]:

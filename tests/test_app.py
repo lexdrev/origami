@@ -15,6 +15,7 @@ from origami import power as power_module
 from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
 from origami.blocks import fans as fans_block
+from origami.blocks import power as power_block
 from origami.buttons import ButtonAction
 from origami.decky_plugins import (
     FAN_OWNERS,
@@ -1201,7 +1202,7 @@ async def no_supply_changes() -> AsyncGenerator[None]:
 @pytest.fixture(autouse=True)
 def quiet_supplies(monkeypatch: pytest.MonkeyPatch) -> None:
     """No kernel events about the charger; tests that need one send their own."""
-    monkeypatch.setattr(app_module, "supply_changes", no_supply_changes)
+    monkeypatch.setattr(power_block, "supply_changes", no_supply_changes)
 
 
 @pytest.fixture
@@ -1246,7 +1247,7 @@ def test_letting_go_of_the_tdp_gives_the_firmware_its_profile_back(
         given_back.append(root)
         return True
 
-    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+    monkeypatch.setattr(power_block, "reset_to_profile", reset)
 
     async def scenario() -> None:
         app = make_app(powered, tmp_path)
@@ -1460,7 +1461,7 @@ def test_a_charger_event_has_the_keeper_write_at_once(
         yield
         await asyncio.Event().wait()
 
-    monkeypatch.setattr(app_module, "supply_changes", one_change)
+    monkeypatch.setattr(power_block, "supply_changes", one_change)
 
     async def scenario() -> None:
         app = make_app(powered, tmp_path)
@@ -1573,7 +1574,7 @@ def test_restoring_everything_gives_the_power_fans_and_gyroscope_back(
         given_back.append(root)
         return True
 
-    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+    monkeypatch.setattr(power_block, "reset_to_profile", reset)
 
     async def scenario() -> None:
         app = make_app(powered, tmp_path)
@@ -1614,8 +1615,8 @@ def test_after_restoring_the_cpu_cap_is_left_to_the_system(
     def reset(_root: Path) -> bool:
         return True
 
-    monkeypatch.setattr(app_module, "program_cap", program)
-    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+    monkeypatch.setattr(power_block, "program_cap", program)
+    monkeypatch.setattr(power_block, "reset_to_profile", reset)
 
     async def scenario() -> None:
         app = make_app(powered, tmp_path)
@@ -1683,7 +1684,7 @@ def test_restoring_leaves_the_power_and_fans_another_plugin_drives_now(
         given_back.append(root)
         return True
 
-    monkeypatch.setattr(app_module, "reset_to_profile", reset)
+    monkeypatch.setattr(power_block, "reset_to_profile", reset)
     owner = next(plugin for plugin in POWER_OWNERS if plugin in FAN_OWNERS)
 
     async def scenario() -> None:
