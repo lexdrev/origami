@@ -127,13 +127,13 @@ export interface Messages {
     ownedText(plugin: string): string;
     /** Under the TDP on the dial while a game's own settings are shown. */
     gameLimit: string;
-    /** The strip of a game: its own settings or the general ones. */
-    profile: string;
-    general: string;
-    /** Under the strip: what the screen sets now. */
-    gameOnly: string;
-    chooseGame: string;
-    profileWaits: string;
+    /** The switch of the running game's own profile, like Steam's per-game profile. */
+    gameProfile: string;
+    /** Under the switch: the game, and whose settings the screen sets now. */
+    gameProfileOn(game: string): string;
+    gameProfileOff(game: string): string;
+    /** A grey line while the switch is off and the game's profile is kept. */
+    gameProfileKept: string;
     /** Beside a setting a game sets otherwise, with the general value where it is short. */
     differs(general?: string): string;
     profiles: string;

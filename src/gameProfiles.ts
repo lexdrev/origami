@@ -6,8 +6,8 @@ import type { Messages } from "./i18n";
 import { withUnit } from "./i18n/format";
 
 // A game can have power settings of its own (ORIGAMI.md, game profiles). The first time the user
-// picks the game over the general settings, its profile starts as a copy of them; picking the
-// general ones again keeps the profile, waiting, until it is picked again or removed from the list.
+// switches its profile on, the profile starts as a copy of the general settings; switched off, it
+// is kept, waiting, until it is switched on again or removed from the list.
 
 /** A game on the Power screen: the one Steam runs, or one picked from the list of profiles. */
 export interface Game {

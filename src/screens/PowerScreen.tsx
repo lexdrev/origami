@@ -39,7 +39,7 @@ const NO_LOAD_SHARE = 0.5;
 
 type PowerReadings = Telemetry["power"];
 
-/** The Power screen: the running game's strip on top, or the way to the game profiles while none runs. */
+/** The Power screen: the running game's profile switch on top, or the way to the game profiles while none runs. */
 export function PowerScreen() {
   const t = useMessages();
   return <PowerView title={t.power.title} game={useStore(runningGame)} />;
@@ -114,7 +114,7 @@ function PowerView({ title, subtitle, game }: PowerViewProps) {
 interface OwnPowerProps {
   setting: Settings;
   power: PowerReadings | null;
-  /** The game whose strip is on top; null for the general settings and the way to the profiles. */
+  /** The game whose profile switch is on top; null for the general settings and the way to the profiles. */
   game: Game | null;
 }
 
@@ -169,7 +169,7 @@ function OwnPower({ setting, power, game }: OwnPowerProps) {
           }}
         />
       ) : (
-        <ProfileStrip setting={setting} game={game} own={own} />
+        <GameProfileRow setting={setting} game={game} own={own} />
       )}
       {steamSlider && <SteamSliderPlate />}
       {holding?.contested && <Alert title={t.power.contested}>{t.power.contestedText}</Alert>}
@@ -188,28 +188,25 @@ function OwnPower({ setting, power, game }: OwnPowerProps) {
   );
 }
 
-/** The game's own settings or the general ones; the first pick of the game copies the general. */
-function ProfileStrip({ setting, game, own }: { setting: Settings; game: Game; own: boolean }) {
+/**
+ * The game's own profile, switched on and off like Steam's per-game profile. Nothing is made
+ * until it is switched on: the first time copies the general settings, and switched off, the profile
+ * is kept for the next time.
+ */
+function GameProfileRow({ setting, game, own }: { setting: Settings; game: Game; own: boolean }) {
   const t = useMessages();
   const kept = profileOf(setting.gamePower, game.appId) !== undefined;
   return (
-    <>
-      <ChoiceGroup
-        label={t.power.profile}
-        choices={[
-          { value: "general", label: t.power.general },
-          { value: "game", label: game.name },
-        ]}
-        value={own ? "game" : "general"}
-        action={t.actions.select}
-        onChange={(choice) => {
-          setGamePower(chooseOwn(setting.gamePower, game, setting.power, choice === "game"));
-        }}
-      />
-      <span className="og-choices__note">
-        {own ? t.power.gameOnly : kept ? t.power.profileWaits : t.power.chooseGame}
-      </span>
-    </>
+    <ToggleRow
+      title={t.power.gameProfile}
+      subtitle={own ? t.power.gameProfileOn(game.name) : t.power.gameProfileOff(game.name)}
+      {...(!own && kept ? { note: t.power.gameProfileKept } : {})}
+      value={own}
+      action={t.actions.toggle}
+      onChange={(on) => {
+        setGamePower(chooseOwn(setting.gamePower, game, setting.power, on));
+      }}
+    />
   );
 }
 
