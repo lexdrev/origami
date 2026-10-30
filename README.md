@@ -12,9 +12,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-0f766e?style=flat-square" alt="License: GPL-3.0-or-later"></a>
 </p>
 
-<p align="center">In English and Russian · <a href="#english">English</a> · <a href="#русский">Русский</a></p>
-
-## English
+<p align="center"><b>English</b> · <a href="README.ru.md">Русский</a></p>
 
 ORIGAMI is a [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) plugin for the ROG Xbox Ally X on
 Bazzite. It puts power, fans, display, stick lighting and gamepad settings in one place and fixes the problems the
@@ -22,7 +20,7 @@ console has on Linux today.
 
 > ORIGAMI is an independent project, not affiliated with ASUS, Microsoft, Valve or the Bazzite team.
 
-### Screenshots
+## Screenshots
 
 <p align="center">
   <img src="assets/screenshots/en/main.png" width="19%" alt="Main screen">
@@ -32,7 +30,7 @@ console has on Linux today.
   <img src="assets/screenshots/en/changes.png" width="19%" alt="System changes">
 </p>
 
-### What it does
+## What it does
 
 - **Power:** TDP from 7 to 35 W with Eco, Balance and Turbo presets, held through sleep, the charger and game
   starts. Power headroom for short bursts, CPU frequency boost, up to 35 W on battery when you allow it, and
@@ -46,7 +44,7 @@ console has on Linux today.
 - **Quick access tab:** the fox in Steam's quick access column at the place you choose, or ORIGAMI only inside the
   Decky tab.
 
-### What it fixes
+## What it fixes
 
 | On Bazzite 44 | ORIGAMI |
 |---|---|
@@ -63,14 +61,14 @@ console has on Linux today.
 
 Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or off yourself, it turns grey.
 
-### Tested on
+## Tested on
 
 - ROG Xbox Ally X (board RC73XA)
 - Bazzite 44.20261026, kernel 7.2.11-ogc4.1, InputPlumber 0.83.0, Decky Loader 3.3.1
 
 ORIGAMI also knows the ROG Xbox Ally X20 (board RC74XA), but it has not been tried on one yet.
 
-### Install
+## Install
 
 You need [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation). In Game Mode, open
 Decky's settings and switch on **Developer mode**. Then, on the **Developer** page:
@@ -85,7 +83,7 @@ Decky warns that its team has not reviewed the plugin; confirm, and open ORIGAMI
 To update, install it again the same way: the link always leads to the latest release, and your settings stay.
 Installing restarts Decky, and Decky reloads Steam's interface, so close your game first.
 
-### Undo everything
+## Undo everything
 
 **Settings → System changes** lists what ORIGAMI has changed. **Restore everything** brings back the factory
 values, removes ORIGAMI's files and switches its fixes off; Steam sets the TDP again. Removing the plugin in Decky
@@ -97,130 +95,24 @@ While the gyro fix is on, ORIGAMI keeps one file outside its folders:
 If another plugin already controls the power, the fans, the lighting, the saturation or the vibration, ORIGAMI
 leaves that part alone and shows which plugin has it.
 
-### Privacy
+## Privacy
 
 ORIGAMI never goes online and collects nothing. It runs as root, because the power, fan and lighting settings
 need it.
 
-### Feedback
+## Feedback
 
 Open an [issue](https://github.com/lexdrev/origami/issues) and add your console, the Bazzite version (ORIGAMI shows
 it in **Settings → System changes**), what you did and the latest log from `~/homebrew/logs/Origami/`.
 
-### Thanks
+## Thanks
 
 - The [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) team, for the plugin platform
 - [Bazzite](https://bazzite.gg), for the system
 - [Open Gaming Collective](https://github.com/OpenGamingCollective), for the kernel fixes for the Ally X
 
-### License
+## License
 
 ORIGAMI © 2026 Alexander Derevyanko (lexdrev), [GPL-3.0-or-later](LICENSE). The HID-BPF program in `bpf/`, which
 runs in the kernel, is GPL-2.0-or-later. The fonts and the library built into the plugin are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Русский
-
-ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) на ROG Xbox Ally X с Bazzite.
-Он собирает в одном месте настройки питания, вентиляторов, экрана, подсветки стиков и геймпада и исправляет
-проблемы, которые есть у консоли на Linux сейчас.
-
-> ORIGAMI — независимый проект, он не связан с ASUS, Microsoft, Valve и командой Bazzite.
-
-### Снимки экрана
-
-<p align="center">
-  <img src="assets/screenshots/ru/main.png" width="19%" alt="Главный экран">
-  <img src="assets/screenshots/ru/power.png" width="19%" alt="Питание">
-  <img src="assets/screenshots/ru/gamepad.png" width="19%" alt="Геймпад">
-  <img src="assets/screenshots/ru/fans.png" width="19%" alt="Вентиляторы">
-  <img src="assets/screenshots/ru/changes.png" width="19%" alt="Изменения в системе">
-</p>
-
-### Что умеет
-
-- **Питание:** TDP от 7 до 35 Вт с режимами «Эко», «Баланс» и «Турбо»; держится после сна, зарядки и запуска игр.
-  Запас мощности на короткие всплески, буст частоты CPU, до 35 Вт от батареи, если разрешить, и профили для
-  отдельных игр.
-- **Вентиляторы:** одна кривая на оба: «Тихая», «Баланс», «Мощная» или свои точки. С 80 °C вентиляторы крутятся
-  не меньше чем на 50%, при 100 °C — всегда на 100%.
-- **Дисплей и свет:** насыщенность экрана от 0 до 200% в играх и в Steam; подсветка стиков: цвета, дыхание, радуга
-  и спираль, яркость и свой цвет.
-- **Геймпад:** сила вибрации ручек, вибрация триггеров от игр, исправление гироскопа, подстраховка QAM и действия
-  для кнопки Armoury Crate на короткое и долгое нажатие.
-- **Вкладка в быстром меню:** лиса в колонке быстрого меню Steam на выбранном месте или ORIGAMI только внутри
-  вкладки Decky.
-
-### Что исправляет
-
-| В Bazzite 44 | ORIGAMI |
-|---|---|
-| TDP слетает после сна и запуска игр; ползунок Steam работает только в профиле «Производительность» | Держит заданный TDP и записывает его заново после сна, зарядки, смены профиля и запуска игр |
-| Предел частоты CPU слетает после зарядки и смены профиля | Заново программирует предел и следит за ядрами |
-| После сна буст CPU не поднимает частоту | Буст снова поднимает частоту ядер |
-| Силу вибрации ручек не настроить, после сна она сбрасывается | Сила от 0 до 100%, возвращается после сна |
-| Моторы триггеров молчат | Вибрация триггеров от вибрации игр |
-| У гироскопа инвертирована горизонтальная ось | Исправленные оси для InputPlumber |
-| Заводская кривая вентиляторов не выше 78% даже при 94 °C | Своя кривая с безопасным минимумом выше |
-| Система подсвечивает стики только синим, после сна подсветка гаснет | Любой цвет и эффект, возвращаются после сна и перезагрузки |
-| В играх Steam теряет до половины нажатий кнопки Library | Подстраховка QAM открывает меню с каждого нажатия |
-| Кнопка Armoury Crate ничего не делает | Действия на короткое и долгое нажатие: ORIGAMI, скриншот, клавиатура, лупа, закрыть игру и другие |
-
-Исправления, о которых вы ещё не решили, в ORIGAMI красные. Как только вы сами включите или выключите
-исправление, оно станет серым.
-
-### На чём проверено
-
-- ROG Xbox Ally X (плата RC73XA)
-- Bazzite 44.20261026, ядро 7.2.11-ogc4.1, InputPlumber 0.83.0, Decky Loader 3.3.1
-
-ORIGAMI знает и ROG Xbox Ally X20 (плата RC74XA), но на ней его ещё не проверяли.
-
-### Установка
-
-Нужен [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation). В игровом режиме откройте
-настройки Decky и включите **Режим разработчика**. Затем на странице **Разработчик**:
-
-- **По ссылке:** в **Установить плагин из URL** введите
-  `github.com/lexdrev/origami/releases/latest/download/ORIGAMI.zip` и нажмите **Установить**.
-- **Из файла:** скачайте `ORIGAMI.zip` из [последнего выпуска](https://github.com/lexdrev/origami/releases/latest),
-  выберите **Установить плагин из ZIP файла → Обзор** и укажите файл.
-
-Decky предупредит, что его команда этот плагин не проверяла, — подтвердите и откройте ORIGAMI в быстром меню.
-
-Обновление — так же: ссылка всегда ведёт на последний выпуск, настройки сохраняются. Установка перезапускает
-Decky, а Decky перезагружает интерфейс Steam, поэтому сначала закройте игру.
-
-### Как всё вернуть
-
-**Настройки → Изменения в системе** показывают, что ORIGAMI изменил. **Вернуть всё как было** возвращает заводские
-значения, удаляет файлы ORIGAMI и выключает его исправления; TDP снова задаёт Steam. Удаление плагина в Decky
-сначала делает то же самое.
-
-Пока включено исправление гироскопа, вне своих папок ORIGAMI держит один файл:
-`/etc/inputplumber/devices.d/50-rog_xbox_ally.yaml`.
-
-Если питанием, вентиляторами, подсветкой, насыщенностью или вибрацией уже управляет другой плагин, ORIGAMI эту
-часть не трогает и показывает, какой плагин ею управляет.
-
-### Приватность
-
-ORIGAMI не выходит в сеть и ничего не собирает. Он работает от root: без этого не изменить настройки питания,
-вентиляторов и подсветки.
-
-### Обратная связь
-
-Создайте [issue](https://github.com/lexdrev/origami/issues): консоль, версия Bazzite (ORIGAMI показывает её в
-**Настройки → Изменения в системе**), что вы делали, и последний журнал из `~/homebrew/logs/Origami/`.
-
-### Благодарности
-
-- Команде [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) — за платформу для плагинов
-- [Bazzite](https://bazzite.gg) — за систему
-- [Open Gaming Collective](https://github.com/OpenGamingCollective) — за исправления ядра для Ally X
-
-### Лицензия
-
-ORIGAMI © 2026 Alexander Derevyanko (lexdrev), [GPL-3.0-or-later](LICENSE). Программа HID-BPF в `bpf/`, которая
-работает в ядре, — GPL-2.0-or-later. Шрифты и библиотека, встроенные в плагин, перечислены в
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
