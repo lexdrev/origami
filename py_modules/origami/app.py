@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Protocol
 
 from origami.blocks import Context
+from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
 from origami.blocks.power import PowerBlock, power_settings_changed
 from origami.buttons import Button, ButtonAction, button_presses, layout_for
@@ -20,17 +21,11 @@ from origami.hid_bpf import HidBpfProgram
 from origami.inputplumber import Chord, press_chord
 from origami.journal import Change, ChangeJournal
 from origami.jsonio import JsonValue
-from origami.lighting import CONTROLLER_LIGHTING, Lighting, apply_lighting
+from origami.lighting import Lighting
 from origami.magnifier import Magnifier
 from origami.power import HeldPower, resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach, RumbleProgram, RumbleSettings
-from origami.saturation import (
-    SRGB_PERCENT,
-    read_saturation,
-    write_saturation,
-    write_saturation_blocking,
-)
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
@@ -120,6 +115,7 @@ class Origami:
         self._settings = Settings()
         self._settings_lock = asyncio.Lock()
         self._controller_lock = asyncio.Lock()
+        """Taken around every report to the controller's MCU, by the display and gamepad blocks."""
         self._info: Info | None = None
         self._ready = asyncio.Event()
         self._start_error: Exception | None = None
@@ -127,6 +123,7 @@ class Origami:
         self._buttons_read: frozenset[Button] = frozenset()
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
         self._power = PowerBlock(context)
+        self._display = DisplayBlock(context, self._controller_lock)
         self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
         self._pulsing = False
 
@@ -176,9 +173,9 @@ class Origami:
                     raise RuntimeError(f"{owner} sets the power, so ORIGAMI leaves it alone")
             # Sent before saving: a change the hardware did not take is not kept.
             if updated.lighting is not None and updated.lighting != self._settings.lighting:
-                await self._send_lighting(updated.lighting)
+                await self._display.send_lighting(updated.lighting)
             if updated.saturation is not None and updated.saturation != self._settings.saturation:
-                await self._send_saturation(updated.saturation)
+                await self._display.send_saturation(updated.saturation)
             if updated.vibration is not None and updated.vibration != self._settings.vibration:
                 await self._send_vibration(updated.vibration)
             triggers_changed = updated.trigger_rumble != self._settings.trigger_rumble
@@ -210,7 +207,7 @@ class Origami:
         Applying keeps it through update_settings; cancelling sends the saved lighting back.
         """
         await self._started()
-        await self._send_lighting(lighting)
+        await self._display.send_lighting(lighting)
 
     async def gyro(self) -> GyroState:
         """Whether the gyroscope's axes need ORIGAMI here, and what ORIGAMI has done about them."""
@@ -264,11 +261,7 @@ class Origami:
 
     async def saturation(self) -> int | None:
         """The saturation gamescope shows now, ORIGAMI's or not; None without gamescope."""
-        try:
-            percent = await read_saturation(self._env.root)
-        except CommandError, TimeoutError:
-            return None
-        return SRGB_PERCENT if percent is None else percent
+        return await self._display.saturation()
 
     async def restore_saturation(self) -> None:
         """Send the saved saturation again; the frontend calls it whenever Steam's interface loads.
@@ -279,16 +272,7 @@ class Origami:
         """
         await self._started()
         async with self._settings_lock:
-            await self._restore_saturation()
-
-    async def _restore_saturation(self) -> None:
-        saturation = self._settings.saturation
-        if saturation is None:
-            return
-        try:
-            await self._send_saturation(saturation)
-        except (CommandError, OSError, RuntimeError, TimeoutError) as error:
-            log.warning("Saturation not restored: %s", error)
+            await self._display.restore_saturation(self._settings)
 
     async def power(self) -> HeldPower:
         """The limits ORIGAMI holds now, for the Power screen."""
@@ -337,7 +321,7 @@ class Origami:
             await asyncio.to_thread(self._power.give_back_boost, owners.power)
             async with self._controller_lock:
                 await asyncio.to_thread(self._give_back_controller, owners)
-            await self._give_back_saturation(owners.saturation)
+            await self._display.give_back_saturation(owners.saturation)
             try:
                 await self._set_gyro(on=False)
             except (CommandError, OSError, RuntimeError, TimeoutError) as error:
@@ -368,7 +352,7 @@ class Origami:
         self._power.give_back_tdp(owners.power)
         self._power.give_back_boost(owners.power)
         self._give_back_controller(owners)
-        self._give_back_saturation_now(owners.saturation)
+        self._display.give_back_saturation_now(owners.saturation)
         log.info("ORIGAMI uninstalled")
 
     def stop(self) -> None:
@@ -430,13 +414,7 @@ class Origami:
 
         A plugin that drives them now keeps them as it set them: only ORIGAMI's record goes.
         """
-        if self._journal.recorded("lighting", "rings"):
-            try:
-                if owners.lighting is None:
-                    apply_lighting(self._env.root, CONTROLLER_LIGHTING)
-                self._journal.forget("lighting", "rings")
-            except OSError as error:
-                log.warning("Lighting not given back: %s", error)
+        self._display.give_back_lighting(owners.lighting)
         if self._journal.recorded("gamepad", "vibration"):
             original = original_vibration(self._journal.original("gamepad", "vibration"))
             try:
@@ -445,55 +423,6 @@ class Origami:
                 self._journal.forget("gamepad", "vibration")
             except OSError as error:
                 log.warning("Vibration strength not given back: %s", error)
-
-    async def _give_back_saturation(self, owner: str | None) -> None:
-        """Gamescope's saturation as it was before ORIGAMI, unless a plugin sets it now."""
-        if not self._journal.recorded("display", "saturation"):
-            return
-        if owner is None:
-            try:
-                await write_saturation(self._env.root, self._saturation_before())
-            except (CommandError, OSError, TimeoutError) as error:
-                log.warning("Saturation not given back: %s", error)
-                return
-        await asyncio.to_thread(self._journal.forget, "display", "saturation")
-
-    def _give_back_saturation_now(self, owner: str | None) -> None:
-        """_give_back_saturation() for uninstall, which cannot await."""
-        if not self._journal.recorded("display", "saturation"):
-            return
-        if owner is None:
-            try:
-                write_saturation_blocking(self._env.root, self._saturation_before())
-            except (CommandError, OSError, TimeoutError) as error:
-                log.warning("Saturation not given back: %s", error)
-                return
-        self._journal.forget("display", "saturation")
-
-    def _saturation_before(self) -> int:
-        """The saturation before ORIGAMI; nobody had set it (None) while gamescope showed sRGB."""
-        original = self._journal.original("display", "saturation")
-        if isinstance(original, int) and not isinstance(original, bool):
-            return original
-        return SRGB_PERCENT
-
-    async def _send_lighting(self, lighting: Lighting) -> None:
-        owner = (await self.conflicts()).lighting
-        if owner is not None:
-            raise RuntimeError(f"{owner} drives the stick lighting, so ORIGAMI leaves it alone")
-        async with self._controller_lock:
-            await asyncio.to_thread(self._record_lighting)
-            await asyncio.to_thread(apply_lighting, self._env.root, lighting)
-
-    async def _send_saturation(self, percent: int) -> None:
-        owner = (await self.conflicts()).saturation
-        if owner is not None:
-            raise RuntimeError(f"{owner} sets the screen colour, so ORIGAMI leaves it alone")
-        if not self._journal.recorded("display", "saturation"):
-            # Raises when gamescope cannot be read: nothing is written then, not even the original.
-            original = await read_saturation(self._env.root)
-            await asyncio.to_thread(self._journal.record, "display", "saturation", original)
-        await write_saturation(self._env.root, percent)
 
     async def _send_vibration(self, vibration: Vibration) -> None:
         owner = (await self.conflicts()).vibration
@@ -529,10 +458,6 @@ class Origami:
                 )
             await asyncio.to_thread(self._rumble.apply, rumble)
 
-    def _record_lighting(self) -> None:
-        # The controller cannot report its lighting, so the original is its own animation (None).
-        self._journal.record("lighting", "rings", None)
-
     def _record_vibration(self) -> None:
         if self._journal.recorded("gamepad", "vibration"):
             return
@@ -545,12 +470,8 @@ class Origami:
 
         Failures are only logged: the controller may be gone, or another plugin drives it now.
         """
-        lighting, vibration = self._settings.lighting, self._settings.vibration
-        if lighting is not None:
-            try:
-                await self._send_lighting(lighting)
-            except (OSError, RuntimeError) as error:
-                log.warning("Lighting not restored: %s", error)
+        await self._display.restore_lighting(self._settings)
+        vibration = self._settings.vibration
         if vibration is not None:
             try:
                 await self._send_vibration(vibration)
@@ -569,7 +490,7 @@ class Origami:
                 # A change saved meanwhile is not overwritten by what was set before it.
                 async with self._settings_lock:
                     await self._restore_controller()
-                    await self._restore_saturation()
+                    await self._display.restore_saturation(self._settings)
 
     async def _set_gyro(self, *, on: bool) -> None:
         """Make the gyroscope's axes follow the setting; InputPlumber restarts for a new file."""

@@ -14,6 +14,7 @@ from origami import gyro as gyro_module
 from origami import power as power_module
 from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
+from origami.blocks import display as display_block
 from origami.blocks import fans as fans_block
 from origami.blocks import power as power_block
 from origami.buttons import ButtonAction
@@ -94,7 +95,7 @@ def sent_lighting(monkeypatch: pytest.MonkeyPatch) -> list[Lighting]:
     def apply(_root: Path, lighting: Lighting) -> None:
         sent.append(lighting)
 
-    monkeypatch.setattr(app_module, "apply_lighting", apply)
+    monkeypatch.setattr(display_block, "apply_lighting", apply)
     return sent
 
 
@@ -392,9 +393,9 @@ def screen(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[int] | int]:
     async def write(root: Path, percent: int) -> None:
         write_blocking(root, percent)
 
-    monkeypatch.setattr(app_module, "read_saturation", read)
-    monkeypatch.setattr(app_module, "write_saturation", write)
-    monkeypatch.setattr(app_module, "write_saturation_blocking", write_blocking)
+    monkeypatch.setattr(display_block, "read_saturation", read)
+    monkeypatch.setattr(display_block, "write_saturation", write)
+    monkeypatch.setattr(display_block, "write_saturation_blocking", write_blocking)
     return state
 
 
@@ -449,7 +450,7 @@ def test_saturation_is_not_set_while_gamescope_cannot_be_read(
     async def unreachable(_root: Path) -> int:
         raise CommandError("gamescope's display is not there")
 
-    monkeypatch.setattr(app_module, "read_saturation", unreachable)
+    monkeypatch.setattr(display_block, "read_saturation", unreachable)
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
@@ -475,7 +476,7 @@ def test_a_saturation_nobody_had_set_is_given_back_as_srgb(
     async def unset(_root: Path) -> None:
         return None
 
-    monkeypatch.setattr(app_module, "read_saturation", unset)
+    monkeypatch.setattr(display_block, "read_saturation", unset)
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
