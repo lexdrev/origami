@@ -71,11 +71,14 @@ def test_the_test_pulse_drives_the_triggers_and_not_the_grips() -> None:
     assert pulse_report(on(Triggers.BOTH, STRONG)) == bytes.fromhex("0d0f64640000ff00eb")
 
 
-def test_trigger_motors_on_the_ally_x(ally_x: FakeRoot) -> None:
+def test_trigger_motors_on_the_xbox_ally_x_and_x20_only(ally_x: FakeRoot) -> None:
     ally_x.ally_controller()
 
     assert read_trigger_state(ally_x.path, "RC73XA") is TriggerState.AVAILABLE
-    assert read_trigger_state(ally_x.path, "RC73YA") is TriggerState.UNAVAILABLE
+    assert read_trigger_state(ally_x.path, "RC74XA") is TriggerState.AVAILABLE
+    # The Ally, the Ally X and the white Xbox Ally have no motors in their triggers.
+    for board in ("RC71L", "RC72LA", "RC73YA"):
+        assert read_trigger_state(ally_x.path, board) is TriggerState.UNAVAILABLE
     assert read_trigger_state(ally_x.path, None) is TriggerState.UNAVAILABLE
 
 

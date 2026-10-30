@@ -23,8 +23,12 @@ from origami.controller import GAMEPAD_INTERFACE, find_hid_device, rumble
 from origami.jsonio import JsonValue, expect_bool
 from origami.rumble import lays_out_rumble
 
-BOARDS = frozenset({"RC73XA"})
-"""Boards with motors in the triggers."""
+BOARDS = frozenset({"RC73XA", "RC74XA"})
+"""Boards with motors in the triggers: the Xbox Ally X and the Xbox Ally X20 (ASUS spec pages).
+
+The X20's motors grow weaker and noisy above 100 (kernel 7.2.11-ogc4, commit 74d25a36); the
+strengths ORIGAMI writes, in the test pulse and in the rumble program, never go above 100.
+"""
 
 
 class Triggers(StrEnum):
