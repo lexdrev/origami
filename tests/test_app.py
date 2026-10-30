@@ -16,6 +16,7 @@ from origami import versions
 from origami.app import BUTTON_ACTION, QAM_PRESSED, Emit, Environment, Origami
 from origami.blocks import display as display_block
 from origami.blocks import fans as fans_block
+from origami.blocks import gamepad as gamepad_block
 from origami.blocks import power as power_block
 from origami.buttons import ButtonAction
 from origami.decky_plugins import (
@@ -107,7 +108,7 @@ def sent_vibration(monkeypatch: pytest.MonkeyPatch) -> list[Vibration]:
     def apply(_root: Path, vibration: Vibration) -> None:
         sent.append(vibration)
 
-    monkeypatch.setattr(app_module, "apply_vibration", apply)
+    monkeypatch.setattr(gamepad_block, "apply_vibration", apply)
     return sent
 
 
@@ -662,9 +663,9 @@ def rumbles(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     def stop(_root: Path) -> None:
         told.append("stop")
 
-    monkeypatch.setattr(app_module, "start_pulse", pulse)
-    monkeypatch.setattr(app_module, "stop_rumble", stop)
-    monkeypatch.setattr(app_module, "PULSE_SECONDS", 0.02)
+    monkeypatch.setattr(gamepad_block, "start_pulse", pulse)
+    monkeypatch.setattr(gamepad_block, "stop_rumble", stop)
+    monkeypatch.setattr(gamepad_block, "PULSE_SECONDS", 0.02)
     return told
 
 
@@ -876,7 +877,7 @@ def test_trigger_test_is_a_pulse_of_the_chosen_triggers(
     def pulse(_root: Path, trigger_rumble: TriggerRumble) -> None:
         pulses.append(trigger_rumble)
 
-    monkeypatch.setattr(app_module, "start_trigger_pulse", pulse)
+    monkeypatch.setattr(gamepad_block, "start_trigger_pulse", pulse)
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
@@ -905,9 +906,9 @@ def test_trigger_test_taps_when_the_triggers_tap(
         pulses.append(trigger_rumble)
         rumbles.append("tap")
 
-    monkeypatch.setattr(app_module, "start_trigger_pulse", pulse)
-    monkeypatch.setattr(app_module, "TAP_SECONDS", 0.01)
-    monkeypatch.setattr(app_module, "TAP_GAP_SECONDS", 0.01)
+    monkeypatch.setattr(gamepad_block, "start_trigger_pulse", pulse)
+    monkeypatch.setattr(gamepad_block, "TAP_SECONDS", 0.01)
+    monkeypatch.setattr(gamepad_block, "TAP_GAP_SECONDS", 0.01)
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
@@ -1084,7 +1085,7 @@ def inputplumber(ally_x: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> list[str]
     async def restart() -> None:
         restarts.append("inputplumber")
 
-    monkeypatch.setattr(app_module, "restart_inputplumber", restart)
+    monkeypatch.setattr(gamepad_block, "restart_inputplumber", restart)
     return restarts
 
 
@@ -1351,7 +1352,7 @@ def test_uninstalling_goes_on_when_the_gyroscope_file_cannot_go(
     def refuse(_root: Path) -> bool:
         raise PermissionError("read-only")
 
-    monkeypatch.setattr(app_module, "remove_fix", refuse)
+    monkeypatch.setattr(gamepad_block, "remove_fix", refuse)
 
     async def scenario() -> None:
         app = make_app(powered, tmp_path)

@@ -12,11 +12,12 @@ from typing import Protocol
 from origami.blocks import Context
 from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
+from origami.blocks.gamepad import GamepadBlock
 from origami.blocks.power import PowerBlock, power_settings_changed
 from origami.buttons import Button, ButtonAction, button_presses, layout_for
 from origami.decky_plugins import Conflicts, read_conflicts
 from origami.device import Device, read_device
-from origami.gyro import GyroState, read_gyro_state, remove_fix, restart_inputplumber, write_fix
+from origami.gyro import GyroState
 from origami.hid_bpf import HidBpfProgram
 from origami.inputplumber import Chord, press_chord
 from origami.journal import Change, ChangeJournal
@@ -25,30 +26,14 @@ from origami.lighting import Lighting
 from origami.magnifier import Magnifier
 from origami.power import HeldPower, resumes
 from origami.proc import CommandError
-from origami.rumble import PROGRAM, Attach, RumbleProgram, RumbleSettings
+from origami.rumble import PROGRAM, Attach
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
 from origami.triggers import (
-    TAP_GAP_SECONDS,
-    TAP_SECONDS,
-    TAPS_IN_TEST,
-    TriggerRumble,
     TriggerState,
-    read_trigger_state,
-    start_trigger_pulse,
 )
 from origami.versions import Versions, read_versions
-from origami.vibration import (
-    GRIP_AT_GAME_FULL,
-    PULSE_SECONDS,
-    Vibration,
-    apply_vibration,
-    original_vibration,
-    read_driver_strength,
-    start_pulse,
-    stop_rumble,
-)
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +92,6 @@ class Origami:
     ) -> None:
         self._env = environment
         self._emit = emit
-        self._rumble = RumbleProgram(environment.root, environment.plugin_dir / PROGRAM, attach_bpf)
         self._magnifier = Magnifier(environment.root)
         self._settings_store = SettingsStore(environment.settings_dir / "settings.json")
         self._journal = ChangeJournal(environment.data_dir / "changes.json")
@@ -124,8 +108,14 @@ class Origami:
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
         self._power = PowerBlock(context)
         self._display = DisplayBlock(context, self._controller_lock)
+        self._gamepad = GamepadBlock(
+            context,
+            self._controller_lock,
+            program=environment.plugin_dir / PROGRAM,
+            attach_bpf=attach_bpf,
+            board=self._board,
+        )
         self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
-        self._pulsing = False
 
     async def start(self) -> None:
         try:
@@ -145,7 +135,7 @@ class Origami:
         # Frontend calls may come in as soon as the settings are loaded: they wait for these.
         async with self._settings_lock:
             await self._restore_controller()
-            await self._restore_gyro()
+            await self._gamepad.restore_gyro(self._settings)
             await self._follow_settings()
 
     async def info(self) -> Info:
@@ -176,22 +166,10 @@ class Origami:
                 await self._display.send_lighting(updated.lighting)
             if updated.saturation is not None and updated.saturation != self._settings.saturation:
                 await self._display.send_saturation(updated.saturation)
-            if updated.vibration is not None and updated.vibration != self._settings.vibration:
-                await self._send_vibration(updated.vibration)
-            triggers_changed = updated.trigger_rumble != self._settings.trigger_rumble
-            if triggers_changed or updated.vibration != self._settings.vibration:
-                try:
-                    await self._send_rumble(updated)
-                except (OSError, RuntimeError) as error:
-                    # The grips' lift is extra: their strength has reached the MCU already.
-                    if triggers_changed:
-                        raise
-                    log.warning("Grips not lifted: %s", error)
+            await self._gamepad.send(self._settings, updated)
             if updated.fans != self._settings.fans:
                 await self._fans.send(updated.fans)
-            # Unset and off are the same axes: switching off a fix never set changes nothing.
-            if bool(updated.gyro_fix) != bool(self._settings.gyro_fix):
-                await self._set_gyro(on=bool(updated.gyro_fix))
+            await self._gamepad.send_gyro(self._settings, updated)
             await asyncio.to_thread(self._settings_store.save, updated)
             gave_up_tdp = self._settings.manage_tdp is True and updated.manage_tdp is not True
             self._settings = updated
@@ -211,53 +189,20 @@ class Origami:
 
     async def gyro(self) -> GyroState:
         """Whether the gyroscope's axes need ORIGAMI here, and what ORIGAMI has done about them."""
-        info = await self.info()
-        return await asyncio.to_thread(read_gyro_state, self._env.root, info.device.board)
+        return await self._gamepad.gyro_state()
 
     async def trigger_state(self) -> TriggerState:
         """Whether the triggers here have motors ORIGAMI can rumble."""
-        info = await self.info()
-        return await asyncio.to_thread(read_trigger_state, self._env.root, info.device.board)
+        return await self._gamepad.trigger_state()
 
     async def test_vibration(self) -> None:
-        """Rumble the handles for a second, so the strength can be felt without a game.
-
-        The controller keeps a rumble until it is told to stop, so the pulse always ends with a
-        stop, also when the call is cancelled or the plugin unloads. A press during it is ignored.
-        The rumble program would rumble the triggers with the handles, so they keep still meanwhile.
-        """
-        if self._pulsing:
-            return
-        self._pulsing = True
-        try:
-            await asyncio.to_thread(self._start_handle_pulse)
-            await asyncio.sleep(PULSE_SECONDS)
-        finally:
-            self._end_pulse()
-            await asyncio.to_thread(self._rumble.unmute)
+        """Rumble the handles for a second, so the strength can be felt without a game."""
+        await self._gamepad.test_vibration()
 
     async def test_trigger_rumble(self) -> None:
         """Rumble the triggers at their level as a game's full rumble would: a second, or taps."""
         await self._started()
-        trigger_rumble = self._settings.trigger_rumble
-        if self._pulsing or trigger_rumble is None or not trigger_rumble.enabled:
-            return
-        self._pulsing = True
-        try:
-            if trigger_rumble.taps:
-                # Taps as a game's shots give them, not one long rumble.
-                # The last tap ends with the test.
-                for tap in range(TAPS_IN_TEST):
-                    if tap:
-                        await asyncio.to_thread(stop_rumble, self._env.root)
-                        await asyncio.sleep(TAP_GAP_SECONDS)
-                    await asyncio.to_thread(start_trigger_pulse, self._env.root, trigger_rumble)
-                    await asyncio.sleep(TAP_SECONDS)
-            else:
-                await asyncio.to_thread(start_trigger_pulse, self._env.root, trigger_rumble)
-                await asyncio.sleep(PULSE_SECONDS)
-        finally:
-            self._end_pulse()
+        await self._gamepad.test_trigger_rumble(self._settings.trigger_rumble)
 
     async def saturation(self) -> int | None:
         """The saturation gamescope shows now, ORIGAMI's or not; None without gamescope."""
@@ -315,7 +260,7 @@ class Origami:
             self._settings = restored
             # The keeper leaves the TDP and the boost from now on, and the fans go back.
             await self._follow_settings()
-            await asyncio.to_thread(self._rumble.close)
+            await self._gamepad.close_rumble()
             owners = await self.conflicts()
             await asyncio.to_thread(self._power.give_back_tdp, owners.power)
             await asyncio.to_thread(self._power.give_back_boost, owners.power)
@@ -323,7 +268,7 @@ class Origami:
                 await asyncio.to_thread(self._give_back_controller, owners)
             await self._display.give_back_saturation(owners.saturation)
             try:
-                await self._set_gyro(on=False)
+                await self._gamepad.set_gyro(on=False)
             except (CommandError, OSError, RuntimeError, TimeoutError) as error:
                 log.warning("Gyroscope not given back: %s", error)
             log.info("Everything given back, %d changes left", len(self._journal.entries()))
@@ -343,11 +288,7 @@ class Origami:
         the rest is given back all the same.
         """
         owners = self._read_conflicts()
-        try:
-            if remove_fix(self._env.root):
-                self._journal.forget("gamepad", "gyro")
-        except OSError as error:
-            log.warning("Gyroscope fix not removed: %s", error)
+        self._gamepad.remove_gyro_fix()
         self._fans.give_back(owners.fans)
         self._power.give_back_tdp(owners.power)
         self._power.give_back_boost(owners.power)
@@ -368,27 +309,12 @@ class Origami:
         self._after_resume.cancel()
         self._fans.stop()
         self._power.stop()
-        self._end_pulse()
-        self._rumble.close()
+        self._gamepad.stop()
         try:
             self._magnifier.close()
         except (CommandError, TimeoutError) as error:
             log.warning("Magnifier not switched off: %s", error)
         log.info("ORIGAMI stopped")
-
-    def _start_handle_pulse(self) -> None:
-        self._rumble.mute_triggers()
-        start_pulse(self._env.root)
-
-    def _end_pulse(self) -> None:
-        # Sent at once, without awaiting: an await could be cut short and leave the motors running.
-        if not self._pulsing:
-            return
-        self._pulsing = False
-        try:
-            stop_rumble(self._env.root)
-        except OSError as error:
-            log.warning("Vibration test not stopped: %s", error)
 
     async def _follow_settings(self) -> None:
         settings = self._settings
@@ -415,55 +341,7 @@ class Origami:
         A plugin that drives them now keeps them as it set them: only ORIGAMI's record goes.
         """
         self._display.give_back_lighting(owners.lighting)
-        if self._journal.recorded("gamepad", "vibration"):
-            original = original_vibration(self._journal.original("gamepad", "vibration"))
-            try:
-                if owners.vibration is None:
-                    apply_vibration(self._env.root, original)
-                self._journal.forget("gamepad", "vibration")
-            except OSError as error:
-                log.warning("Vibration strength not given back: %s", error)
-
-    async def _send_vibration(self, vibration: Vibration) -> None:
-        owner = (await self.conflicts()).vibration
-        if owner is not None:
-            raise RuntimeError(f"{owner} sets the vibration strength, so ORIGAMI leaves it alone")
-        async with self._controller_lock:
-            await asyncio.to_thread(self._record_vibration)
-            await asyncio.to_thread(apply_vibration, self._env.root, vibration)
-
-    async def _send_rumble(self, settings: Settings) -> None:
-        """Have the rumble program fill the triggers as chosen and lift the grips ORIGAMI drives.
-
-        The grips are lifted only under ORIGAMI's own strength: with another plugin setting it, or
-        before the user sets one, games rumble the grips as before.
-        """
-        owners = await self.conflicts()
-        trigger_rumble = settings.trigger_rumble or TriggerRumble()
-        own_grips = (
-            settings.vibration is not None
-            and settings.vibration.enabled
-            and owners.vibration is None
-        )
-        rumble = RumbleSettings(
-            *trigger_rumble.strengths(),
-            grips=GRIP_AT_GAME_FULL if own_grips else 0,
-            taps=trigger_rumble.enabled and trigger_rumble.taps,
-        )
-        async with self._controller_lock:
-            if owners.triggers is not None and trigger_rumble.enabled:
-                await asyncio.to_thread(self._rumble.close)
-                raise RuntimeError(
-                    f"{owners.triggers} rumbles the triggers, so ORIGAMI leaves them alone"
-                )
-            await asyncio.to_thread(self._rumble.apply, rumble)
-
-    def _record_vibration(self) -> None:
-        if self._journal.recorded("gamepad", "vibration"):
-            return
-        # The MCU cannot be asked, so the original is what the driver last took.
-        strength = read_driver_strength(self._env.root)
-        self._journal.record("gamepad", "vibration", None if strength is None else list(strength))
+        self._gamepad.give_back_vibration(owners.vibration)
 
     async def _restore_controller(self) -> None:
         """Send the saved lighting, vibration and rumble program again, at start and after sleep.
@@ -471,17 +349,7 @@ class Origami:
         Failures are only logged: the controller may be gone, or another plugin drives it now.
         """
         await self._display.restore_lighting(self._settings)
-        vibration = self._settings.vibration
-        if vibration is not None:
-            try:
-                await self._send_vibration(vibration)
-            except (OSError, RuntimeError) as error:
-                log.warning("Vibration not restored: %s", error)
-        if vibration is not None or self._settings.trigger_rumble is not None:
-            try:
-                await self._send_rumble(self._settings)
-            except (OSError, RuntimeError) as error:
-                log.warning("Rumble program not restored: %s", error)
+        await self._gamepad.restore(self._settings)
 
     async def _follow_resumes(self) -> None:
         async with aclosing(resumes()) as wakes:
@@ -491,31 +359,6 @@ class Origami:
                 async with self._settings_lock:
                     await self._restore_controller()
                     await self._display.restore_saturation(self._settings)
-
-    async def _set_gyro(self, *, on: bool) -> None:
-        """Make the gyroscope's axes follow the setting; InputPlumber restarts for a new file."""
-        state = await self.gyro()
-        match on, state:
-            case True, GyroState.WRONG | GyroState.OUTDATED:
-                await asyncio.to_thread(self._journal.record, "gamepad", "gyro", None)
-                await asyncio.to_thread(write_fix, self._env.root)
-            case False, GyroState.FIXED | GyroState.OUTDATED:
-                await asyncio.to_thread(remove_fix, self._env.root)
-                await asyncio.to_thread(self._journal.forget, "gamepad", "gyro")
-            case True, GyroState.FIXED:
-                return
-            case True, _:
-                raise RuntimeError(f"ORIGAMI cannot fix the gyroscope here ({state})")
-            case _:
-                return
-        await restart_inputplumber()
-
-    async def _restore_gyro(self) -> None:
-        """Keep the axes as set: InputPlumber may have been updated, or the file may be gone."""
-        try:
-            await self._set_gyro(on=bool(self._settings.gyro_fix))
-        except (CommandError, OSError, RuntimeError, TimeoutError) as error:
-            log.warning("Gyroscope not restored: %s", error)
 
     async def _forward_buttons(self) -> None:
         layout = layout_for(self._info.device.board if self._info else None)
@@ -544,6 +387,9 @@ class Origami:
                 await self._emit(BUTTON_ACTION, action.value)
         except (CommandError, TimeoutError, ValueError) as error:
             log.warning("%s not done: %s", action.value, error)
+
+    async def _board(self) -> str | None:
+        return (await self.info()).device.board
 
     async def _started(self) -> None:
         await self._ready.wait()
