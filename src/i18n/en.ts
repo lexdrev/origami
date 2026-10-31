@@ -109,7 +109,7 @@ export const en: Messages = {
     profilesSub: "No game running · general in use",
     profilesTitleSub: "Power · per-game settings",
     profilesHint:
-      "To add a game, start it and pick its name at the top of the Power screen. Its profile starts as a copy of the general one.",
+      "To add a game, start it and switch on Per-game profile at the top of the Power screen. Its profile starts as a copy of the general one.",
     profileSub: "Game profile · the game is not running",
     tdpBoost: (on) => (on ? "TDP\u00a0boost\u00a0on" : "TDP\u00a0boost\u00a0off"),
     profileWaiting: "General in use",
