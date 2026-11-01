@@ -214,6 +214,7 @@ export const backend = {
   restoreAll: callable<[], Settings>("restore_all"),
   previewLighting: callable<[lighting: Lighting]>("preview_lighting"),
   testVibration: callable("test_vibration"),
+  paste: callable("paste"),
   getTriggerState: callable<[], TriggerState>("get_trigger_state"),
   testTriggerRumble: callable("test_trigger_rumble"),
   getGyro: callable<[], GyroState>("get_gyro"),

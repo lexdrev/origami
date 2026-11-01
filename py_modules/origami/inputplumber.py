@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Buttons, Steam's chords and device profiles of the built-in controller, through InputPlumber.
+"""Buttons, chords, keys and device profiles of the built-in controller, through InputPlumber.
 
 InputPlumber shows the Ally's controller to Steam as a Steam Deck, so Steam's own chords with its
 button work: Steam + R1 takes a screenshot, Steam + X shows the keyboard in a game.
@@ -11,11 +11,16 @@ button is a press of 80 ms; SendEvent, which could hold a button down, panics in
 
 InputPlumber names the face buttons as Linux does, where BTN_X is BTN_NORTH: X is North, Y West.
 
+Its keyboard is a uinput device, so gamescope takes its keys as a real keyboard's, modifiers
+included. The keys Steam presses itself through gamescope lose their modifiers (gamescope 3.17.0):
+Ctrl+V from Steam's on-screen keyboard arrives as a plain "v".
+
 The calls block: callers run them in a thread, and the magnifier also makes them while the plugin
 unloads, when nothing can be awaited.
 """
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -27,8 +32,11 @@ from origami.proc import CommandError, run_blocking
 SERVICE = "org.shadowblip.InputPlumber"
 COMPOSITE_DEVICE = "org.shadowblip.Input.CompositeDevice"
 COMPOSITE_PATH = re.compile(r"^/org/shadowblip/InputPlumber/CompositeDevice\d+$", re.MULTILINE)
+TARGET = "org.shadowblip.Input.Target"
+KEYBOARD = "org.shadowblip.Input.Keyboard"
 TIMEOUT_SECONDS = 5
 STEAM = "Gamepad:Button:Guide"
+PASTE = ("KEY_LEFTCTRL", "KEY_V")
 
 
 class Chord(Enum):
@@ -53,6 +61,32 @@ def press_chord(root: Path, chord: Chord) -> None:
     """Press a chord on the built-in controller; raise CommandError or TimeoutError on failure."""
     buttons = chord.value
     _call(builtin_device(root), "SendButtonChord", "as", str(len(buttons)), *buttons)
+
+
+def press_keys(root: Path, keys: Sequence[str]) -> None:
+    """Press keys together on the controller's keyboard and let them go in reverse.
+
+    Raise CommandError or TimeoutError on failure; the keys already down go up first.
+    """
+    keyboard = keyboard_target(builtin_device(root))
+    pressed: list[str] = []
+    try:
+        for key in keys:
+            _send_key(keyboard, key, down=True)
+            pressed.append(key)
+    finally:
+        # A key left down would stay held for everything typed after it.
+        for key in reversed(pressed):
+            _send_key(keyboard, key, down=False)
+
+
+def keyboard_target(device: str) -> str:
+    """The keyboard InputPlumber made for this device, one of its target devices."""
+    for target in _strings(_property(device, "TargetDevices")):
+        kind = _data(_busctl("--json=short", "get-property", SERVICE, target, TARGET, "DeviceType"))
+        if kind == "keyboard":
+            return target
+    raise CommandError("InputPlumber has no keyboard for the Ally controller")
 
 
 def builtin_device(root: Path) -> str:
@@ -101,6 +135,10 @@ def _call(device: str, method: str, *args: str, json: bool = False) -> str:
 
 def _property(device: str, name: str) -> str:
     return _busctl("--json=short", "get-property", SERVICE, device, COMPOSITE_DEVICE, name)
+
+
+def _send_key(keyboard: str, key: str, *, down: bool) -> None:
+    _busctl("call", SERVICE, keyboard, KEYBOARD, "SendKey", "sb", key, "true" if down else "false")
 
 
 def _busctl(*args: str) -> str:

@@ -10,6 +10,7 @@ import { watchButtonActions } from "./buttonActions";
 import { PluginTitle } from "./PluginTitle";
 import { recordFanHistory } from "./fanHistory";
 import { watchRunningGame } from "./games";
+import { fixKeyboardPaste } from "./keyboardPaste";
 import { watchGameStarts, watchSteamTdpLimit } from "./power";
 import { watchQuickAccessButton } from "./qamAssist";
 import { createOwnTab } from "./qamTab";
@@ -36,6 +37,8 @@ export default definePlugin(() => {
   // A game with power settings of its own runs with them.
   const stopRunningGame = watchRunningGame();
   const stopFanHistory = recordFanHistory();
+  // The paste key of Steam's on-screen keyboard types a "v" in gamescope without this.
+  const stopKeyboardPaste = fixKeyboardPaste(backend.paste);
   // The tab follows the settings: it appears once they are loaded and moves when they change.
   const unsubscribe = settings.subscribe(() => {
     const current = settings.get();
@@ -55,6 +58,7 @@ export default definePlugin(() => {
       stopGameStarts();
       stopRunningGame();
       stopFanHistory();
+      stopKeyboardPaste();
     },
   };
 });

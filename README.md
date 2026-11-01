@@ -58,6 +58,7 @@ console has on Linux today.
 | The system lights the sticks only in blue, and they go dark after sleep | Any colour and effect, back after sleep and reboot |
 | In games, Steam misses up to half of the Library button presses | QAM assist opens the menu on every press |
 | The Armoury Crate button does nothing | Actions on a short and a long press: ORIGAMI, screenshot, keyboard, magnifier, close the game and more |
+| Paste on Steam's on-screen keyboard types a "v" | Pastes the text; works by itself, there is nothing to switch on |
 
 Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or off yourself, it turns grey.
 
