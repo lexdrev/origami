@@ -8,7 +8,9 @@ import logging
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
+from origami import inputplumber
 from origami.blocks import Context
+from origami.controller import gamepad_over_xpad
 from origami.gyro import GyroState, read_gyro_state, remove_fix, restart_inputplumber, write_fix
 from origami.proc import CommandError
 from origami.rumble import Attach, RumbleProgram, RumbleSettings
@@ -24,6 +26,7 @@ from origami.triggers import (
 )
 from origami.vibration import (
     GRIP_AT_GAME_FULL,
+    PULSE_MAGNITUDE,
     PULSE_SECONDS,
     Vibration,
     apply_vibration,
@@ -57,13 +60,16 @@ class GamepadBlock:
         self._board = board
         self._rumble = RumbleProgram(context.root, program, attach_bpf)
         self._pulsing = False
+        self._pulse_device: str | None = None
+        """InputPlumber's device a test pulse went through, where the gamepad is an Xbox 360 one."""
 
     async def send(self, before: Settings, after: Settings) -> None:
         """Send a changed vibration strength and rumble program before the settings keep them."""
         if after.vibration is not None and after.vibration != before.vibration:
             await self._send_vibration(after.vibration)
         triggers_changed = after.trigger_rumble != before.trigger_rumble
-        if triggers_changed or after.vibration != before.vibration:
+        rumble_changed = triggers_changed or after.vibration != before.vibration
+        if rumble_changed and not await self._over_xpad():
             try:
                 await self._send_rumble(after)
             except (OSError, RuntimeError) as error:
@@ -88,7 +94,8 @@ class GamepadBlock:
                 await self._send_vibration(vibration)
             except (OSError, RuntimeError) as error:
                 log.warning("Vibration not restored: %s", error)
-        if vibration is not None or settings.trigger_rumble is not None:
+        wants_program = vibration is not None or settings.trigger_rumble is not None
+        if wants_program and not await self._over_xpad():
             try:
                 await self._send_rumble(settings)
             except (OSError, RuntimeError) as error:
@@ -164,10 +171,17 @@ class GamepadBlock:
         The controller keeps a rumble until it is told to stop, so the pulse always ends with a
         stop, also when the call is cancelled or the plugin unloads. A press during it is ignored.
         The rumble program would rumble the triggers with the handles, so they keep still meanwhile.
+        Where the gamepad is a separate Xbox 360 controller, the pulse goes through InputPlumber.
         """
         if self._pulsing:
             return
+        device = None
+        if await self._over_xpad():
+            device = await asyncio.to_thread(inputplumber.builtin_device, self._context.root)
+        if self._pulsing:  # pressed again while InputPlumber answered
+            return
         self._pulsing = True
+        self._pulse_device = device
         try:
             await asyncio.to_thread(self._start_handle_pulse)
             await asyncio.sleep(PULSE_SECONDS)
@@ -244,7 +258,13 @@ class GamepadBlock:
         strength = read_driver_strength(self._context.root)
         journal.record("gamepad", "vibration", None if strength is None else list(strength))
 
+    async def _over_xpad(self) -> bool:
+        return await asyncio.to_thread(gamepad_over_xpad, self._context.root)
+
     def _start_handle_pulse(self) -> None:
+        if self._pulse_device is not None:
+            inputplumber.start_rumble(self._pulse_device, PULSE_MAGNITUDE / 100)
+            return
         self._rumble.mute_triggers()
         start_pulse(self._context.root)
 
@@ -253,7 +273,11 @@ class GamepadBlock:
         if not self._pulsing:
             return
         self._pulsing = False
+        device, self._pulse_device = self._pulse_device, None
         try:
-            stop_rumble(self._context.root)
-        except OSError as error:
+            if device is not None:
+                inputplumber.stop_rumble(device)
+            else:
+                stop_rumble(self._context.root)
+        except (CommandError, OSError, TimeoutError) as error:
             log.warning("Vibration test not stopped: %s", error)

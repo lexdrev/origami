@@ -8,6 +8,10 @@ reports the special buttons and takes its settings as vendor feature reports `5a
 long. Interface 5 is the gamepad itself, which takes the rumble output report. InputPlumber
 hides both hidraw nodes from users; ORIGAMI uses them as root. Interface 3, bound by hid-asus,
 is the controller's keyboard: held buttons arrive there as keys.
+
+The ROG Ally (RC71L, 0B05:1ABE) has interfaces 0-2 only: its MCU shows the gamepad as a separate
+USB Xbox 360 controller, which xpad drives (owner's report, 2026-11-04). The rumble report and the
+rumble program have nothing to work on there; a rumble goes through InputPlumber instead.
 """
 
 import fcntl
@@ -25,6 +29,8 @@ KEYBOARD_INTERFACE = "input3"
 GAMEPAD_INTERFACE = "input5"
 VENDOR_REPORT = 0x5A
 REPORT_SIZE = 64
+XPAD_PRODUCTS = frozenset({0x1ABE})
+"""USB products of controllers whose gamepad is a separate Xbox 360 controller."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +85,24 @@ def _find(root: Path, interface: str) -> _Hidraw | None:
         return None
     wanted = config.removesuffix(CONFIG_INTERFACE) + interface
     return next((device for device in devices if device.phys == wanted), None)
+
+
+def gamepad_over_xpad(root: Path) -> bool:
+    """Whether the controller's gamepad is a separate Xbox 360 controller, not its interface 5.
+
+    False also while the controller is not there.
+    """
+    found = _find(root, CONFIG_INTERFACE)
+    return found is not None and _product(found.device.name) in XPAD_PRODUCTS
+
+
+def _product(device_name: str) -> int | None:
+    """The USB product in a HID device's name such as 0003:0B05:1ABE.0003."""
+    try:
+        _bus, _vendor, product = device_name.split(":")
+        return int(product.partition(".")[0], 16)
+    except ValueError:
+        return None
 
 
 def configure(root: Path, reports: Iterable[bytes]) -> None:

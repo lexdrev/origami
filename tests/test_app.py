@@ -985,6 +985,64 @@ def test_the_handle_test_keeps_the_triggers_still(
     assert rumbles == ["pulse", "stop"]
 
 
+def test_the_rog_allys_handle_test_rumbles_through_inputplumber(
+    ally_x: FakeRoot, tmp_path: Path, rumbles: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ally_x.rog_ally_controller()
+    told: list[tuple[str, ...]] = []
+
+    def builtin_device(root: Path) -> str:
+        assert root == ally_x.path
+        return "/org/shadowblip/InputPlumber/CompositeDevice0"
+
+    def start(device: str, strength: float) -> None:
+        told.append(("rumble", device, f"{strength:g}"))
+
+    def stop(device: str) -> None:
+        told.append(("stop", device))
+
+    monkeypatch.setattr(gamepad_block.inputplumber, "builtin_device", builtin_device)
+    monkeypatch.setattr(gamepad_block.inputplumber, "start_rumble", start)
+    monkeypatch.setattr(gamepad_block.inputplumber, "stop_rumble", stop)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.test_vibration()
+        app.stop()
+
+    asyncio.run(scenario())
+
+    device = "/org/shadowblip/InputPlumber/CompositeDevice0"
+    assert told == [("rumble", device, "0.32"), ("stop", device)]
+    assert rumbles == []  # nothing went to the gamepad interface the ROG Ally has not
+
+
+def test_the_rog_ally_has_no_rumble_program_and_no_warnings(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    sent_vibration: list[Vibration],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ally_x.rog_ally_controller()
+    bpf = FakeHidBpf()
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path, bpf=bpf)
+        await app.start()
+        await app.update_settings({"vibration": {"left": 80, "right": 80}})
+        app.stop()
+
+    with caplog.at_level(logging.WARNING):
+        asyncio.run(scenario())
+
+    assert sent_vibration == [Vibration(left=80, right=80)]  # the strength still reaches its MCU
+    assert bpf.programs == []
+    assert [
+        r.message for r in caplog.records if "lifted" in r.message or "Rumble" in r.message
+    ] == []
+
+
 def test_trigger_test_is_a_pulse_of_the_chosen_triggers(
     ally_x: FakeRoot, tmp_path: Path, rumbles: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:

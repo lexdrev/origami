@@ -34,6 +34,7 @@ COMPOSITE_DEVICE = "org.shadowblip.Input.CompositeDevice"
 COMPOSITE_PATH = re.compile(r"^/org/shadowblip/InputPlumber/CompositeDevice\d+$", re.MULTILINE)
 TARGET = "org.shadowblip.Input.Target"
 KEYBOARD = "org.shadowblip.Input.Keyboard"
+FORCE_FEEDBACK = "org.shadowblip.Output.ForceFeedback"
 TIMEOUT_SECONDS = 5
 STEAM = "Gamepad:Button:Guide"
 PASTE = ("KEY_LEFTCTRL", "KEY_V")
@@ -106,6 +107,19 @@ def builtin_device(root: Path) -> str:
         if node in _strings(_property(path, "SourceDevicePaths")):
             return path
     raise CommandError("InputPlumber has no device for the Ally controller")
+
+
+def start_rumble(device: str, strength: float) -> None:
+    """Rumble the controller through InputPlumber as a game does, until stop_rumble.
+
+    The strength runs from 0 to 1, as the speed of both handles in Steam's rumble report; the
+    MCU's own strength then scales it. InputPlumber 0.78 and 0.83 have this method.
+    """
+    _busctl("call", SERVICE, device, FORCE_FEEDBACK, "Rumble", "d", f"{strength:g}")
+
+
+def stop_rumble(device: str) -> None:
+    _busctl("call", SERVICE, device, FORCE_FEEDBACK, "Stop")
 
 
 def profile_path(device: str) -> str:

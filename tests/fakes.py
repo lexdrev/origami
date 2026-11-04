@@ -10,6 +10,8 @@ class FakeRoot:
 
     def __init__(self, path: Path) -> None:
         self.path = path
+        self.product = "1B4C"
+        """USB product of the controller whose interfaces hidraw() adds."""
 
     def write(self, relative: str, value: object) -> Path:
         target = self.path / relative
@@ -38,7 +40,7 @@ class FakeRoot:
         As in sysfs, hidrawN/device links to the HID device's folder, named by its id.
         """
         number = 0x100 + index if hid_id is None else hid_id
-        device = self.path / "sys/devices/hid" / f"0003:0B05:1B4C.{number:04X}"
+        device = self.path / "sys/devices/hid" / f"0003:0B05:{self.product}.{number:04X}"
         self.write(f"{device.relative_to(self.path)}/uevent", f"DRIVER={driver}\nHID_PHYS={phys}")
         (device / "report_descriptor").write_bytes(descriptor)
         hidraw = self.path / "sys/class/hidraw" / f"hidraw{index}"
@@ -63,6 +65,17 @@ class FakeRoot:
         )
         self.hidraw(7, driver="hid-generic", phys="", hid_id=8)
         return node
+
+    def rog_ally_controller(self) -> Path:
+        """The ROG Ally (RC71L) controller as its owner's report shows it: interfaces 0-2 only.
+
+        Its gamepad is a separate Xbox 360 controller (xpad). Returns the configuration node.
+        """
+        self.product = "1ABE"
+        phys = "usb-0000:09:00.3-3/input"
+        self.hidraw(0, driver="asus", phys=f"{phys}0", hid_id=1)
+        self.hidraw(1, driver="asus", phys=f"{phys}1", hid_id=2)
+        return self.hidraw(2, driver="asus_rog_ally", phys=f"{phys}2", hid_id=3)
 
 
 ALLY_X_GAMEPAD_DESCRIPTOR = bytes.fromhex(

@@ -13,6 +13,7 @@ from origami.controller import (
     HidDevice,
     find_hid_device,
     find_hidraw,
+    gamepad_over_xpad,
     send_feature_reports,
 )
 
@@ -39,6 +40,24 @@ def test_no_controller(fake_root: FakeRoot) -> None:
     assert find_hidraw(fake_root.path, CONFIG_INTERFACE) is None
     assert find_hidraw(fake_root.path, KEYBOARD_INTERFACE) is None
     assert find_hid_device(fake_root.path, GAMEPAD_INTERFACE) is None
+
+
+def test_the_rog_allys_gamepad_is_an_xbox_360_controller(fake_root: FakeRoot) -> None:
+    node = fake_root.rog_ally_controller()
+
+    assert find_hidraw(fake_root.path, CONFIG_INTERFACE) == node
+    assert find_hid_device(fake_root.path, GAMEPAD_INTERFACE) is None
+    assert gamepad_over_xpad(fake_root.path)
+
+
+def test_the_ally_xs_gamepad_is_its_own_interface(fake_root: FakeRoot) -> None:
+    fake_root.ally_controller()
+
+    assert not gamepad_over_xpad(fake_root.path)
+
+
+def test_no_xpad_gamepad_without_a_controller(fake_root: FakeRoot) -> None:
+    assert not gamepad_over_xpad(fake_root.path)
 
 
 def test_hid_device_of_an_interface_carries_the_kernels_number(fake_root: FakeRoot) -> None:
