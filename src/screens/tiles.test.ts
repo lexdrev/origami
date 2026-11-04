@@ -19,7 +19,15 @@ const none = {
 };
 
 const allyX: Telemetry = {
-  power: { tdpLimitW: 35, packagePowerW: 16.94, cpuBoost: false, onBattery: false, battery: null },
+  power: {
+    tdpLimitW: 35,
+    tdpTopW: 35,
+    batteryTdpTopW: null,
+    packagePowerW: 16.94,
+    cpuBoost: false,
+    onBattery: false,
+    battery: null,
+  },
   fans: { speedsRpm: [4600, 4700], cpuTempC: 61.6, gpuTempC: 63.2 },
   gamepad: { vibrationPct: [50, 50] },
 };
@@ -74,7 +82,15 @@ describe("tile texts", () => {
 
   it("show dashes before the first reading and on other hardware", () => {
     const unknown: Telemetry = {
-      power: { tdpLimitW: null, packagePowerW: null, cpuBoost: null, onBattery: false, battery: null },
+      power: {
+        tdpLimitW: null,
+        tdpTopW: null,
+        batteryTdpTopW: null,
+        packagePowerW: null,
+        cpuBoost: null,
+        onBattery: false,
+        battery: null,
+      },
       fans: { speedsRpm: [], cpuTempC: null, gpuTempC: null },
       gamepad: { vibrationPct: null },
     };

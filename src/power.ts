@@ -7,14 +7,39 @@ import { formatNumber, withUnit } from "./i18n/format";
 import { readSteamTdpSlider } from "./steam";
 import { createStore } from "./store";
 
-// The TDP and the CPU boost ORIGAMI holds (origami.power). The firmware takes a sustained limit of
-// 7–35 W; from the factory it is 17 W with short boosts to 21 and 26 W. On the battery ORIGAMI
-// keeps it at 25 W unless the user allows more.
+// The TDP and the CPU boost ORIGAMI holds (origami.power). The Ally X's firmware takes a sustained
+// limit of 7–35 W; from the factory it is 17 W with short boosts to 21 and 26 W. Other models take
+// less (the ROG Ally 25 W on the battery, 30 W on the charger), so the scale ends where the firmware
+// does. On the battery ORIGAMI keeps it at 25 W unless the user allows more.
 
 export const MIN_TDP = 7;
 export const MAX_TDP = 35;
 export const BATTERY_TDP = 25;
 export const TDP_STEP = 1;
+
+interface TdpReadings {
+  onBattery: boolean;
+  tdpTopW: number | null;
+  batteryTdpTopW: number | null;
+}
+
+/** The top of the TDP scale: what the firmware takes on the supply in use, 35 W where not known. */
+export function tdpTop(readings: TdpReadings | null): number {
+  const top = readings?.tdpTopW ?? null;
+  return top === null || top < MIN_TDP ? MAX_TDP : Math.min(top, MAX_TDP);
+}
+
+/** Whether the battery could take more than 25 W, so that allowing it means something. */
+export function batteryTakesMore(readings: TdpReadings | null): boolean {
+  const top = readings?.batteryTdpTopW ?? null;
+  return top === null || top > BATTERY_TDP;
+}
+
+/** The highest TDP to choose now: the firmware's top, and on the battery 25 W until more is allowed. */
+export function highestTdp(readings: TdpReadings | null, batteryHighTdp: boolean): number {
+  const top = tdpTop(readings);
+  return readings?.onBattery === true && !batteryHighTdp ? Math.min(BATTERY_TDP, top) : top;
+}
 
 /** Sustained limits for the choices; a custom cell after them shows any other. */
 export const TDP_PRESETS = [

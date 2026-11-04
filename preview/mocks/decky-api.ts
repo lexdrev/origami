@@ -92,6 +92,8 @@ function telemetry(): Telemetry {
   return {
     power: {
       tdpLimitW: settings.power.tdp,
+      tdpTopW: 35,
+      batteryTdpTopW: 35,
       packagePowerW: settings.power.tdp - 0.1 + wobble * 0.3,
       cpuBoost: settings.power.cpuBoost ?? false,
       onBattery: false,

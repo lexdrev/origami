@@ -10,16 +10,17 @@ import { useMessages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
 import { back, navigate } from "../navigation";
 import {
-  BATTERY_TDP,
+  batteryTakesMore,
   batteryTexts,
   formatWatts,
+  highestTdp,
   limitsFor,
-  MAX_TDP,
   MIN_TDP,
   presetOf,
   steamTdpSlider,
   TDP_PRESETS,
   TDP_STEP,
+  tdpTop,
 } from "../power";
 import { unset } from "../problems";
 import { mainWindow, QuickAccessTab, steamTab } from "../quickAccess";
@@ -144,6 +145,7 @@ function OwnPower({ setting, power, game }: OwnPowerProps) {
   const holding = held.status === "ready" ? held.value : null;
   const heldLimits = applied ? (holding?.limits ?? null) : null;
   const highest = highestTdp(power, setting.batteryHighTdp);
+  const top = tdpTop(power);
   // A TDP chosen on the charger stays; on the battery the screen shows the 25 W held.
   const shown = Math.min(shownPower.tdp, highest);
   const limits = heldLimits?.spl === shown ? heldLimits : limitsFor({ ...shownPower, tdp: shown });
@@ -177,7 +179,8 @@ function OwnPower({ setting, power, game }: OwnPowerProps) {
         power={shownPower}
         general={general}
         highest={highest}
-        batteryHighTdp={setting.batteryHighTdp}
+        top={top}
+        batteryHighTdp={batteryTakesMore(power) ? setting.batteryHighTdp : null}
         drawn={drawn}
         status={status}
         onChange={save}
@@ -210,17 +213,13 @@ function GameProfileRow({ setting, game, own }: { setting: Settings; game: Game;
   );
 }
 
-/** The top of the TDP scale: 35 W on the charger, and on the battery only once allowed. */
-function highestTdp(power: PowerReadings | null, batteryHighTdp: boolean): number {
-  return power?.onBattery === true && !batteryHighTdp ? BATTERY_TDP : MAX_TDP;
-}
-
 /** The power drawn now on the dial, where ORIGAMI does not set the TDP. */
 function DrawnDial({ power }: { power: PowerReadings | null }) {
   const t = useMessages();
   const drawn = power?.packagePowerW ?? null;
   return (
     <Dial
+      top={tdpTop(power)}
       value={drawn === null ? t.unknown : formatNumber(drawn, t.locale, 1)}
       unit={t.units.watts}
       label={t.power.now}
@@ -238,7 +237,10 @@ interface PowerCardProps {
 
 interface TdpCardProps extends PowerCardProps {
   highest: number;
-  batteryHighTdp: boolean;
+  /** The firmware's top, where the scale ends. */
+  top: number;
+  /** null where the battery takes no more than 25 W anyway: no switch then. */
+  batteryHighTdp: boolean | null;
   drawn: number | null;
   status: DialStatus | null;
 }
@@ -249,7 +251,7 @@ interface TdpCardProps extends PowerCardProps {
  * presets the switch that unlocks the top of the scale on the battery, next to the lock it opens. It
  * is one for the general settings and every game.
  */
-function TdpCard({ power, general, highest, batteryHighTdp, drawn, status, onChange }: TdpCardProps) {
+function TdpCard({ power, general, highest, top, batteryHighTdp, drawn, status, onChange }: TdpCardProps) {
   const t = useMessages();
   const tdp = Math.min(power.tdp, highest);
   const preset = presetOf(tdp);
@@ -262,7 +264,8 @@ function TdpCard({ power, general, highest, batteryHighTdp, drawn, status, onCha
           unit={t.units.watts}
           label={general === null ? t.power.limit : t.power.gameLimit}
           fill={{ watts: tdp, kind: "on" }}
-          locked={highest < MAX_TDP ? highest : undefined}
+          top={top}
+          locked={highest < top ? highest : undefined}
         />
         <div className="og-tdp__side">
           <CardTitles
@@ -306,14 +309,18 @@ function TdpCard({ power, general, highest, batteryHighTdp, drawn, status, onCha
           selected: preset === undefined,
         }}
       />
-      <span className="og-card__divider" aria-hidden="true" />
-      <SwitchLine
-        title={t.power.batteryHigh}
-        subtitle={batteryHighTdp ? t.power.batteryHighOn : t.power.batteryHighOff}
-        value={batteryHighTdp}
-        action={t.actions.toggle}
-        onChange={(on) => void updateSettings({ batteryHighTdp: on })}
-      />
+      {batteryHighTdp !== null && (
+        <>
+          <span className="og-card__divider" aria-hidden="true" />
+          <SwitchLine
+            title={t.power.batteryHigh}
+            subtitle={batteryHighTdp ? t.power.batteryHighOn : t.power.batteryHighOff}
+            value={batteryHighTdp}
+            action={t.actions.toggle}
+            onChange={(on) => void updateSettings({ batteryHighTdp: on })}
+          />
+        </>
+      )}
     </Card>
   );
 }

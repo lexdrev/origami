@@ -5,7 +5,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "./i18n/en";
 import { ru } from "./i18n/ru";
-import { batteryTexts, limitsFor, presetOf, steamTdpSlider, watchSteamTdpLimit } from "./power";
+import {
+  batteryTakesMore,
+  batteryTexts,
+  highestTdp,
+  limitsFor,
+  presetOf,
+  steamTdpSlider,
+  tdpTop,
+  watchSteamTdpLimit,
+} from "./power";
 
 // The backend and Steam's performance store, which exist only inside Steam.
 const fake = vi.hoisted(() => {
@@ -92,5 +101,31 @@ describe("Steam's TDP slider", () => {
 
     expect(fake.reported).toEqual([false]);
     expect(steamTdpSlider.get()).toBeNull();
+  });
+});
+
+describe("the top of the TDP scale", () => {
+  const allyX = { onBattery: true, tdpTopW: 35, batteryTdpTopW: 35 };
+  const rogAlly = { onBattery: true, tdpTopW: 25, batteryTdpTopW: 25 };
+
+  it("ends where the firmware does", () => {
+    expect(tdpTop(allyX)).toBe(35);
+    expect(tdpTop({ onBattery: false, tdpTopW: 30, batteryTdpTopW: 25 })).toBe(30);
+    expect(tdpTop(null)).toBe(35);
+    expect(tdpTop({ onBattery: false, tdpTopW: null, batteryTdpTopW: null })).toBe(35);
+  });
+
+  it("holds 25 W on the battery until more is allowed, where the battery takes more", () => {
+    expect(highestTdp(allyX, false)).toBe(25);
+    expect(highestTdp(allyX, true)).toBe(35);
+    expect(highestTdp({ ...allyX, onBattery: false }, false)).toBe(35);
+    expect(batteryTakesMore(allyX)).toBe(true);
+  });
+
+  it("has nothing to allow on a battery that takes 25 W at most", () => {
+    expect(batteryTakesMore(rogAlly)).toBe(false);
+    expect(batteryTakesMore({ onBattery: false, tdpTopW: 30, batteryTdpTopW: 25 })).toBe(false);
+    expect(highestTdp(rogAlly, false)).toBe(25);
+    expect(batteryTakesMore({ onBattery: false, tdpTopW: 35, batteryTdpTopW: null })).toBe(true);
   });
 });

@@ -4,12 +4,12 @@
 import { MAX_TDP, MIN_TDP } from "../power";
 import { LockIcon } from "./icons";
 
-// The Power screen's dial (style B2): one tick a watt from 7 to 35 W on a 240° arc, every fifth
-// one longer, lit up to the value. It only shows; the TDP is set by the slider beside it. The arc
-// keeps its watts in place: those the battery does not allow stay on it as empty, locked ticks.
+// The Power screen's dial (style B2): one tick a watt from 7 W to the firmware's top (35 W on the
+// Ally X) on a 240° arc, every fifth one longer, lit up to the value. It only shows; the TDP is set by
+// the slider beside it. The arc keeps its watts in place: those the battery does not allow stay on
+// it as empty, locked ticks.
 
 const ARC_DEGREES = 240;
-const TICKS = MAX_TDP - MIN_TDP + 1;
 
 export type DialFill = "on" | "drawn";
 
@@ -26,15 +26,18 @@ interface DialFaceProps {
   fill: { watts: number; kind: DialFill };
   /** The watts over this are locked: on the battery, until more than 25 W is allowed. */
   locked?: number | undefined;
+  /** The highest watts on the arc: what the firmware takes. */
+  top?: number;
 }
 
 /** The arc and the reading in its middle, for the TDP card. */
-export function DialFace({ value, unit, label, fill, locked }: DialFaceProps) {
+export function DialFace({ value, unit, label, fill, locked, top = MAX_TDP }: DialFaceProps) {
+  const ticks = top - MIN_TDP + 1;
   return (
     <div className="og-dial__face" aria-hidden="true">
-      {Array.from({ length: TICKS }, (_, index) => {
+      {Array.from({ length: ticks }, (_, index) => {
         const watts = MIN_TDP + index;
-        const angle = -ARC_DEGREES / 2 + index * (ARC_DEGREES / (TICKS - 1));
+        const angle = -ARC_DEGREES / 2 + index * (ARC_DEGREES / (ticks - 1));
         const kind = locked !== undefined && watts > locked ? "locked" : watts <= fill.watts ? fill.kind : null;
         const classes = ["og-dial__tick", watts % 5 === 0 && "og-dial__tick--major", kind && `og-dial__tick--${kind}`];
         return (
@@ -53,7 +56,7 @@ export function DialFace({ value, unit, label, fill, locked }: DialFaceProps) {
         <span className="og-dial__label">{label}</span>
       </span>
       <span className="og-dial__end og-dial__end--low">{MIN_TDP}</span>
-      <span className="og-dial__end og-dial__end--high">{MAX_TDP}</span>
+      <span className="og-dial__end og-dial__end--high">{top}</span>
       {locked !== undefined && (
         <span className="og-dial__lock">
           <LockIcon />

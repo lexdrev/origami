@@ -29,6 +29,9 @@ MIN_TDP = 7
 MAX_TDP = 35
 BATTERY_TDP = 25
 """Highest TDP on the battery unless the user allows more: ORIGAMI's guard, not the firmware's."""
+BATTERY_TOPS = {"RC71L": 25}
+"""Highest TDP the firmware takes on the battery, where it is below the charger's (RC71L: 25 and
+30 W, owner's report 2026-11-04); on the battery itself ORIGAMI reads it."""
 SPPT_HEADROOM = 4
 FPPT_HEADROOM = 9
 """The factory's boost and peak above the sustained limit (17 / 21 / 26 W)."""
@@ -70,6 +73,18 @@ def read_ranges(root: Path) -> tuple[Range, Range, Range] | None:
         ranges.append(Range(low, high))
     spl, sppt, fppt = ranges
     return spl, sppt, fppt
+
+
+def read_tdp_top(root: Path) -> int | None:
+    """The highest sustained limit the firmware takes on the supply in use; None without it."""
+    return read_int(root / ARMOURY / ATTRIBUTES[0] / "max_value")
+
+
+def battery_tdp_top(root: Path, board: str | None) -> int | None:
+    """The highest sustained limit on the battery: read there, else known for the model."""
+    if not on_mains(root):
+        return read_tdp_top(root)
+    return BATTERY_TOPS.get(board) if board is not None else None
 
 
 def limits_for(tdp: int, *, headroom: bool, ranges: tuple[Range, Range, Range]) -> Limits:

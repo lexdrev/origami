@@ -6,8 +6,9 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from origami.device import DMI
 from origami.sysfs import find_hwmon, read_int, read_text
-from origami.tdp import POWER_SUPPLIES, on_mains
+from origami.tdp import POWER_SUPPLIES, battery_tdp_top, on_mains, read_tdp_top
 from origami.vibration import read_driver_strength
 
 ARMOURY = Path("sys/class/firmware-attributes/asus-armoury/attributes")
@@ -28,6 +29,10 @@ class BatteryTelemetry:
 class PowerTelemetry:
     tdp_limit_w: int | None
     """Sustained limit (SPL) as cached by asus-armoury; may differ from what firmware applies."""
+    tdp_top_w: int | None
+    """The highest sustained limit the firmware takes on the supply in use: 35 W on the Ally X."""
+    battery_tdp_top_w: int | None
+    """The highest on the battery, where known: 25 W on the ROG Ally, so no more to allow there."""
     package_power_w: float | None
     cpu_boost: bool | None
     on_battery: bool
@@ -59,6 +64,8 @@ def read_telemetry(root: Path) -> Telemetry:
     return Telemetry(
         power=PowerTelemetry(
             tdp_limit_w=read_int(root / ARMOURY / "ppt_pl1_spl" / "current_value"),
+            tdp_top_w=read_tdp_top(root),
+            battery_tdp_top_w=battery_tdp_top(root, read_text(root / DMI / "board_name")),
             package_power_w=_scaled(amdgpu, "power1_average", 1_000_000),
             cpu_boost=_flag(root / CPU_BOOST),
             on_battery=not on_mains(root),

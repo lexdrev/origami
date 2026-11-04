@@ -18,7 +18,13 @@ from fakes import FakeRoot
 def test_ally_x(ally_x: FakeRoot) -> None:
     assert read_telemetry(ally_x.path) == Telemetry(
         power=PowerTelemetry(
-            tdp_limit_w=17, package_power_w=16.9, cpu_boost=False, on_battery=False, battery=None
+            tdp_limit_w=17,
+            tdp_top_w=None,
+            battery_tdp_top_w=None,
+            package_power_w=16.9,
+            cpu_boost=False,
+            on_battery=False,
+            battery=None,
         ),
         fans=FanTelemetry(speeds_rpm=[4600, 4700], cpu_temp_c=61.625, gpu_temp_c=61.0),
         gamepad=GamepadTelemetry(vibration_pct=(50, 50)),
@@ -28,7 +34,13 @@ def test_ally_x(ally_x: FakeRoot) -> None:
 def test_other_hardware_reads_as_unknown(fake_root: FakeRoot) -> None:
     assert read_telemetry(fake_root.path) == Telemetry(
         power=PowerTelemetry(
-            tdp_limit_w=None, package_power_w=None, cpu_boost=None, on_battery=False, battery=None
+            tdp_limit_w=None,
+            tdp_top_w=None,
+            battery_tdp_top_w=None,
+            package_power_w=None,
+            cpu_boost=None,
+            on_battery=False,
+            battery=None,
         ),
         fans=FanTelemetry(speeds_rpm=[], cpu_temp_c=None, gpu_temp_c=None),
         gamepad=GamepadTelemetry(vibration_pct=None),
@@ -49,6 +61,23 @@ def test_unexpected_vibration_value(ally_x: FakeRoot, value: str) -> None:
     )
 
     assert read_telemetry(ally_x.path).gamepad.vibration_pct is None
+
+
+def test_the_tdp_top_is_the_firmwares(powered: FakeRoot) -> None:
+    power = read_telemetry(powered.path).power
+
+    assert (power.tdp_top_w, power.battery_tdp_top_w) == (35, 35)
+
+
+def test_the_rog_ally_takes_no_more_than_25_w_from_the_battery(powered: FakeRoot) -> None:
+    # The ROG Ally on the charger: 30 W at most there, and 25 W on the battery (owner's report).
+    powered.write("sys/class/dmi/id/board_name", "RC71L")
+    powered.write("sys/class/firmware-attributes/asus-armoury/attributes/ppt_pl1_spl/max_value", 30)
+    powered.write("sys/class/power_supply/AC0/online", 1)
+
+    power = read_telemetry(powered.path).power
+
+    assert (power.tdp_top_w, power.battery_tdp_top_w) == (30, 25)
 
 
 def test_the_battery(powered: FakeRoot) -> None:

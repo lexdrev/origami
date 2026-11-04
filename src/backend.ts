@@ -43,6 +43,10 @@ export interface Telemetry {
   power: {
     /** What asus-armoury shows for the supply in use: what was written last, not what the firmware applies. */
     tdpLimitW: number | null;
+    /** The highest sustained limit the firmware takes on the supply in use: 35 W on the Ally X. */
+    tdpTopW: number | null;
+    /** The highest on the battery, where known: 25 W on the ROG Ally, so no more to allow there. */
+    batteryTdpTopW: number | null;
     packagePowerW: number | null;
     cpuBoost: boolean | null;
     onBattery: boolean;
