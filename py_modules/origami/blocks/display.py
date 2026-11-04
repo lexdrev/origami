@@ -50,14 +50,24 @@ class DisplayBlock:
             await asyncio.to_thread(journal.record, "display", "saturation", original)
         await write_saturation(root, percent)
 
-    async def restore_saturation(self, settings: Settings) -> None:
-        """Send the saved saturation again; failures are only logged."""
+    async def restore_saturation(self, settings: Settings, *, last_try: bool = True) -> bool:
+        """Send the saved saturation again; False when gamescope could not be reached yet.
+
+        Right after Steam's session starts, xprop may find no display or be refused at first
+        ("Authorization required", 2026-11-02 on Bazzite, 2026-11-04 on SteamOS), so the caller
+        tries again. Failures are logged on the last try, and at once when another try cannot help.
+        """
         if settings.saturation is None:
-            return
+            return True
         try:
             await self.send_saturation(settings.saturation)
-        except (CommandError, OSError, RuntimeError, TimeoutError) as error:
+        except (CommandError, TimeoutError) as error:
+            if last_try:
+                log.warning("Saturation not restored: %s", error)
+            return False
+        except (OSError, RuntimeError) as error:
             log.warning("Saturation not restored: %s", error)
+        return True
 
     async def give_back_saturation(self, owner: str | None) -> None:
         """Gamescope's saturation as it was before ORIGAMI, unless a plugin sets it now."""

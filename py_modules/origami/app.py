@@ -36,6 +36,9 @@ log = logging.getLogger(__name__)
 
 RESUME_SETTLE_SECONDS = 2.0
 """The driver resets the controller on resume; ORIGAMI sends its settings after that."""
+SATURATION_RETRY_SECONDS = 3.0
+SATURATION_TRIES = 10
+"""A saturation gamescope did not take is sent again every 3 s for 30 s."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +87,9 @@ class Origami:
         self._ready = asyncio.Event()
         self._start_error: Exception | None = None
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
+        self._saturation_again = BackgroundTask(
+            "origami-saturation-again", self._saturation_retries
+        )
         self._power = PowerBlock(context)
         self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
         self._display = DisplayBlock(context, self._controller_lock)
@@ -209,7 +215,7 @@ class Origami:
         """
         await self._started()
         async with self._settings_lock:
-            await self._display.restore_saturation(self._settings)
+            await self._restore_saturation()
 
     async def power(self) -> HeldPower:
         """The limits ORIGAMI holds now, for the Power screen."""
@@ -298,6 +304,7 @@ class Origami:
         off with the right stick given back to the game.
         """
         self._after_resume.cancel()
+        self._saturation_again.cancel()
         self._fans.stop()
         self._power.stop()
         self._gamepad.stop()
@@ -341,7 +348,24 @@ class Origami:
                 # A change saved meanwhile is not overwritten by what was set before it.
                 async with self._settings_lock:
                     await self._restore_controller()
-                    await self._display.restore_saturation(self._settings)
+                    await self._restore_saturation()
+
+    async def _restore_saturation(self) -> None:
+        """Send the saved saturation, and keep trying a while when gamescope is not ready yet.
+
+        Called with the settings lock held; the tries after the first run apart, without it.
+        """
+        self._saturation_again.cancel()
+        if not await self._display.restore_saturation(self._settings, last_try=False):
+            self._saturation_again.start()
+
+    async def _saturation_retries(self) -> None:
+        for attempt in range(1, SATURATION_TRIES + 1):
+            await asyncio.sleep(SATURATION_RETRY_SECONDS)
+            async with self._settings_lock:
+                last_try = attempt == SATURATION_TRIES
+                if await self._display.restore_saturation(self._settings, last_try=last_try):
+                    return
 
     async def _board(self) -> str | None:
         return (await self.info()).device.board

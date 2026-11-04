@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import logging
 import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -423,6 +424,95 @@ def test_saturation_is_written_kept_journaled_and_restored(
         assert screen["written"] == [150, 150]
 
     asyncio.run(scenario())
+
+
+def test_saturation_is_sent_again_while_gamescope_refuses(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Right after the session starts, xprop is refused at first; ORIGAMI keeps trying a while."""
+    written: list[int] = []
+    refusals = [0]
+    sent = asyncio.Event()
+
+    async def read(_root: Path) -> int:
+        return 100
+
+    async def write(_root: Path, percent: int) -> None:
+        if refusals[0] > 0:
+            refusals[0] -= 1
+            raise CommandError("xprop exited with 1: Authorization required")
+        written.append(percent)
+        sent.set()
+
+    monkeypatch.setattr(display_block, "read_saturation", read)
+    monkeypatch.setattr(display_block, "write_saturation", write)
+    monkeypatch.setattr(app_module, "SATURATION_RETRY_SECONDS", 0.01)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"saturation": 150})
+        written.clear()
+        sent.clear()
+        refusals[0] = 2
+
+        await app.restore_saturation()
+        assert written == []
+        async with asyncio.timeout(1):
+            await sent.wait()
+
+        assert written == [150]
+        app.stop()
+
+    with caplog.at_level(logging.WARNING):
+        asyncio.run(scenario())
+    assert not any("Saturation" in record.message for record in caplog.records)
+
+
+def test_saturation_tries_end_with_one_warning(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    refusing = [False]
+    tries: list[int] = []
+    given_up = asyncio.Event()
+
+    async def read(_root: Path) -> int:
+        return 100
+
+    async def write(_root: Path, _percent: int) -> None:
+        if refusing[0]:
+            tries.append(1)
+            if len(tries) == 1 + app_module.SATURATION_TRIES:
+                given_up.set()
+            raise CommandError("xprop:  unable to open display ':0'")
+
+    monkeypatch.setattr(display_block, "read_saturation", read)
+    monkeypatch.setattr(display_block, "write_saturation", write)
+    monkeypatch.setattr(app_module, "SATURATION_RETRY_SECONDS", 0.001)
+    monkeypatch.setattr(app_module, "SATURATION_TRIES", 3)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"saturation": 150})
+        refusing[0] = True
+
+        await app.restore_saturation()
+        async with asyncio.timeout(1):
+            await given_up.wait()
+        app.stop()
+
+    with caplog.at_level(logging.WARNING):
+        asyncio.run(scenario())
+    assert [r.message for r in caplog.records if "Saturation" in r.message] == [
+        "Saturation not restored: xprop:  unable to open display ':0'"
+    ]
 
 
 def test_uninstalling_gives_the_saturation_back_without_waiting(
