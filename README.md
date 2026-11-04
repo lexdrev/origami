@@ -46,7 +46,7 @@ console has on Linux today.
 
 ## What it fixes
 
-| On Bazzite 44 | ORIGAMI |
+| On Bazzite 45 | ORIGAMI |
 |---|---|
 | The TDP drops after sleep and game starts; Steam's slider works only in the Performance profile | Holds the TDP you set and writes it again after sleep, the charger, profile changes and game starts |
 | The CPU frequency cap slips after the charger or the profile changes | Programs the cap again and watches the cores |
@@ -65,7 +65,7 @@ Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or 
 ## Tested on
 
 - ROG Xbox Ally X (board RC73XA)
-- Bazzite 44.20261026, kernel 7.2.11-ogc4.1, InputPlumber 0.83.0, Decky Loader 3.3.1
+- Bazzite 45.20261104, kernel 7.2.15-ogc1.1, InputPlumber 0.83.1, Decky Loader 3.3.1
 
 ORIGAMI also knows the ROG Xbox Ally X20 (board RC74XA), but it has not been tried on one yet, nor on SteamOS.
 

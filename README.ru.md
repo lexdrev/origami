@@ -46,7 +46,7 @@ ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomeb
 
 ## Что исправляет
 
-| В Bazzite 44 | ORIGAMI |
+| В Bazzite 45 | ORIGAMI |
 |---|---|
 | TDP слетает после сна и запуска игр; ползунок Steam работает только в профиле «Производительность» | Держит заданный TDP и записывает его заново после сна, зарядки, смены профиля и запуска игр |
 | Предел частоты CPU слетает после зарядки и смены профиля | Заново программирует предел и следит за ядрами |
@@ -66,7 +66,7 @@ ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomeb
 ## На чём проверено
 
 - ROG Xbox Ally X (плата RC73XA)
-- Bazzite 44.20261026, ядро 7.2.11-ogc4.1, InputPlumber 0.83.0, Decky Loader 3.3.1
+- Bazzite 45.20261104, ядро 7.2.15-ogc1.1, InputPlumber 0.83.1, Decky Loader 3.3.1
 
 ORIGAMI знает и ROG Xbox Ally X20 (плата RC74XA), но на ней его ещё не проверяли, как и на SteamOS.
 
