@@ -16,6 +16,7 @@ from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
 from origami.blocks.gamepad import GamepadBlock
 from origami.blocks.power import PowerBlock, power_settings_changed
+from origami.buttons import Button, layout_for
 from origami.decky_plugins import Conflicts, read_conflicts
 from origami.device import Device, read_device
 from origami.gyro import GyroState
@@ -60,6 +61,8 @@ class Info:
     version: str
     device: Device
     versions: Versions
+    buttons: tuple[Button, ...]
+    """The buttons ORIGAMI may drive here; the system keeps the others (both on the ROG Ally)."""
 
 
 class Origami:
@@ -108,7 +111,10 @@ class Origami:
             await asyncio.to_thread(self._journal.load)
             device = await asyncio.to_thread(read_device, self._env.root)
             versions = await read_versions(self._env.root, decky=self._env.decky_version)
-            self._info = Info(version=self._env.version, device=device, versions=versions)
+            buttons = sorted(layout_for(device.board).buttons, key=lambda button: button.value)
+            self._info = Info(
+                version=self._env.version, device=device, versions=versions, buttons=tuple(buttons)
+            )
             log.info("ORIGAMI %s started, board %s", self._env.version, device.board)
         except Exception as error:
             # Surfaced to every frontend call instead of leaving them waiting forever.

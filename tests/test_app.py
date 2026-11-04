@@ -21,7 +21,7 @@ from origami.blocks import fans as fans_block
 from origami.blocks import gamepad as gamepad_block
 from origami.blocks import power as power_block
 from origami.blocks.buttons import BUTTON_ACTION, QAM_PRESSED
-from origami.buttons import ButtonAction
+from origami.buttons import Button, ButtonAction
 from origami.decky_plugins import (
     FAN_OWNERS,
     LIGHTING_OWNERS,
@@ -124,9 +124,41 @@ def test_info_after_start(ally_x: FakeRoot, tmp_path: Path) -> None:
         assert info.version == "0.1.0"
         assert info.device.model == "ROG Xbox Ally X"
         assert info.versions.inputplumber == "0.83.1"
+        assert set(info.buttons) == {
+            Button.QUICK_ACCESS,
+            Button.ARMOURY_CRATE,
+            Button.ARMOURY_CRATE_HOLD,
+        }
         assert await app.changes() == []
 
     asyncio.run(scenario())
+
+
+def test_the_rog_ally_reads_none_of_its_buttons(
+    ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ally_x.write("sys/class/dmi/id/board_name", "RC71L")
+    read: list[frozenset[Button]] = []
+
+    async def presses(
+        _root: Path, buttons: frozenset[Button], **_options: object
+    ) -> AsyncGenerator[Button]:
+        read.append(buttons)
+        await asyncio.Event().wait()
+        yield Button.QUICK_ACCESS
+
+    monkeypatch.setattr(buttons_block, "button_presses", presses)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"qam_assist": True})
+
+        assert (await app.info()).buttons == ()
+        app.stop()
+
+    asyncio.run(scenario())
+    assert read == []
 
 
 def test_calls_wait_for_start(ally_x: FakeRoot, tmp_path: Path) -> None:

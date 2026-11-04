@@ -33,6 +33,7 @@ const sources = (changes: Partial<ProblemSources> = {}): ProblemSources => ({
   conflicts: alone,
   gyro: "wrong",
   triggers: "available",
+  buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   steamTdpSlider: false,
   contested: false,
   ...changes,
@@ -88,6 +89,17 @@ describe("problems on the tiles", () => {
     // Another plugin owns the power, and its own block already says so.
     const owned = { ...alone, power: "Power Plugin" };
     expect(tileProblems(sources({ settings: restored, conflicts: owned })).power).toBe(1);
+  });
+});
+
+describe("problems of the buttons", () => {
+  it("count only the buttons ORIGAMI may drive on the model", () => {
+    // The ROG Ally X: the system opens the quick access menu with its Armoury Crate button.
+    expect(tileProblems(sources({ buttons: ["quick_access"] })).gamepad).toBe(3);
+    // The ROG Ally: both its buttons are the system's.
+    expect(tileProblems(sources({ buttons: [] })).gamepad).toBe(2);
+    // Not known yet: neither counts.
+    expect(tileProblems(sources({ buttons: null })).gamepad).toBe(2);
   });
 });
 

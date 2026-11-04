@@ -6,11 +6,12 @@ import { useEffect, useState } from "react";
 import type { TriggerRumble, Vibration } from "../backend";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
-import { buttonUnset, gyroProblem, unset } from "../problems";
+import { buttonUnset, drives, gyroProblem, unset } from "../problems";
 import { UISound } from "../sounds";
 import {
   conflicts,
   gyro,
+  info,
   refreshConflicts,
   refreshGyro,
   refreshTriggerState,
@@ -53,6 +54,7 @@ export function GamepadScreen() {
   const t = useMessages();
   const current = useStore(settings);
   const owners = useStore(conflicts);
+  const plugin = useStore(info);
 
   useEffect(() => {
     void refreshConflicts();
@@ -71,6 +73,7 @@ export function GamepadScreen() {
   const vibrationOwner = owners.value.vibration;
   const triggerOwner = separateTriggerOwner(owners.value);
   const { armouryCrate, armouryCrateHold } = current.value;
+  const buttons = plugin.status === "ready" ? plugin.value.buttons : null;
   const buttonSummary = armouryCrateSummary(armouryCrate ?? "none", armouryCrateHold ?? "none", t);
   return (
     <Screen onBack={back}>
@@ -95,24 +98,30 @@ export function GamepadScreen() {
           />
         )
       )}
-      <ToggleRow
-        title={t.gamepad.qamAssist}
-        subtitle={current.value.qamAssist ? t.gamepad.qamAssistOn : t.gamepad.qamAssistOff}
-        problem={unset(current.value.qamAssist)}
-        value={current.value.qamAssist ?? false}
-        action={t.actions.toggle}
-        onChange={(qamAssist) => void updateSettings({ qamAssist })}
-      />
+      {/* Steam catches every press of the ROG Ally's quick access button itself. */}
+      {drives(buttons, "quick_access") && (
+        <ToggleRow
+          title={t.gamepad.qamAssist}
+          subtitle={current.value.qamAssist ? t.gamepad.qamAssistOn : t.gamepad.qamAssistOff}
+          problem={unset(current.value.qamAssist)}
+          value={current.value.qamAssist ?? false}
+          action={t.actions.toggle}
+          onChange={(qamAssist) => void updateSettings({ qamAssist })}
+        />
+      )}
       <GyroFix fix={current.value.gyroFix} />
-      <NavRow
-        title={t.gamepad.armouryCrate}
-        subtitle={buttonSummary ?? t.gamepad.armouryCrateUnassigned}
-        problem={buttonUnset(armouryCrate, armouryCrateHold)}
-        action={t.actions.open}
-        onPress={() => {
-          navigate("armouryCrate");
-        }}
-      />
+      {/* On the ROG Ally and the ROG Ally X the system opens the quick access menu with this button. */}
+      {drives(buttons, "armoury_crate") && (
+        <NavRow
+          title={t.gamepad.armouryCrate}
+          subtitle={buttonSummary ?? t.gamepad.armouryCrateUnassigned}
+          problem={buttonUnset(armouryCrate, armouryCrateHold)}
+          action={t.actions.open}
+          onPress={() => {
+            navigate("armouryCrate");
+          }}
+        />
+      )}
     </Screen>
   );
 }

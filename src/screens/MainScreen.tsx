@@ -38,6 +38,7 @@ export function MainScreen() {
   const owners = useStore(conflicts);
   const motors = useStore(triggerState);
   const axes = useStore(gyro);
+  const plugin = useStore(info);
   const slider = useStore(steamTdpSlider) === true;
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.
@@ -70,6 +71,7 @@ export function MainScreen() {
           conflicts: others,
           gyro: axes.status === "ready" ? axes.value : null,
           triggers: motors.status === "ready" ? motors.value : null,
+          buttons: plugin.status === "ready" ? plugin.value.buttons : null,
           steamTdpSlider: slider,
           contested: held.status === "ready" && held.value.contested,
         })

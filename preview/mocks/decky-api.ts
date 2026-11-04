@@ -20,6 +20,7 @@ const info: Info = {
     inputplumber: "0.83.1",
     decky: "v3.3.1",
   },
+  buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
 };
 
 let settings: Settings = {

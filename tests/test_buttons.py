@@ -63,8 +63,18 @@ def test_the_x20_reports_its_buttons_with_codes_of_its_own(
 
 def test_boards_without_a_layout_of_their_own_get_the_xbox_ally_x_one() -> None:
     assert layout_for(None) is ALLY
-    assert layout_for("RC72LA") is ALLY
+    assert layout_for("RC73YA") is ALLY
     assert layout_for("RC74XA") is X20
+
+
+def test_the_system_keeps_the_armoury_crate_button_of_the_older_allys() -> None:
+    every = {Button.QUICK_ACCESS, Button.ARMOURY_CRATE, Button.ARMOURY_CRATE_HOLD}
+    assert layout_for("RC73XA").buttons == every
+    assert layout_for("RC74XA").buttons == every
+    # The ROG Ally X: Armoury Crate opens the quick access menu already.
+    assert layout_for("RC72LA").buttons == {Button.QUICK_ACCESS}
+    # The ROG Ally: both its buttons are the system's, and Steam catches every press itself.
+    assert layout_for("RC71L").buttons == frozenset()
 
 
 def test_a_held_key_is_one_press() -> None:

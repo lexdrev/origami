@@ -62,7 +62,7 @@ class ButtonsBlock:
 
     async def follow(self, settings: Settings) -> None:
         self._settings = settings
-        buttons = driven_buttons(settings)
+        buttons = driven_buttons(settings) & layout_for(self._board()).buttons
         if buttons != self._read:
             # The reader opens only the interfaces its buttons come from.
             await self._reader.stop()

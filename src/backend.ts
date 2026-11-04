@@ -24,10 +24,15 @@ export interface Versions {
   decky: string | null;
 }
 
+/** A button of the console ORIGAMI may drive (origami.buttons.Button). */
+export type ConsoleButton = "quick_access" | "armoury_crate" | "armoury_crate_hold";
+
 export interface Info {
   version: string;
   device: Device;
   versions: Versions;
+  /** The buttons ORIGAMI may drive here; the system keeps the others (both of the ROG Ally's). */
+  buttons: ConsoleButton[];
 }
 
 export interface BatteryTelemetry {

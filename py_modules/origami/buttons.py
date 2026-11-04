@@ -82,6 +82,11 @@ class Layout:
     keyboard_keys: Mapping[int, Button]
     """HID usages of the keys it sends for its buttons on the keyboard interface."""
 
+    @property
+    def buttons(self) -> frozenset[Button]:
+        """The buttons ORIGAMI may drive on this model; the system keeps the others."""
+        return frozenset(self.vendor_codes.values()) | frozenset(self.keyboard_keys.values())
+
     def interface_of(self, button: Button) -> str:
         return KEYBOARD_INTERFACE if button in self.keyboard_keys.values() else CONFIG_INTERFACE
 
@@ -98,7 +103,14 @@ X20 = Layout(
     },
     keyboard_keys={},
 )
-LAYOUTS = {"RC74XA": X20}
+ROG_ALLY = Layout(vendor_codes={}, keyboard_keys={})
+"""The ROG Ally (RC71L): the system takes both its buttons, Command Center for Steam's menu and
+Armoury Crate for the quick access menu, and Steam catches every press of it there (29 of 29 in
+its owner's report, 2026-11-04), so ORIGAMI drives none."""
+ALLY_X_2024 = Layout(vendor_codes={0x93: Button.QUICK_ACCESS}, keyboard_keys={})
+"""The ROG Ally X (RC72LA): the system takes its Armoury Crate button as on the ROG Ally; its
+quick access press as the Xbox Ally X's (not tried on one)."""
+LAYOUTS = {"RC71L": ROG_ALLY, "RC72LA": ALLY_X_2024, "RC74XA": X20}
 """Boards whose controller reports its buttons otherwise than the ROG Xbox Ally X's."""
 
 
