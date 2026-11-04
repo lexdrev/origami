@@ -16,7 +16,13 @@ def test_ally_x(ally_x: FakeRoot) -> None:
 
 @pytest.mark.parametrize(
     ("board", "model"),
-    [("RC74XA", "ROG Xbox Ally X20"), ("RC72LA", None), ("Jupiter", None)],
+    [
+        ("RC71L", "ROG Ally"),
+        ("RC72LA", "ROG Ally X"),
+        ("RC73YA", "ROG Xbox Ally"),
+        ("RC74XA", "ROG Xbox Ally X20"),
+        ("Jupiter", None),
+    ],
 )
 def test_model_is_detected_by_board(fake_root: FakeRoot, board: str, model: str | None) -> None:
     fake_root.write("sys/class/dmi/id/board_name", board)

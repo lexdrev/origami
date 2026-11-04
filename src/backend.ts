@@ -12,7 +12,13 @@ export interface Device {
 }
 
 export interface Versions {
-  os: { name: string | null; versionId: string | null; imageVersion: string | null };
+  os: {
+    id: string | null;
+    name: string | null;
+    versionId: string | null;
+    imageVersion: string | null;
+    buildId: string | null;
+  };
   kernel: string | null;
   inputplumber: string | null;
   decky: string | null;

@@ -23,10 +23,14 @@ _ESCAPED = re.compile(r"\\(.)", re.DOTALL)
 
 @dataclass(frozen=True, slots=True)
 class OsRelease:
+    id: str | None
+    """The system's short name: bazzite, steamos."""
     name: str | None
     version_id: str | None
     image_version: str | None
     """Full build of an image-based system, e.g. 45.20261104 on Bazzite."""
+    build_id: str | None
+    """SteamOS keeps its build here, e.g. 20261023.100; Bazzite a description of its image."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,9 +62,11 @@ def read_os_release(root: Path) -> OsRelease:
             fields = parse_os_release(text)
             break
     return OsRelease(
+        id=fields.get("ID"),
         name=fields.get("NAME"),
         version_id=fields.get("VERSION_ID"),
         image_version=fields.get("OSTREE_VERSION"),
+        build_id=fields.get("BUILD_ID"),
     )
 
 

@@ -40,7 +40,8 @@ def ally_x(fake_root: FakeRoot) -> FakeRoot:
     fake_root.write("proc/sys/kernel/osrelease", "7.2.15-ogc1.1.fc45.x86_64")
     fake_root.write(
         "usr/lib/os-release",
-        'NAME="Bazzite"\nVERSION_ID="45"\nOSTREE_VERSION=\'45.20261104\'',
+        'NAME="Bazzite"\nID=bazzite\nVERSION_ID="45"\nOSTREE_VERSION=\'45.20261104\'\n'
+        'BUILD_ID="Stable (F45.20261104)"',
     )
     return fake_root
 

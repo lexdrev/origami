@@ -9,7 +9,11 @@ from origami.sysfs import read_text
 DMI = Path("sys/class/dmi/id")
 
 # Matched by board name: the X20 reports sys_vendor "ASUS" instead of "ASUSTeK COMPUTER INC.".
+# Names only: what ORIGAMI does on a model still follows its own lists of boards.
 MODELS = {
+    "RC71L": "ROG Ally",
+    "RC72LA": "ROG Ally X",
+    "RC73YA": "ROG Xbox Ally",
     "RC73XA": "ROG Xbox Ally X",
     "RC74XA": "ROG Xbox Ally X20",
 }
@@ -20,7 +24,7 @@ class Device:
     board: str | None
     product: str | None
     model: str | None
-    """Known model name; None on hardware ORIGAMI does not support."""
+    """Known model name; None on hardware ORIGAMI does not know."""
 
 
 def read_device(root: Path) -> Device:
