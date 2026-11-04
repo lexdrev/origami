@@ -49,7 +49,7 @@ from fakes import FakeHidBpf, FakeRoot
 @pytest.fixture(autouse=True)
 def no_busctl(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_run(*_args: str) -> str:
-        return '{"type":"s","data":"0.83.0"}'
+        return '{"type":"s","data":"0.83.1"}'
 
     monkeypatch.setattr(versions, "run", fake_run)
 
@@ -79,7 +79,7 @@ def make_app(
         decky_home=tmp_path / "decky",
         plugin_dir=tmp_path / "plugin",
         version="0.1.0",
-        decky_version="v3.3.0",
+        decky_version="v3.3.1",
     )
     return Origami(environment, emit=emit, attach_bpf=bpf or FakeHidBpf())
 
@@ -122,7 +122,7 @@ def test_info_after_start(ally_x: FakeRoot, tmp_path: Path) -> None:
 
         assert info.version == "0.1.0"
         assert info.device.model == "ROG Xbox Ally X"
-        assert info.versions.inputplumber == "0.83.0"
+        assert info.versions.inputplumber == "0.83.1"
         assert await app.changes() == []
 
     asyncio.run(scenario())

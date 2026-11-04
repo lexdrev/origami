@@ -41,7 +41,7 @@ body:
       description: >-
         In ORIGAMI: Settings → System changes, under the console. ·
         В ORIGAMI: Настройки → Изменения в системе, под консолью.
-      placeholder: "Bazzite 44.20261026 / SteamOS 3.9.5"
+      placeholder: "Bazzite 45.20261104 / SteamOS 3.9.5"
     validations:
       required: true
 

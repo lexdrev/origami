@@ -37,10 +37,10 @@ def ally_x(fake_root: FakeRoot) -> FakeRoot:
     fake_root.hwmon(5, "amdgpu", power1_average=16_900_000, temp1_input=61000)
     fake_root.hwmon(6, "asus", fan1_input=4600, fan2_input=4700)
     fake_root.hwmon(7, "k10temp", temp1_input=61625)
-    fake_root.write("proc/sys/kernel/osrelease", "7.2.9-ogc3.1.fc44.x86_64")
+    fake_root.write("proc/sys/kernel/osrelease", "7.2.15-ogc1.1.fc45.x86_64")
     fake_root.write(
         "usr/lib/os-release",
-        'NAME="Bazzite"\nVERSION_ID="44"\nOSTREE_VERSION=\'44.20261023\'',
+        'NAME="Bazzite"\nVERSION_ID="45"\nOSTREE_VERSION=\'45.20261104\'',
     )
     return fake_root
 

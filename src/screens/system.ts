@@ -15,7 +15,7 @@ export function deviceName(info: Info): string | null {
   return info.device.model ?? info.device.product;
 }
 
-/** "Bazzite 44". */
+/** "Bazzite 45". */
 export function systemName(info: Info): string | null {
   const name = present(info.versions.os.name, info.versions.os.versionId).join(" ");
   return name === "" ? null : name;

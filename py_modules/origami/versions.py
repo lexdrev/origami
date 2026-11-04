@@ -26,7 +26,7 @@ class OsRelease:
     name: str | None
     version_id: str | None
     image_version: str | None
-    """Full build of an image-based system, e.g. 44.20261023 on Bazzite."""
+    """Full build of an image-based system, e.g. 45.20261104 on Bazzite."""
 
 
 @dataclass(frozen=True, slots=True)

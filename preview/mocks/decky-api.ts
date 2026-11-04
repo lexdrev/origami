@@ -9,10 +9,10 @@ const info: Info = {
   version: "1.0.0",
   device: { board: "RC73XA", product: "ROG Xbox Ally X RC73XA_RC73XA", model: "ROG Xbox Ally X" },
   versions: {
-    os: { name: "Bazzite", versionId: "44", imageVersion: "44.20261023" },
-    kernel: "7.2.9-ogc3.1.fc44.x86_64",
-    inputplumber: "0.83.0",
-    decky: "v3.3.0",
+    os: { name: "Bazzite", versionId: "45", imageVersion: "45.20261104" },
+    kernel: "7.2.15-ogc1.1.fc45.x86_64",
+    inputplumber: "0.83.1",
+    decky: "v3.3.1",
   },
 };
 

@@ -11,17 +11,17 @@ const info: Info = {
   version: "0.1.0",
   device: { board: "RC73XA", product: "ROG Xbox Ally X RC73XA_RC73XA", model: "ROG Xbox Ally X" },
   versions: {
-    os: { name: "Bazzite", versionId: "44", imageVersion: "44.20261023" },
-    kernel: "7.2.9-ogc3.1.fc44.x86_64",
-    inputplumber: "0.83.0",
-    decky: "v3.3.0",
+    os: { name: "Bazzite", versionId: "45", imageVersion: "45.20261104" },
+    kernel: "7.2.15-ogc1.1.fc45.x86_64",
+    inputplumber: "0.83.1",
+    decky: "v3.3.1",
   },
 };
 
 describe("system information", () => {
   it("names the device and the system", () => {
     expect(deviceName(info)).toBe("ROG Xbox Ally X");
-    expect(systemName(info)).toBe("Bazzite 44");
+    expect(systemName(info)).toBe("Bazzite 45");
   });
 
   it("falls back to the DMI product name on other hardware", () => {
@@ -41,10 +41,10 @@ describe("system information", () => {
 
     expect(systemFacts(partial, ru)).toEqual([
       ["Устройство", "ROG Xbox Ally X · RC73XA"],
-      ["Bazzite", "44.20261023"],
-      ["Ядро", "7.2.9-ogc3.1.fc44.x86_64"],
+      ["Bazzite", "45.20261104"],
+      ["Ядро", "7.2.15-ogc1.1.fc45.x86_64"],
       ["InputPlumber", "—"],
-      ["Decky", "3.3.0"],
+      ["Decky", "3.3.1"],
     ]);
   });
 });

@@ -2,8 +2,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * The few kernel types ORIGAMI's HID-BPF programs need, instead of a whole vmlinux.h.
- * Same layout as kernel 7.2.11-ogc4.1 (checked against its /sys/kernel/btf/vmlinux). libbpf matches
- * struct_ops members to the kernel's by name, so hid_bpf_ops keeps the kernel's names.
+ * Same layout as kernels 7.2.11-ogc4.1 and 7.2.15-ogc1.1 (checked against their /sys/kernel/btf/vmlinux).
+ * libbpf matches struct_ops members to the kernel's by name, so hid_bpf_ops keeps the kernel's names.
  */
 #ifndef ORIGAMI_HID_BPF_KERNEL_H
 #define ORIGAMI_HID_BPF_KERNEL_H

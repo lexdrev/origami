@@ -4,7 +4,7 @@
 import { findModuleExport, replacePatch } from "@decky/ui";
 
 // The paste key of Steam's on-screen keyboard presses Ctrl+V through SteamClient.Input. gamescope
-// passes such keys on without their Ctrl (3.17.0 on Bazzite 44), so the field gets a plain "v".
+// passes such keys on without their Ctrl (3.17.0 on Bazzite 44 and 45), so the field gets a plain "v".
 // ORIGAMI presses the two keys on InputPlumber's keyboard instead, which gamescope takes as a real
 // keyboard, and lets Steam paste its own way when that cannot be done.
 

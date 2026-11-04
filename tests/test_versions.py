@@ -18,7 +18,7 @@ def test_os_release_quoting() -> None:
             "# comment",
             'NAME="Bazzite"',
             "ID=bazzite",
-            "OSTREE_VERSION='44.20261023'",
+            "OSTREE_VERSION='45.20261104'",
             r'PRETTY_NAME="Say \"hi\" \$HOME"',
             "",
             "not a field",
@@ -29,7 +29,7 @@ def test_os_release_quoting() -> None:
     assert parse_os_release(text) == {
         "NAME": "Bazzite",
         "ID": "bazzite",
-        "OSTREE_VERSION": "44.20261023",
+        "OSTREE_VERSION": "45.20261104",
         "PRETTY_NAME": 'Say "hi" $HOME',
     }
 
@@ -47,17 +47,17 @@ def test_versions(ally_x: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> None:
 
     async def fake_run(*args: str) -> str:
         calls.append(args)
-        return '{"type":"s","data":"0.83.0"}\n'
+        return '{"type":"s","data":"0.83.1"}\n'
 
     monkeypatch.setattr(versions, "run", fake_run)
 
-    result = asyncio.run(read_versions(ally_x.path, decky="v3.3.0"))
+    result = asyncio.run(read_versions(ally_x.path, decky="v3.3.1"))
 
     assert result == Versions(
-        os=OsRelease(name="Bazzite", version_id="44", image_version="44.20261023"),
-        kernel="7.2.9-ogc3.1.fc44.x86_64",
-        inputplumber="0.83.0",
-        decky="v3.3.0",
+        os=OsRelease(name="Bazzite", version_id="45", image_version="45.20261104"),
+        kernel="7.2.15-ogc1.1.fc45.x86_64",
+        inputplumber="0.83.1",
+        decky="v3.3.1",
     )
     # Interface name checked on the console with busctl introspect (InputPlumber 0.83.0).
     assert calls[0][0] == "busctl"
