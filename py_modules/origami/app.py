@@ -20,7 +20,7 @@ from origami.decky_plugins import Conflicts, read_conflicts
 from origami.device import Device, read_device
 from origami.gyro import GyroState
 from origami.hid_bpf import HidBpfProgram
-from origami.inputplumber import PASTE, press_keys
+from origami.inputplumber import PASTE, NoKeyboardError, press_keys
 from origami.journal import Change, ChangeJournal
 from origami.lighting import Lighting
 from origami.power import HeldPower, resumes
@@ -183,13 +183,18 @@ class Origami:
         await self._started()
         await self._gamepad.test_trigger_rumble(self._settings.trigger_rumble)
 
-    async def paste(self) -> None:
+    async def paste(self) -> bool:
         """Press Ctrl+V for the paste key of Steam's on-screen keyboard, through InputPlumber.
 
-        Steam's own Ctrl+V loses its Ctrl in gamescope and types a "v". Raise CommandError or
-        TimeoutError when InputPlumber cannot do it, so the frontend lets Steam try its way.
+        Steam's own Ctrl+V loses its Ctrl in gamescope and types a "v". False where InputPlumber
+        has no keyboard for the controller (0.78 on SteamOS): Steam pastes its way then. Raise
+        CommandError or TimeoutError when InputPlumber fails otherwise, so Steam tries its way too.
         """
-        await asyncio.to_thread(press_keys, self._env.root, PASTE)
+        try:
+            await asyncio.to_thread(press_keys, self._env.root, PASTE)
+        except NoKeyboardError:
+            return False
+        return True
 
     async def saturation(self) -> int | None:
         """The saturation gamescope shows now, ORIGAMI's or not; None without gamescope."""

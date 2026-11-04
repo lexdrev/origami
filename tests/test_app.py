@@ -30,7 +30,7 @@ from origami.decky_plugins import (
     VIBRATION_OWNERS,
 )
 from origami.gyro import GyroState
-from origami.inputplumber import PASTE, Chord
+from origami.inputplumber import PASTE, Chord, NoKeyboardError
 from origami.journal import Change
 from origami.jsonio import JsonValue
 from origami.lighting import CONTROLLER_LIGHTING, Lighting, LightMode
@@ -841,9 +841,19 @@ def test_paste_presses_ctrl_v_through_inputplumber(
 
     monkeypatch.setattr(app_module, "press_keys", press_keys)
 
-    asyncio.run(make_app(ally_x, tmp_path).paste())
-
+    assert asyncio.run(make_app(ally_x, tmp_path).paste()) is True
     assert pressed == [(ally_x.path, PASTE)]
+
+
+def test_paste_is_left_to_steam_where_inputplumber_has_no_keyboard(
+    ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def press_keys(_root: Path, _keys: tuple[str, ...]) -> None:
+        raise NoKeyboardError("InputPlumber has no keyboard for the Ally controller")
+
+    monkeypatch.setattr(app_module, "press_keys", press_keys)
+
+    assert asyncio.run(make_app(ally_x, tmp_path).paste()) is False
 
 
 def test_vibration_test_is_a_pulse_that_ends_with_a_stop(

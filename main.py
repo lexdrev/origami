@@ -72,8 +72,8 @@ class Plugin:
     async def test_vibration(self) -> None:
         await self._app.test_vibration()
 
-    async def paste(self) -> None:
-        await self._app.paste()
+    async def paste(self) -> bool:
+        return await self._app.paste()
 
     async def get_power(self) -> JsonValue:
         return to_wire(await self._app.power())

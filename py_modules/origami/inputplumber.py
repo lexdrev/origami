@@ -80,13 +80,17 @@ def press_keys(root: Path, keys: Sequence[str]) -> None:
             _send_key(keyboard, key, down=False)
 
 
+class NoKeyboardError(CommandError):
+    """InputPlumber made no keyboard for the controller, as 0.78 on SteamOS (RC71L report)."""
+
+
 def keyboard_target(device: str) -> str:
     """The keyboard InputPlumber made for this device, one of its target devices."""
     for target in _strings(_property(device, "TargetDevices")):
         kind = _data(_busctl("--json=short", "get-property", SERVICE, target, TARGET, "DeviceType"))
         if kind == "keyboard":
             return target
-    raise CommandError("InputPlumber has no keyboard for the Ally controller")
+    raise NoKeyboardError("InputPlumber has no keyboard for the Ally controller")
 
 
 def builtin_device(root: Path) -> str:

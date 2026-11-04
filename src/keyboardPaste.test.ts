@@ -46,7 +46,7 @@ describe("the paste key of Steam's on-screen keyboard", () => {
   });
 
   it("pastes through ORIGAMI instead of Steam", async () => {
-    const paste = vi.fn(() => Promise.resolve());
+    const paste = vi.fn(() => Promise.resolve(true));
     fixKeyboardPaste(paste);
 
     new KeyboardManager().SendClientPasteCommand();
@@ -54,6 +54,15 @@ describe("the paste key of Steam's on-screen keyboard", () => {
 
     expect(paste).toHaveBeenCalledTimes(1);
     expect(steam.pasted).toBe(0);
+  });
+
+  it("lets Steam paste where InputPlumber has no keyboard", async () => {
+    fixKeyboardPaste(() => Promise.resolve(false));
+
+    new KeyboardManager().SendClientPasteCommand();
+    await settle();
+
+    expect(steam.pasted).toBe(1);
   });
 
   it("lets Steam paste when ORIGAMI cannot", async () => {
@@ -67,7 +76,7 @@ describe("the paste key of Steam's on-screen keyboard", () => {
   });
 
   it("gives Steam its paste back when undone", () => {
-    const undo = fixKeyboardPaste(() => Promise.resolve());
+    const undo = fixKeyboardPaste(() => Promise.resolve(true));
 
     undo();
 
@@ -76,7 +85,7 @@ describe("the paste key of Steam's on-screen keyboard", () => {
 
   it("does nothing in a Steam without that keyboard", () => {
     steam.managerClass = undefined;
-    const paste = vi.fn(() => Promise.resolve());
+    const paste = vi.fn(() => Promise.resolve(true));
 
     fixKeyboardPaste(paste)();
 
