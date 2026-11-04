@@ -147,7 +147,17 @@ export const en: Messages = {
     title: "Display & Light",
     saturation: "Saturation",
     saturationSub: "Whole screen · games and Steam",
-    presets: { default: "Default", brighter: "Bright", vivid: "Vivid", max: "Max", custom: "Custom" },
+    saturationSteamOs: "SteamOS shows the most already · it can only go down",
+    presets: {
+      default: "Default",
+      brighter: "Bright",
+      vivid: "Vivid",
+      max: "Max",
+      accurate: "Accurate",
+      soft: "Soft",
+      system: "System",
+      custom: "Custom",
+    },
     saturationOwnedBy: (plugin) => `${plugin} controls the saturation`,
     saturationOwnedText: (plugin) =>
       `${plugin} writes the screen colour past Steam's setting, so ORIGAMI leaves it alone. Switch off or remove ${plugin} in Decky, and the saturation appears here.`,

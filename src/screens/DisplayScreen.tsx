@@ -21,16 +21,15 @@ import {
 import { back, navigate } from "../navigation";
 import {
   DEFAULT_SATURATION,
-  MAX_SATURATION,
   presetOf,
   refreshSaturation,
   saturation,
-  SATURATION_PRESETS,
   SATURATION_STEP,
+  saturationScale,
   setSaturation,
 } from "../saturation";
 import { UISound } from "../sounds";
-import { conflicts, refreshConflicts, settings, updateSettings } from "../state";
+import { conflicts, info, refreshConflicts, settings, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, Pressable, Slider } from "../ui/controls";
@@ -83,40 +82,49 @@ export function DisplayScreen() {
   );
 }
 
-/** The screen saturation ORIGAMI writes to gamescope: the scale and its presets in one card. */
+/**
+ * The screen saturation ORIGAMI writes to gamescope: the scale and its presets in one card. 100% is
+ * what the system shows by itself; on SteamOS that is the top, so the scale only goes down from it.
+ */
 function SaturationSettings() {
   const t = useMessages();
   const value = useStore(saturation);
+  const plugin = useStore(info);
   if (value === null) return null;
-  const preset = presetOf(value);
+  const scale = saturationScale(plugin.status === "ready" ? plugin.value.versions.os.id : null);
+  const shown = Math.min(value, scale.max);
+  const preset = presetOf(shown, scale.presets);
+  const set = (percent: number) => {
+    setSaturation(percent, scale.max);
+  };
 
   return (
     <Card
       title={t.display.saturation}
-      subtitle={t.display.saturationSub}
-      aside={<span className="og-card__value">{`${value}%`}</span>}
+      subtitle={scale.steamos ? `${t.display.saturationSub} · ${t.display.saturationSteamOs}` : t.display.saturationSub}
+      aside={<span className="og-card__value">{`${shown}%`}</span>}
     >
       <Slider
         label={t.display.saturation}
-        value={value}
+        value={shown}
         min={0}
-        max={MAX_SATURATION}
+        max={scale.max}
         step={SATURATION_STEP}
-        track={filledTrack(value, 0, MAX_SATURATION)}
+        track={filledTrack(shown, 0, scale.max)}
         thumb="var(--og-accent)"
         notch={DEFAULT_SATURATION}
         lessLabel={t.actions.less}
         moreLabel={t.actions.more}
-        onChange={setSaturation}
+        onChange={set}
       />
       <div className="og-slider__ends" aria-hidden="true">
         <span>0</span>
-        <span>{DEFAULT_SATURATION}</span>
-        <span>{MAX_SATURATION}</span>
+        <span>{scale.max / 2}</span>
+        <span>{scale.max}</span>
       </div>
       <ChoiceGroup
         label={t.display.saturation}
-        choices={SATURATION_PRESETS.map((choice) => ({
+        choices={scale.presets.map((choice) => ({
           value: choice.id,
           label: t.display.presets[choice.id],
           detail: `${choice.value}%`,
@@ -124,11 +132,11 @@ function SaturationSettings() {
         value={preset?.id}
         action={t.actions.select}
         onChange={(id) => {
-          setSaturation(SATURATION_PRESETS.find((choice) => choice.id === id)?.value ?? DEFAULT_SATURATION);
+          set(scale.presets.find((choice) => choice.id === id)?.value ?? DEFAULT_SATURATION);
         }}
         custom={{
           label: t.display.presets.custom,
-          detail: preset === undefined ? `${value}%` : "+",
+          detail: preset === undefined ? `${shown}%` : "+",
           selected: preset === undefined,
         }}
       />

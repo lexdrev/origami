@@ -3,7 +3,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { presetOf, refreshSaturation, saturation, setSaturation } from "./saturation";
+import { presetOf, refreshSaturation, saturation, saturationScale, setSaturation } from "./saturation";
 
 // The backend and the settings call, which reach Decky only inside Steam.
 const fake = vi.hoisted(() => {
@@ -63,5 +63,25 @@ describe("saturation", () => {
     expect(presetOf(150)?.id).toBe("vivid");
     expect(presetOf(200)?.id).toBe("max");
     expect(presetOf(140)).toBeUndefined();
+  });
+});
+
+describe("the saturation scale", () => {
+  it("runs to 200% where the system keeps gamescope's 0.5, as Bazzite", () => {
+    const scale = saturationScale("bazzite");
+    expect(scale.max).toBe(200);
+    expect(scale.steamos).toBe(false);
+    expect(presetOf(100, scale.presets)?.id).toBe("default");
+  });
+
+  it("tops at 100% on SteamOS, which shows the most itself", () => {
+    const scale = saturationScale("steamos");
+    expect(scale.max).toBe(100);
+    expect(scale.steamos).toBe(true);
+    expect(scale.presets.map((preset) => [preset.id, preset.value])).toEqual([
+      ["accurate", 0],
+      ["soft", 50],
+      ["system", 100],
+    ]);
   });
 });

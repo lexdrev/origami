@@ -151,7 +151,17 @@ export const ru: Messages = {
     title: "Дисплей и свет",
     saturation: "Насыщенность",
     saturationSub: "Весь экран · игры и\u00a0Steam",
-    presets: { default: "Дефолт", brighter: "Ярче", vivid: "Сочно", max: "Макс.", custom: "Свой" },
+    saturationSteamOs: "SteamOS уже даёт максимум · можно только убавить",
+    presets: {
+      default: "Дефолт",
+      brighter: "Ярче",
+      vivid: "Сочно",
+      max: "Макс.",
+      accurate: "Точно",
+      soft: "Мягко",
+      system: "Система",
+      custom: "Свой",
+    },
     saturationOwnedBy: (plugin) => `Насыщенностью управляет ${plugin}`,
     saturationOwnedText: (plugin) =>
       `${plugin} пишет цвет экрана мимо настройки Steam, поэтому ORIGAMI её не\u00a0трогает. Выключите или удалите ${plugin} в\u00a0Decky — насыщенность появится здесь.`,

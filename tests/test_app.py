@@ -415,24 +415,51 @@ def screen(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[int] | int]:
     """gamescope's saturation as the app reads and writes it."""
     state: dict[str, list[int] | int] = {"now": 100, "written": []}
 
-    async def read(_root: Path) -> int:
+    async def read(_root: Path, **_options: object) -> int:
         now = state["now"]
         assert isinstance(now, int)
         return now
 
-    def write_blocking(_root: Path, percent: int) -> None:
+    def write_blocking(_root: Path, percent: int, **_options: object) -> None:
         written = state["written"]
         assert isinstance(written, list)
         written.append(percent)
         state["now"] = percent
 
-    async def write(root: Path, percent: int) -> None:
+    async def write(root: Path, percent: int, **_options: object) -> None:
         write_blocking(root, percent)
 
     monkeypatch.setattr(display_block, "read_saturation", read)
     monkeypatch.setattr(display_block, "write_saturation", write)
     monkeypatch.setattr(display_block, "write_saturation_blocking", write_blocking)
     return state
+
+
+def test_on_steamos_the_scale_tops_at_what_the_system_shows(
+    ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ally_x.write(
+        "usr/lib/os-release", 'NAME="SteamOS"\nID=steamos\nVERSION_ID=3.9.5\nBUILD_ID=20261023.100'
+    )
+    tops: list[int] = []
+
+    async def read(_root: Path, *, top: int) -> int:
+        tops.append(top)
+        return 100
+
+    async def write(_root: Path, _percent: int, *, top: int) -> None:
+        tops.append(top)
+
+    monkeypatch.setattr(display_block, "read_saturation", read)
+    monkeypatch.setattr(display_block, "write_saturation", write)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"saturation": 100})
+
+    asyncio.run(scenario())
+    assert tops == [100, 100]  # the original read and the value written, both on SteamOS's scale
 
 
 def test_saturation_is_written_kept_journaled_and_restored(
@@ -469,10 +496,10 @@ def test_saturation_is_sent_again_while_gamescope_refuses(
     refusals = [0]
     sent = asyncio.Event()
 
-    async def read(_root: Path) -> int:
+    async def read(_root: Path, **_options: object) -> int:
         return 100
 
-    async def write(_root: Path, percent: int) -> None:
+    async def write(_root: Path, percent: int, **_options: object) -> None:
         if refusals[0] > 0:
             refusals[0] -= 1
             raise CommandError("xprop exited with 1: Authorization required")
@@ -514,10 +541,10 @@ def test_saturation_tries_end_with_one_warning(
     tries: list[int] = []
     given_up = asyncio.Event()
 
-    async def read(_root: Path) -> int:
+    async def read(_root: Path, **_options: object) -> int:
         return 100
 
-    async def write(_root: Path, _percent: int) -> None:
+    async def write(_root: Path, _percent: int, **_options: object) -> None:
         if refusing[0]:
             tries.append(1)
             if len(tries) == 1 + app_module.SATURATION_TRIES:
@@ -572,7 +599,7 @@ def test_saturation_is_not_set_while_gamescope_cannot_be_read(
     screen: dict[str, list[int] | int],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def unreachable(_root: Path) -> int:
+    async def unreachable(_root: Path, **_options: object) -> int:
         raise CommandError("gamescope's display is not there")
 
     monkeypatch.setattr(display_block, "read_saturation", unreachable)
@@ -598,7 +625,7 @@ def test_a_saturation_nobody_had_set_is_given_back_as_srgb(
     screen: dict[str, list[int] | int],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def unset(_root: Path) -> None:
+    async def unset(_root: Path, **_options: object) -> None:
         return None
 
     monkeypatch.setattr(display_block, "read_saturation", unset)

@@ -5,11 +5,13 @@
 
 import asyncio
 import logging
+from collections.abc import Callable
 
 from origami.blocks import Context
 from origami.lighting import CONTROLLER_LIGHTING, Lighting, apply_lighting
 from origami.proc import CommandError
 from origami.saturation import (
+    MAX_PERCENT,
     SRGB_PERCENT,
     read_saturation,
     write_saturation,
@@ -27,14 +29,22 @@ class DisplayBlock:
     takes `controller_lock` around what it sends to it.
     """
 
-    def __init__(self, context: Context, controller_lock: asyncio.Lock) -> None:
+    def __init__(
+        self,
+        context: Context,
+        controller_lock: asyncio.Lock,
+        *,
+        saturation_top: Callable[[], int] = lambda: MAX_PERCENT,
+    ) -> None:
         self._context = context
         self._controller_lock = controller_lock
+        self._top = saturation_top
+        """The top of the saturation scale on this system: 200% on Bazzite, 100% on SteamOS."""
 
     async def saturation(self) -> int | None:
         """The saturation gamescope shows now, ORIGAMI's or not; None without gamescope."""
         try:
-            percent = await read_saturation(self._context.root)
+            percent = await read_saturation(self._context.root, top=self._top())
         except CommandError, TimeoutError:
             return None
         return SRGB_PERCENT if percent is None else percent
@@ -46,9 +56,9 @@ class DisplayBlock:
         journal, root = self._context.journal, self._context.root
         if not journal.recorded("display", "saturation"):
             # Raises when gamescope cannot be read: nothing is written then, not even the original.
-            original = await read_saturation(root)
+            original = await read_saturation(root, top=self._top())
             await asyncio.to_thread(journal.record, "display", "saturation", original)
-        await write_saturation(root, percent)
+        await write_saturation(root, percent, top=self._top())
 
     async def restore_saturation(self, settings: Settings, *, last_try: bool = True) -> bool:
         """Send the saved saturation again; False when gamescope could not be reached yet.
@@ -76,7 +86,9 @@ class DisplayBlock:
             return
         if owner is None:
             try:
-                await write_saturation(self._context.root, self._saturation_before())
+                await write_saturation(
+                    self._context.root, self._saturation_before(), top=self._top()
+                )
             except (CommandError, OSError, TimeoutError) as error:
                 log.warning("Saturation not given back: %s", error)
                 return
@@ -89,7 +101,9 @@ class DisplayBlock:
             return
         if owner is None:
             try:
-                write_saturation_blocking(self._context.root, self._saturation_before())
+                write_saturation_blocking(
+                    self._context.root, self._saturation_before(), top=self._top()
+                )
             except (CommandError, OSError, TimeoutError) as error:
                 log.warning("Saturation not given back: %s", error)
                 return

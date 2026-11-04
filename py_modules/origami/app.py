@@ -27,6 +27,7 @@ from origami.lighting import Lighting
 from origami.power import HeldPower, resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach
+from origami.saturation import max_percent
 from origami.settings import Settings, SettingsStore
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
@@ -95,7 +96,9 @@ class Origami:
         )
         self._power = PowerBlock(context)
         self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
-        self._display = DisplayBlock(context, self._controller_lock)
+        self._display = DisplayBlock(
+            context, self._controller_lock, saturation_top=self._saturation_top
+        )
         self._gamepad = GamepadBlock(
             context,
             self._controller_lock,
@@ -372,6 +375,9 @@ class Origami:
                 last_try = attempt == SATURATION_TRIES
                 if await self._display.restore_saturation(self._settings, last_try=last_try):
                     return
+
+    def _saturation_top(self) -> int:
+        return max_percent(self._info.versions.os.id if self._info else None)
 
     async def _board(self) -> str | None:
         return (await self.info()).device.board

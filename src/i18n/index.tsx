@@ -176,7 +176,9 @@ export interface Messages {
     title: string;
     saturation: string;
     saturationSub: string;
-    presets: Record<"default" | "brighter" | "vivid" | "max" | "custom", string>;
+    /** On SteamOS, after the subtitle: the system shows the most already. */
+    saturationSteamOs: string;
+    presets: Record<"default" | "brighter" | "vivid" | "max" | "accurate" | "soft" | "system" | "custom", string>;
     saturationOwnedBy(plugin: string): string;
     saturationOwnedText(plugin: string): string;
     lighting: string;

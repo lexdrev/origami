@@ -6,7 +6,14 @@ import asyncio
 import pytest
 
 from origami.proc import CommandError
-from origami.saturation import ATOM, from_cardinal, read_saturation, to_cardinal, write_saturation
+from origami.saturation import (
+    ATOM,
+    from_cardinal,
+    max_percent,
+    read_saturation,
+    to_cardinal,
+    write_saturation,
+)
 
 from fakes import FakeDisplay, FakeRoot
 
@@ -18,6 +25,21 @@ def test_percent_and_gamescope_value_convert_both_ways() -> None:
     assert to_cardinal(100) == SRGB
     assert from_cardinal(SRGB) == 100
     assert from_cardinal(to_cardinal(150)) == 150
+
+
+WIDEST = 1065353216
+"""1.0 as a CARDINAL, which SteamOS sets itself (RC71L owner's report)."""
+
+
+def test_100_percent_is_what_the_system_shows_by_itself() -> None:
+    assert max_percent("bazzite") == 200
+    assert max_percent(None) == 200
+    assert max_percent("steamos") == 100
+    # SteamOS keeps the widest: there 100% is it, and nothing goes over it.
+    assert from_cardinal(WIDEST, top=100) == 100
+    assert to_cardinal(100, top=100) == WIDEST
+    assert to_cardinal(150, top=100) == WIDEST
+    assert to_cardinal(50, top=100) == SRGB
 
 
 def test_reads_the_value_gamescope_shows(fake_root: FakeRoot, display: FakeDisplay) -> None:
