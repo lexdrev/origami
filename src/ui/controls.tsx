@@ -6,6 +6,7 @@ import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 import { playSound, UISound } from "../sounds";
 import { ChevronIcon, WarningIcon } from "./icons";
+import { slide } from "./slider";
 
 interface PressableProps {
   className: string;
@@ -306,21 +307,27 @@ export function Slider(props: SliderProps) {
   const { label, caption, value, min, max, step, wrap = false, track, thumb, notch, lessLabel, moreLabel, onChange } =
     props;
   const span = max - min;
-  const set = (next: number) => {
-    onChange(wrap ? min + ((((next - min) % (span + 1)) + span + 1) % (span + 1)) : Math.min(max, Math.max(min, next)));
+  // Every step clicks as Steam's own sliders do, held D-pad or not; an end that stops it is silent.
+  const set = (next: number, direction: -1 | 1) => {
+    const move = slide({ min, max, wrap }, value, next, direction);
+    if (move.sound === null) return;
+    playSound(move.sound);
+    onChange(move.value);
   };
   // Steam takes any result but false as "handled" and then moves no focus at all, so up and
   // down must answer false to leave the slider.
   const onDirection = (event: GamepadEvent): boolean => {
     const { button } = event.detail;
     if (button !== GamepadButton.DIR_LEFT && button !== GamepadButton.DIR_RIGHT) return false;
-    set(value + (button === GamepadButton.DIR_LEFT ? -1 : 1) * step);
+    const direction = button === GamepadButton.DIR_LEFT ? -1 : 1;
+    set(value + direction * step, direction);
     return true;
   };
   // A tap lands on the nearest step, as the D-pad would, so presets and the notch stay reachable.
   const onTap = (event: MouseEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
-    set(min + Math.round((((event.clientX - box.left) / box.width) * span) / step) * step);
+    const next = min + Math.round((((event.clientX - box.left) / box.width) * span) / step) * step;
+    set(next, next < value ? -1 : 1);
   };
   const stepButton = (direction: -1 | 1, buttonLabel: string) => (
     <div
@@ -328,8 +335,7 @@ export function Slider(props: SliderProps) {
       role="button"
       aria-label={buttonLabel}
       onClick={() => {
-        playSound(UISound.Press);
-        set(value + direction * step);
+        set(value + direction * step, direction);
       }}
     >
       {direction < 0 ? "−" : "+"}

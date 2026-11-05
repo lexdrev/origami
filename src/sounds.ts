@@ -13,6 +13,8 @@ export const UISound = {
   OutOfScreen: steamSound(14),
   ToggleOn: steamSound(16),
   ToggleOff: steamSound(17),
+  SliderUp: steamSound(18),
+  SliderDown: steamSound(19),
   Press: steamSound(21),
 } as const;
 
