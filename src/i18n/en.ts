@@ -99,6 +99,9 @@ export const en: Messages = {
     ownedBy: (plugin) => `${plugin} controls the power`,
     ownedText: (plugin) =>
       `The TDP and the CPU can listen to one plugin only, so ORIGAMI leaves them alone. Switch off or remove ${plugin} in Decky, and the power settings appear here.`,
+    boostOwnedBy: (plugin) => `${plugin} controls the CPU boost`,
+    boostOwnedText: (plugin) =>
+      `The boost and the CPU frequency cap can listen to one plugin only, so ORIGAMI leaves them alone and keeps the TDP. Switch off or remove ${plugin} in Decky, and the boost switch appears here.`,
     gameLimit: "Game limit",
     gameProfile: "Per-game profile",
     gameProfileOn: (game) => `${game} · settings for it only`,

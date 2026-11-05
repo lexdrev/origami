@@ -87,6 +87,7 @@ function PowerView({ title, subtitle, game }: PowerViewProps) {
   }
   const power = readings.status === "ready" ? readings.value.power : null;
   const owner = owners.value.power;
+  const boostOwner = owners.value.boost;
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={title} subtitle={subtitle} />
@@ -96,7 +97,7 @@ function PowerView({ title, subtitle, game }: PowerViewProps) {
           <OwnedBy title={t.power.ownedBy(owner)} text={t.power.ownedText(owner)} />
         </>
       ) : current.value.manageTdp ? (
-        <OwnPower setting={current.value} power={power} game={game} />
+        <OwnPower setting={current.value} power={power} game={game} boostOwner={boostOwner} />
       ) : (
         <>
           <DrawnDial power={power} />
@@ -104,7 +105,11 @@ function PowerView({ title, subtitle, game }: PowerViewProps) {
           <Alert title={t.power.steamSets} problem={unset(current.value.manageTdp)}>
             {t.power.steamSetsText}
           </Alert>
-          <BoostRow power={current.value.power} general={null} readings={power} onChange={setPower} />
+          {boostOwner !== null ? (
+            <BoostOwnedBy owner={boostOwner} />
+          ) : (
+            <BoostRow power={current.value.power} general={null} readings={power} onChange={setPower} />
+          )}
         </>
       )}
       {power?.battery && <BatteryLine battery={power.battery} />}
@@ -117,13 +122,15 @@ interface OwnPowerProps {
   power: PowerReadings | null;
   /** The game whose profile switch is on top; null for the general settings and the way to the profiles. */
   game: Game | null;
+  /** Another plugin that holds the CPU boost alone; ORIGAMI keeps the TDP then. */
+  boostOwner: string | null;
 }
 
 /**
  * ORIGAMI holds the TDP: the TDP card with its dial, then the headroom and the switches. With a game,
  * they set its own profile while it has an active one, else the general settings.
  */
-function OwnPower({ setting, power, game }: OwnPowerProps) {
+function OwnPower({ setting, power, game, boostOwner }: OwnPowerProps) {
   const t = useMessages();
   const held = useStore(heldPower);
   const running = useStore(runningGame);
@@ -186,7 +193,11 @@ function OwnPower({ setting, power, game }: OwnPowerProps) {
         onChange={save}
       />
       <HeadroomCard power={shownPower} general={general} limits={limits} onChange={save} />
-      <BoostRow power={shownPower} general={general} readings={applied ? power : null} onChange={save} />
+      {boostOwner !== null ? (
+        <BoostOwnedBy owner={boostOwner} />
+      ) : (
+        <BoostRow power={shownPower} general={general} readings={applied ? power : null} onChange={save} />
+      )}
     </>
   );
 }
@@ -371,6 +382,14 @@ function BoostRow({ power, general, readings, onChange }: PowerCardProps & { rea
         onChange({ ...power, cpuBoost });
       }}
     />
+  );
+}
+
+/** In place of the boost switch: another plugin holds the boost and its cap, and ORIGAMI the TDP. */
+function BoostOwnedBy({ owner }: { owner: string }) {
+  const t = useMessages();
+  return (
+    <OwnedBy section={t.power.cpuBoost} title={t.power.boostOwnedBy(owner)} text={t.power.boostOwnedText(owner)} />
   );
 }
 

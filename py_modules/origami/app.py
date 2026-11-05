@@ -271,7 +271,7 @@ class Origami:
             await self._gamepad.close_rumble()
             owners = await self.conflicts()
             await asyncio.to_thread(self._power.give_back_tdp, owners.power)
-            await asyncio.to_thread(self._power.give_back_boost, owners.power)
+            await asyncio.to_thread(self._power.give_back_boost, owners.boost)
             async with self._controller_lock:
                 await asyncio.to_thread(self._give_back_controller, owners)
             await self._display.give_back_saturation(owners.saturation)
@@ -299,7 +299,7 @@ class Origami:
         self._gamepad.remove_gyro_fix()
         self._fans.give_back(owners.fans)
         self._power.give_back_tdp(owners.power)
-        self._power.give_back_boost(owners.power)
+        self._power.give_back_boost(owners.boost)
         self._give_back_controller(owners)
         self._display.give_back_saturation_now(owners.saturation)
         log.info("ORIGAMI uninstalled")

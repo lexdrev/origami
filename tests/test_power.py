@@ -380,6 +380,15 @@ def test_after_the_charger_the_cap_is_programmed_while_the_boost_is_off(
     assert console.tick(1) == "after a change"
 
 
+def test_a_boost_held_by_another_plugin_is_left_with_its_cap(console: Console) -> None:
+    console.keeper.hold(PowerTarget(Power(tdp=20), tdp=True, cpu=False))
+    console.core(3_500_000)
+
+    assert [console.tick() for _ in range(5)] == [None] * 5
+    assert console.boost() == "0\n"
+    assert console.limits() == Limits(20, 24, 29)
+
+
 def test_the_cap_is_left_alone_while_the_boost_is_on(console: Console) -> None:
     hold(console, Power(cpu_boost=True))
     console.tick()

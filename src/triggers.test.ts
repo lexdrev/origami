@@ -18,7 +18,15 @@ describe("trigger rumble", () => {
   });
 
   it("names a plugin that owns the triggers once on the screen", () => {
-    const none = { lighting: null, saturation: null, vibration: null, triggers: null, power: null, fans: null };
+    const none = {
+      lighting: null,
+      saturation: null,
+      vibration: null,
+      triggers: null,
+      power: null,
+      boost: null,
+      fans: null,
+    };
     expect(separateTriggerOwner(none)).toBeNull();
     // One plugin sets the vibration too: its block for the vibration speaks for the triggers.
     expect(separateTriggerOwner({ ...none, vibration: "Rumble Plugin", triggers: "Rumble Plugin" })).toBeNull();

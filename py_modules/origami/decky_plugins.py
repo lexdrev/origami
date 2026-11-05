@@ -25,8 +25,12 @@ TRIGGER_OWNERS = ("Ally Fix",)
 """Plugins that rumble the impulse triggers with a HID-BPF program of their own."""
 POWER_OWNERS = ("Panel de Control", "SimpleDeckyTDP", "PowerTools")
 """Plugins that set the TDP or the CPU boost and frequency; ORIGAMI then shows the power only."""
-FAN_OWNERS = ("Panel de Control", "Ally Fix")
-"""Plugins that write the fan curves; ORIGAMI then shows the fans only."""
+BOOST_OWNERS = ("Ally Fix",)
+"""Plugins that hold the CPU boost and its frequency cap but not the TDP (Ally Fix's CPU Boost Fix
+keeps the boost off and the cap applied); ORIGAMI then keeps the TDP only."""
+FAN_OWNERS = ("Panel de Control", "Ally Fix", "Fantastic")
+"""Plugins that drive the fans; ORIGAMI then shows them only. Fantastic is made for the Steam Deck's
+fan, but an owner of a ROG Ally had it on (2026-11-04), so the two never take turns."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +42,8 @@ class Conflicts:
     vibration: str | None
     triggers: str | None
     power: str | None
+    boost: str | None
+    """The plugin that holds the CPU boost: one that sets the whole power, or the boost alone."""
     fans: str | None
 
 
@@ -53,6 +59,7 @@ def read_conflicts(decky_home: Path) -> Conflicts:
         vibration=owner(VIBRATION_OWNERS),
         triggers=owner(TRIGGER_OWNERS),
         power=owner(POWER_OWNERS),
+        boost=owner(POWER_OWNERS + BOOST_OWNERS),
         fans=owner(FAN_OWNERS),
     )
 

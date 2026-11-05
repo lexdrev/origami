@@ -23,6 +23,7 @@ from origami.blocks import power as power_block
 from origami.blocks.buttons import BUTTON_ACTION, QAM_PRESSED
 from origami.buttons import Button, ButtonAction
 from origami.decky_plugins import (
+    BOOST_OWNERS,
     FAN_OWNERS,
     LIGHTING_OWNERS,
     POWER_OWNERS,
@@ -1702,6 +1703,34 @@ def test_power_plugins_own_the_power(powered: FakeRoot, tmp_path: Path, plugin: 
         assert written_limits(powered)[0] == 20
         assert (await app.settings()).power == Power()
         assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("plugin", BOOST_OWNERS)
+@pytest.mark.usefixtures("quick_power")
+def test_a_boost_plugin_leaves_origami_the_tdp_only(
+    powered: FakeRoot, tmp_path: Path, plugin: str
+) -> None:
+    install_plugin(tmp_path, plugin)
+    boost = powered.path / "sys/devices/system/cpu/cpufreq/boost"
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        conflicts = await app.conflicts()
+        assert (conflicts.power, conflicts.boost) == (None, plugin)
+
+        await app.update_settings({"power": {"tdp": 20, "cpu_boost": True}})
+        await asyncio.sleep(0.05)
+
+        assert written_limits(powered) == [20, 24, 29]
+        assert boost.read_text(encoding="utf-8") == "0\n"
+        assert await app.changes() == [Change("power", "tdp", None)]
+
+        await app.restore_all()
+        assert boost.read_text(encoding="utf-8") == "0\n"
         app.stop()
 
     asyncio.run(scenario())

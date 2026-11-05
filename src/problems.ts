@@ -70,6 +70,7 @@ export function tileProblems(sources: ProblemSources): TileProblems {
   return {
     power: count(
       conflicts.power !== null,
+      conflicts.power === null && conflicts.boost !== null,
       conflicts.power === null && unset(settings.manageTdp),
       ownTdp && sources.steamTdpSlider,
       ownTdp && sources.contested,

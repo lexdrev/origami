@@ -26,7 +26,15 @@ const fresh: Settings = {
   fans: null,
 };
 
-const alone: Conflicts = { lighting: null, saturation: null, vibration: null, triggers: null, power: null, fans: null };
+const alone: Conflicts = {
+  lighting: null,
+  saturation: null,
+  vibration: null,
+  triggers: null,
+  power: null,
+  boost: null,
+  fans: null,
+};
 
 const sources = (changes: Partial<ProblemSources> = {}): ProblemSources => ({
   settings: fresh,
@@ -70,11 +78,16 @@ describe("problems on the tiles", () => {
       vibration: "Rumble Plugin",
       triggers: "Rumble Plugin",
       power: "Power Plugin",
+      boost: "Power Plugin",
       fans: "Power Plugin",
     };
 
     expect(tileProblems(sources({ conflicts }))).toEqual({ power: 1, fans: 1, display: 2, gamepad: 4 });
     expect(tileProblems(sources({ conflicts: { ...alone, triggers: "Rumble Plugin" } })).gamepad).toBe(4);
+  });
+
+  it("count a plugin that holds the CPU boost alone on the Power tile", () => {
+    expect(tileProblems(sources({ conflicts: { ...alone, boost: "Ally Fix" } })).power).toBe(1);
   });
 
   it("count what fights ORIGAMI over the TDP while it keeps it", () => {

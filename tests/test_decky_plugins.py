@@ -4,7 +4,7 @@
 import json
 from pathlib import Path
 
-from origami.decky_plugins import enabled_plugins
+from origami.decky_plugins import POWER_OWNERS, enabled_plugins, read_conflicts
 
 
 def install(home: Path, folder: str, name: str) -> None:
@@ -30,3 +30,22 @@ def test_without_decky_settings_every_plugin_counts(tmp_path: Path) -> None:
     (tmp_path / "plugins" / "broken" / "plugin.json").write_text("{", encoding="utf-8")
 
     assert enabled_plugins(tmp_path) == {"Lights"}
+
+
+def test_a_power_plugin_holds_the_boost_too(tmp_path: Path) -> None:
+    install(tmp_path, "pdc", POWER_OWNERS[0])
+
+    conflicts = read_conflicts(tmp_path)
+
+    assert (conflicts.power, conflicts.boost) == (POWER_OWNERS[0], POWER_OWNERS[0])
+
+
+def test_ally_fix_holds_the_boost_and_fantastic_the_fans(tmp_path: Path) -> None:
+    install(tmp_path, "Ally Fix", "Ally Fix")
+    install(tmp_path, "Fantastic", "Fantastic")
+
+    conflicts = read_conflicts(tmp_path)
+
+    assert (conflicts.power, conflicts.boost, conflicts.fans) == (None, "Ally Fix", "Ally Fix")
+    (tmp_path / "plugins" / "Ally Fix" / "plugin.json").unlink()
+    assert read_conflicts(tmp_path).fans == "Fantastic"

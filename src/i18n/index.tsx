@@ -125,6 +125,9 @@ export interface Messages {
     steamSetsText: string;
     ownedBy(plugin: string): string;
     ownedText(plugin: string): string;
+    /** In place of the boost switch while another plugin holds the boost alone, as Ally Fix does. */
+    boostOwnedBy(plugin: string): string;
+    boostOwnedText(plugin: string): string;
     /** Under the TDP on the dial while a game's own settings are shown. */
     gameLimit: string;
     /** The switch of the running game's own profile, like Steam's per-game profile. */

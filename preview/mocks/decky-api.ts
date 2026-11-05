@@ -58,6 +58,7 @@ const conflicts: Conflicts = {
   vibration: null,
   triggers: null,
   power: null,
+  boost: null,
   fans: null,
 };
 const changes: Change[] = [

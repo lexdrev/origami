@@ -210,6 +210,8 @@ export interface Conflicts {
   vibration: string | null;
   triggers: string | null;
   power: string | null;
+  /** The plugin that holds the CPU boost: one that sets the whole power, or the boost alone (Ally Fix). */
+  boost: string | null;
   fans: string | null;
 }
 

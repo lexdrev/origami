@@ -191,6 +191,8 @@ class PowerTarget:
     power: Power
     tdp: bool
     """ORIGAMI writes the TDP; off, it keeps only the CPU boost and its cap."""
+    cpu: bool = True
+    """ORIGAMI keeps the CPU boost and its frequency cap; off, another plugin holds them."""
     battery_high_tdp: bool = False
     """The TDP may go over BATTERY_TDP on the battery too."""
     steam_slider: bool = False
@@ -273,7 +275,12 @@ class PowerKeeper:
             now = self._clock()
             self._due.append((now, "settings"))
             # The cap needs programming when the keeper starts and when the boost goes off.
-            if before is None or target is None or before.power.cpu_boost != target.power.cpu_boost:
+            if (
+                before is None
+                or target is None
+                or before.power.cpu_boost != target.power.cpu_boost
+                or before.cpu != target.cpu
+            ):
                 self._cap_due = now
             if target is None or not target.tdp:
                 self._held = HeldPower(None, battery_capped=False, contested=False)
@@ -323,6 +330,9 @@ class PowerKeeper:
                     self._hold_tdp(now, target, mains=mains)
                 else:
                     self._due.clear()
+                if not target.cpu:
+                    self._cap_due = None
+                    return None
                 return self._hold_cpu(now, target)
             except OSError as error:
                 log.warning("Power settings not held: %s", error)

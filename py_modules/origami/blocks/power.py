@@ -6,6 +6,7 @@
 import asyncio
 import logging
 from contextlib import aclosing, suppress
+from dataclasses import replace
 
 from origami.blocks import Context
 from origami.cpu import program_cap, read_boost, write_boost
@@ -84,10 +85,15 @@ class PowerBlock:
         """Hold the power as set, unless another plugin owns it; the journal remembers first.
 
         With neither the TDP nor the boost left to ORIGAMI, after "restore everything" for one, the
-        keeper holds nothing, and the CPU's frequency cap is not ORIGAMI's to program either.
+        keeper holds nothing, and the CPU's frequency cap is not ORIGAMI's to program either. A
+        plugin that holds the boost alone leaves ORIGAMI the TDP, and the boost and the cap to it.
         """
         power = settings.power_for(self._game)
-        if (await self._context.conflicts()).power is not None or (
+        owners = await self._context.conflicts()
+        own_cpu = owners.boost is None
+        if not own_cpu:
+            power = replace(power, cpu_boost=None)
+        if owners.power is not None or (
             settings.manage_tdp is not True and power.cpu_boost is None
         ):
             target = None
@@ -95,6 +101,7 @@ class PowerBlock:
             target = PowerTarget(
                 power,
                 tdp=settings.manage_tdp is True,
+                cpu=own_cpu,
                 battery_high_tdp=settings.battery_high_tdp,
                 steam_slider=self._steam_tdp_limit,
             )
@@ -121,7 +128,7 @@ class PowerBlock:
         journal.forget("power", "tdp")
 
     def give_back_boost(self, owner: str | None) -> None:
-        """The CPU boost as it was before ORIGAMI, unless a plugin sets the power now."""
+        """The CPU boost as it was before ORIGAMI, unless a plugin holds the boost now."""
         journal = self._context.journal
         original = journal.original("power", "cpu_boost")
         if owner is None and isinstance(original, bool):
