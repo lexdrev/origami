@@ -45,7 +45,11 @@ export function QamTabScreen() {
           {current.value.qamTab && column.arranger !== null && (
             <>
               <SectionLabel>{t.qamTab.place}</SectionLabel>
-              <Alert title={t.qamTab.arranged(column.arranger.name)}>{t.qamTab.arrangedText}</Alert>
+              <Alert title={t.qamTab.arranged(column.arranger.name)}>
+                {column.arranger.running || column.arranger.name === null
+                  ? t.qamTab.arrangedText
+                  : t.qamTab.arrangedUntilRestart(column.arranger.name)}
+              </Alert>
             </>
           )}
           {current.value.qamTab && column.arranger === null && (

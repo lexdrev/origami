@@ -320,7 +320,7 @@ describe("ORIGAMI's own tab when another plugin replaced Decky's render", () => 
     await Promise.resolve();
 
     expect(keys(tabs)).toEqual([...keys(steamColumn()), ORIGAMI_TAB]);
-    expect(quickAccessColumn.get().arranger).toEqual({ name: null });
+    expect(quickAccessColumn.get().arranger).toEqual({ name: null, running: true });
   });
 
   it.each(KNOWN_ARRANGERS)("names $name by the mark it leaves on Decky's hook", async (known) => {
@@ -331,7 +331,22 @@ describe("ORIGAMI's own tab when another plugin replaced Decky's render", () => 
     renderMenu(steamColumn(), hook);
     await Promise.resolve();
 
-    expect(quickAccessColumn.get().arranger).toEqual({ name: known.name });
+    expect(quickAccessColumn.get().arranger).toEqual({ name: known.name, running: true });
+  });
+
+  it.each(KNOWN_ARRANGERS)("tells when $name is switched off but its render stays", async (known) => {
+    const { hook } = reconcilingHook();
+    Object.defineProperty(hook, known.marker, { value: {} });
+    setUp(hook);
+    const eventBus = new EventTarget();
+    vi.stubGlobal("window", {
+      DeckyPluginLoader: { tabsHook: hook, deckyState: { publicState: () => ({ plugins: [] }), eventBus } },
+    });
+
+    renderMenu(steamColumn(), hook);
+    await Promise.resolve();
+
+    expect(quickAccessColumn.get().arranger).toEqual({ name: known.name, running: false });
   });
 
   it("leaves taking its entry out to that plugin when the plugin unloads", () => {

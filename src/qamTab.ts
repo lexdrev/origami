@@ -11,6 +11,7 @@ import {
 } from "@decky/ui";
 import { createElement, useEffect, type ElementType, type ReactNode } from "react";
 
+import { runningPlugins } from "./deckyPlugins";
 import { ORIGAMI_TAB } from "./quickAccess";
 import { createStore, useStore } from "./store";
 import { FIRST_TAB, quickAccessColumn, type Arranger, type TabPosition } from "./tabPosition";
@@ -90,7 +91,9 @@ export const KNOWN_ARRANGERS = [{ marker: Symbol.for("panel-de-control.qam-rende
 /** The plugin that arranges the column, or null when Decky's own render is in place. */
 function arrangerOf(hook: DeckyTabsHook): Arranger | null {
   if (deckyRendersTabs(hook)) return null;
-  return { name: KNOWN_ARRANGERS.find(({ marker }) => marker in hook)?.name ?? null };
+  const name = KNOWN_ARRANGERS.find(({ marker }) => marker in hook)?.name ?? null;
+  const running = runningPlugins();
+  return { name, running: name === null || running === null || running.includes(name) };
 }
 
 const isOwnTab = (tab: SteamTab) => tab.key === ORIGAMI_TAB;
@@ -181,7 +184,7 @@ function refreshMountedMenu(renderers: object[]): void {
 }
 
 const sameArranger = (a: Arranger | null, b: Arranger | null) =>
-  a === null || b === null ? a === b : a.name === b.name;
+  a === null || b === null ? a === b : a.name === b.name && a.running === b.running;
 
 function publishColumn(tabs: SteamTab[], arranger: Arranger | null): void {
   const column = tabs

@@ -18,6 +18,12 @@ function pluginState(): DeckyPluginState | null {
     : null;
 }
 
+/** The names of the plugins Decky runs now; null when Decky's state cannot be read. */
+export function runningPlugins(): string[] | null {
+  const state = pluginState();
+  return state === null ? null : state.publicState().plugins.map((plugin) => plugin.name);
+}
+
 /** The names of the loaded plugins in a fixed order, to tell a change of the list from other updates. */
 export function pluginList(plugins: readonly { name: string }[]): string {
   return plugins

@@ -84,6 +84,8 @@ export interface Messages {
     placeHint: string;
     arranged(plugin: string | null): string;
     arrangedText: string;
+    /** The arranging plugin is switched off, but its render stays until Steam restarts. */
+    arrangedUntilRestart(plugin: string): string;
     up: string;
     down: string;
     toTop: string;

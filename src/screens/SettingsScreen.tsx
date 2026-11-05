@@ -69,6 +69,7 @@ export function SettingsScreen() {
             ? ownTabSummary(current.value.qamTab, current.value.qamTabBefore, column, t)
             : t.unknown
         }
+        problem={current.status === "ready" && current.value.qamTab && column.arranger !== null}
         action={t.actions.open}
         onPress={() => {
           navigate("qamTab");

@@ -21,6 +21,11 @@ export interface ColumnTab {
 export interface Arranger {
   /** The plugin's name in Decky; null when ORIGAMI does not know the plugin. */
   name: string | null;
+  /**
+   * False once Decky has switched the plugin off: Panel de Control keeps its render until Steam
+   * restarts then, as its own tab stays in Steam's list (Decky never takes an entry out).
+   */
+  running: boolean;
 }
 
 /** Steam's column as of the last time the quick access menu was drawn. */

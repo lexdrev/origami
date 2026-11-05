@@ -57,8 +57,8 @@ describe("summary in the settings", () => {
   });
 
   it("names the plugin that arranges the column, when it is known", () => {
-    const known = ownTabSummary(true, 7, { tabs: column, arranger: { name: "Tabs Plugin" } }, ru);
-    const unknown = ownTabSummary(true, 7, { tabs: column, arranger: { name: null } }, ru);
+    const known = ownTabSummary(true, 7, { tabs: column, arranger: { name: "Tabs Plugin", running: true } }, ru);
+    const unknown = ownTabSummary(true, 7, { tabs: column, arranger: { name: null, running: true } }, ru);
 
     expect(known).toBe("Вкл · место задаёт Tabs Plugin");
     expect(unknown).toBe("Вкл · место задаёт другой плагин");

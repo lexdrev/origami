@@ -58,6 +58,8 @@ export const en: Messages = {
     arranged: (plugin) => `${plugin ?? "Another plugin"} arranges the tabs`,
     arrangedText:
       "ORIGAMI leaves its tab where it is so as not to get in the way. Without that plugin, you can choose the place here again.",
+    arrangedUntilRestart: (plugin) =>
+      `${plugin} is switched off, but it arranges the tabs until Steam restarts, so as not to break the menu. After a restart, you can choose the place here again.`,
     up: "Up",
     down: "Down",
     toTop: "To the top",
