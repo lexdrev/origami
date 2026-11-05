@@ -71,7 +71,7 @@ describe("the saturation scale", () => {
     const scale = saturationScale("bazzite");
     expect(scale.max).toBe(200);
     expect(scale.steamos).toBe(false);
-    expect(presetOf(100, scale.presets)?.id).toBe("default");
+    expect(presetOf(100, scale.presets)?.id).toBe("system");
   });
 
   it("tops at 100% on SteamOS, which shows the most itself", () => {

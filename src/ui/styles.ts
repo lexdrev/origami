@@ -198,7 +198,8 @@ ${fontFaces}
 .og-strip .og-choice { height: 34px; border: 0; border-left: 1px solid var(--og-border); border-radius: 0; background: transparent; }
 .og-strip .og-choice:first-child { border-left: 0; }
 .og-strip .og-choice--two-lines { height: 44px; }
-.og-strip--dense .og-choice { font-size: 9px; letter-spacing: 0.02em; }
+/* Narrow cells keep only a hairline of padding, as in the mockups: СИСТЕМА needs 44 of a 49 px cell. */
+.og-strip--dense .og-choice { padding: 0 2px; font-size: 9px; letter-spacing: 0.02em; }
 .og-strip .og-choice.og-focused { box-shadow: inset 0 0 0 2px var(--og-accent); }
 .og-strip .og-choice--selected { background: rgba(255, 176, 32, 0.12); color: var(--og-accent); box-shadow: inset 0 -2px 0 var(--og-accent); }
 .og-strip .og-choice--selected.og-focused { box-shadow: inset 0 0 0 2px var(--og-accent); }

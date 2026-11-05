@@ -15,6 +15,7 @@ import type { FanPreset } from "../fans";
 import type { LightLevel, PaletteColour } from "../lighting";
 import type { TriggerPattern } from "../triggers";
 import type { TdpPreset } from "../power";
+import type { SaturationPreset } from "../saturation";
 import type { VibrationPreset } from "../vibration";
 import { en } from "./en";
 import { ru } from "./ru";
@@ -182,7 +183,7 @@ export interface Messages {
     saturationSub: string;
     /** On SteamOS, after the subtitle: the system shows the most already. */
     saturationSteamOs: string;
-    presets: Record<"default" | "brighter" | "vivid" | "max" | "accurate" | "soft" | "system" | "custom", string>;
+    presets: Record<SaturationPreset["id"] | "custom", string>;
     saturationOwnedBy(plugin: string): string;
     saturationOwnedText(plugin: string): string;
     lighting: string;

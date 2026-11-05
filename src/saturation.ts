@@ -15,12 +15,13 @@ export const STEAMOS_MAX_SATURATION = 100;
 export const SATURATION_STEP = 5;
 
 export interface SaturationPreset {
-  id: "default" | "brighter" | "vivid" | "max" | "accurate" | "soft" | "system";
+  id: "system" | "brighter" | "vivid" | "max" | "accurate" | "soft";
   value: number;
 }
 
+/** 100% is named System on every system: it is what the system shows by itself. */
 export const SATURATION_PRESETS: readonly SaturationPreset[] = [
-  { id: "default", value: DEFAULT_SATURATION },
+  { id: "system", value: DEFAULT_SATURATION },
   { id: "brighter", value: 125 },
   { id: "vivid", value: 150 },
   { id: "max", value: MAX_SATURATION },
