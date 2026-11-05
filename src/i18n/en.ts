@@ -172,7 +172,7 @@ export const en: Messages = {
     lightingUnset: "Not set · default",
     mode: "Mode",
     rings: { left: "Left", right: "Right" },
-    modes: { static: "Colour", breathing: "Breathing", rainbow: "Rainbow", spiral: "Spiral" },
+    modes: { static: "Colour", breathing: "Breathe", rainbow: "Rainbow", spiral: "Spiral" },
     colour: "Colour",
     colours: {
       yellow: "Yellow",
