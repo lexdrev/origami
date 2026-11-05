@@ -92,6 +92,16 @@ def install_plugin(tmp_path: Path, name: str) -> None:
     manifest.write_text(json.dumps({"name": name}), encoding="utf-8")
 
 
+def disable_plugin(tmp_path: Path, name: str) -> None:
+    """Switch a plugin off in Decky's settings, as its list of plugins does."""
+    loader = tmp_path / "decky" / "settings" / "loader.json"
+    loader.parent.mkdir(parents=True, exist_ok=True)
+    disabled: list[str] = []
+    if loader.exists():
+        disabled = json.loads(loader.read_text(encoding="utf-8"))["disabled_plugins"]
+    loader.write_text(json.dumps({"disabled_plugins": [*disabled, name]}), encoding="utf-8")
+
+
 @pytest.fixture
 def sent_lighting(monkeypatch: pytest.MonkeyPatch) -> list[Lighting]:
     """Lighting the app sends to the controller, in order."""
@@ -318,6 +328,67 @@ def test_lighting_is_left_alone_while_a_lighting_plugin_runs(
         assert sent_lighting == []
         assert (await app.settings()).lighting is None
         assert await app.changes() == []
+
+    asyncio.run(scenario())
+
+
+def test_a_lighting_plugin_switched_on_and_off_takes_the_rings_and_gives_them_back(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    sent_lighting: list[Lighting],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"lighting": RAINBOW})
+        sent_lighting.clear()
+
+        install_plugin(tmp_path, LIGHTING_OWNERS[0])
+        with caplog.at_level(logging.WARNING):
+            assert (await app.follow_owners()).lighting == LIGHTING_OWNERS[0]
+        assert sent_lighting == []
+        assert caplog.records == []
+
+        disable_plugin(tmp_path, LIGHTING_OWNERS[0])
+        assert (await app.follow_owners()).lighting is None
+        assert [lighting.mode for lighting in sent_lighting] == [LightMode.RAINBOW]
+
+        # Asked again with nothing changed, ORIGAMI sends nothing.
+        await app.follow_owners()
+        assert len(sent_lighting) == 1
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_what_other_plugins_drive_is_not_restored_and_not_warned_about(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    sent_lighting: list[Lighting],
+    sent_vibration: list[Vibration],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ally_x.ally_controller()
+
+    async def scenario() -> None:
+        first = make_app(ally_x, tmp_path)
+        await first.start()
+        await first.update_settings({"lighting": RAINBOW, "vibration": {"left": 80, "right": 80}})
+        first.stop()
+        sent_lighting.clear()
+        sent_vibration.clear()
+        install_plugin(tmp_path, LIGHTING_OWNERS[0])
+        install_plugin(tmp_path, VIBRATION_OWNERS[0])
+
+        app = make_app(ally_x, tmp_path)
+        with caplog.at_level(logging.WARNING):
+            await app.start()
+
+        assert sent_lighting == []
+        assert sent_vibration == []
+        assert caplog.records == []
+        app.stop()
 
     asyncio.run(scenario())
 
@@ -1704,6 +1775,41 @@ def test_power_plugins_own_the_power(powered: FakeRoot, tmp_path: Path, plugin: 
         assert written_limits(powered)[0] == 20
         assert (await app.settings()).power == Power()
         assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_a_power_plugin_switched_on_and_off_takes_the_power_and_gives_it_back(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path
+) -> None:
+    plugin = next(name for name in POWER_OWNERS if name in FAN_OWNERS)
+
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+        await app.start()
+        await app.update_settings({"power": {"tdp": 20}, "fans": {"enabled": True}})
+        await asyncio.sleep(0.05)
+        assert written_limits(powered) == [20, 24, 29]
+
+        install_plugin(tmp_path, plugin)
+        owners = await app.follow_owners()
+        assert (owners.power, owners.fans) == (plugin, plugin)
+        assert (await app.power()).limits is None
+        # The plugin writes its own; ORIGAMI no longer writes over it.
+        powered.write(f"{ARMOURY}/ppt_pl1_spl/current_value", 25)
+        powered.write(f"sys/class/hwmon/{fan_curves.name}/pwm1_enable", 2)
+        await asyncio.sleep(0.05)
+        assert written_limits(powered)[0] == 25
+        assert fan_mode(fan_curves)[0] == 2
+
+        disable_plugin(tmp_path, plugin)
+        owners = await app.follow_owners()
+        assert (owners.power, owners.fans) == (None, None)
+        await asyncio.sleep(0.05)
+        assert written_limits(powered) == [20, 24, 29]
+        assert fan_mode(fan_curves) == [1, 1]
         app.stop()
 
     asyncio.run(scenario())

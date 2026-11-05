@@ -8,7 +8,7 @@ switched off by name in settings/loader.json ("disabled_plugins").
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 from origami.jsonio import parse_object
@@ -47,6 +47,16 @@ class Conflicts:
     boost: str | None
     """The plugin that holds the CPU boost: one that sets the whole power, or the boost alone."""
     fans: str | None
+
+
+def describe(conflicts: Conflicts) -> str:
+    """The parts other plugins drive and who drives each, for one line of the log."""
+    told = [
+        f"{item.name} {owner}"
+        for item in fields(conflicts)
+        if (owner := getattr(conflicts, item.name)) is not None
+    ]
+    return ", ".join(told) or "nothing"
 
 
 def read_conflicts(decky_home: Path) -> Conflicts:

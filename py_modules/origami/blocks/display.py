@@ -68,7 +68,7 @@ class DisplayBlock:
         ("Authorization required", 2026-11-02 on Bazzite, 2026-11-04 on SteamOS), so the caller
         tries again. Failures are logged on the last try, and at once when another try cannot help.
         """
-        if settings.saturation is None:
+        if settings.saturation is None or (await self._context.conflicts()).saturation is not None:
             return True
         if not await asyncio.to_thread(gamescope_running, self._context.root):
             # Steam in desktop mode loads ORIGAMI too; the saturation waits for game mode.
@@ -127,9 +127,9 @@ class DisplayBlock:
     async def restore_lighting(self, settings: Settings) -> bool:
         """Send the saved lighting again, at start and after sleep; whether it was sent.
 
-        Failures are only logged.
+        Failures are only logged; lighting another plugin drives is left to it, without a word.
         """
-        if settings.lighting is None:
+        if settings.lighting is None or (await self._context.conflicts()).lighting is not None:
             return False
         try:
             await self.send_lighting(settings.lighting)

@@ -83,7 +83,10 @@ export function refreshTriggerState(): Promise<void> {
   return load(triggerState, backend.getTriggerState);
 }
 
-/** Other plugins can be switched on and off at any time, so this is read when a screen opens. */
+/**
+ * Other plugins can be switched on and off at any time, so this is read when a screen opens and
+ * when Decky's plugins change; asked, the backend hands over or takes back what changed.
+ */
 export function refreshConflicts(): Promise<void> {
   return load(conflicts, backend.getConflicts);
 }

@@ -7,6 +7,7 @@ import { backend } from "./backend";
 
 import { App } from "./App";
 import { watchButtonActions } from "./buttonActions";
+import { watchDeckyPlugins } from "./deckyPlugins";
 import { PluginTitle } from "./PluginTitle";
 import { recordFanHistory } from "./fanHistory";
 import { watchRunningGame } from "./games";
@@ -14,7 +15,7 @@ import { fixKeyboardPaste } from "./keyboardPaste";
 import { watchGameStarts, watchSteamTdpLimit } from "./power";
 import { watchQuickAccessButton } from "./qamAssist";
 import { createOwnTab } from "./qamTab";
-import { loadAll, settings } from "./state";
+import { loadAll, refreshConflicts, settings } from "./state";
 import { TabApp } from "./TabApp";
 import { FoxGlyph } from "./ui/icons";
 
@@ -39,6 +40,9 @@ export default definePlugin(() => {
   const stopFanHistory = recordFanHistory();
   // The paste key of Steam's on-screen keyboard types a "v" in gamescope without this.
   const stopKeyboardPaste = fixKeyboardPaste(backend.paste);
+  // A plugin switched on or off may take a part of the hardware or leave it: the backend follows at
+  // once, and the screens and the tiles show it even while ORIGAMI stays open.
+  const stopDeckyPlugins = watchDeckyPlugins(() => void refreshConflicts());
   // The tab follows the settings: it appears once they are loaded and moves when they change.
   const unsubscribe = settings.subscribe(() => {
     const current = settings.get();
@@ -59,6 +63,7 @@ export default definePlugin(() => {
       stopRunningGame();
       stopFanHistory();
       stopKeyboardPaste();
+      stopDeckyPlugins();
     },
   };
 });

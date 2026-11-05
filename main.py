@@ -103,7 +103,7 @@ class Plugin:
         await self._app.restore_saturation()
 
     async def get_conflicts(self) -> JsonValue:
-        return to_wire(await self._app.conflicts())
+        return to_wire(await self._app.follow_owners())
 
     async def restore_all(self) -> JsonValue:
         return to_wire(await self._app.restore_all())

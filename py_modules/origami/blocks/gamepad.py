@@ -11,6 +11,7 @@ from pathlib import Path
 from origami import inputplumber
 from origami.blocks import Context
 from origami.controller import gamepad_over_xpad
+from origami.decky_plugins import Conflicts
 from origami.gyro import GyroState, read_gyro_state, remove_fix, restart_inputplumber, write_fix
 from origami.proc import CommandError
 from origami.rumble import Attach, RumbleProgram, RumbleSettings
@@ -86,12 +87,13 @@ class GamepadBlock:
     async def restore(self, settings: Settings) -> list[str]:
         """Send the saved vibration and rumble program again, at start and after sleep.
 
-        Return what was sent. Failures are only logged: the controller may be gone, or another
-        plugin drives it now.
+        Return what was sent. Failures are only logged, as the controller may be gone; what another
+        plugin drives is left to it without a word.
         """
+        owners = await self._context.conflicts()
         restored: list[str] = []
         vibration = settings.vibration
-        if vibration is not None:
+        if vibration is not None and owners.vibration is None:
             try:
                 await self._send_vibration(vibration)
                 restored.append("vibration")
@@ -99,6 +101,9 @@ class GamepadBlock:
                 log.warning("Vibration not restored: %s", error)
         wants_program = vibration is not None or settings.trigger_rumble is not None
         if wants_program and not await self._over_xpad():
+            if _triggers_taken(owners, settings):
+                await asyncio.to_thread(self._rumble.close)
+                return restored
             try:
                 await self._send_rumble(settings)
                 restored.append("rumble program")
@@ -250,7 +255,7 @@ class GamepadBlock:
             taps=trigger_rumble.enabled and trigger_rumble.taps,
         )
         async with self._controller_lock:
-            if owners.triggers is not None and trigger_rumble.enabled:
+            if _triggers_taken(owners, settings):
                 await asyncio.to_thread(self._rumble.close)
                 raise RuntimeError(
                     f"{owners.triggers} rumbles the triggers, so ORIGAMI leaves them alone"
@@ -288,3 +293,8 @@ class GamepadBlock:
                 stop_rumble(self._context.root)
         except (CommandError, OSError, TimeoutError) as error:
             log.warning("Vibration test not stopped: %s", error)
+
+
+def _triggers_taken(owners: Conflicts, settings: Settings) -> bool:
+    """Another plugin's program rumbles the triggers, and ORIGAMI's would rumble them as well."""
+    return owners.triggers is not None and (settings.trigger_rumble or TriggerRumble()).enabled

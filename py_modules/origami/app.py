@@ -17,7 +17,7 @@ from origami.blocks.fans import FansBlock
 from origami.blocks.gamepad import GamepadBlock
 from origami.blocks.power import PowerBlock, power_settings_changed
 from origami.buttons import Button, layout_for
-from origami.decky_plugins import Conflicts, read_conflicts
+from origami.decky_plugins import Conflicts, describe, read_conflicts
 from origami.device import Device, read_device
 from origami.gyro import GyroState
 from origami.hid_bpf import HidBpfProgram
@@ -88,6 +88,8 @@ class Origami:
         self._controller_lock = asyncio.Lock()
         """Taken around every report to the controller's MCU, by the display and gamepad blocks."""
         self._info: Info | None = None
+        self._owners: Conflicts | None = None
+        """The plugins that drove the hardware when ORIGAMI last followed its settings."""
         self._ready = asyncio.Event()
         self._start_error: Exception | None = None
         self._after_resume = BackgroundTask("origami-after-resume", self._follow_resumes)
@@ -128,6 +130,7 @@ class Origami:
             self._ready.set()
         # Frontend calls may come in as soon as the settings are loaded: they wait for these.
         async with self._settings_lock:
+            self._owners = await self.conflicts()
             await self._restore_controller("at start")
             await self._gamepad.restore_gyro(self._settings)
             await self._follow_settings()
@@ -253,6 +256,25 @@ class Origami:
 
     async def conflicts(self) -> Conflicts:
         return await asyncio.to_thread(self._read_conflicts)
+
+    async def follow_owners(self) -> Conflicts:
+        """The plugins that drive the hardware now; what one of them took or left follows at once.
+
+        Plugins are installed, switched on and off and removed while ORIGAMI runs, and the frontend
+        asks then. A part another plugin took is left to it; a part it left gets ORIGAMI's settings
+        again, as at start.
+        """
+        await self._started()
+        async with self._settings_lock:
+            owners = await self.conflicts()
+            if owners == self._owners:
+                return owners
+            self._owners = owners
+            log.info("Other plugins drive now: %s", describe(owners))
+            await self._follow_settings()
+            await self._restore_controller("as plugins changed")
+            await self._restore_saturation()
+            return owners
 
     async def restore_all(self) -> Settings:
         """Give the system back as it was before ORIGAMI, as uninstalling does, and keep running.

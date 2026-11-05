@@ -4,7 +4,7 @@
 import json
 from pathlib import Path
 
-from origami.decky_plugins import POWER_OWNERS, enabled_plugins, read_conflicts
+from origami.decky_plugins import POWER_OWNERS, describe, enabled_plugins, read_conflicts
 
 
 def install(home: Path, folder: str, name: str) -> None:
@@ -68,3 +68,11 @@ def test_power_control_holds_the_power_and_the_fans(tmp_path: Path) -> None:
 
     assert (conflicts.power, conflicts.boost, conflicts.fans) == ("PowerControl",) * 3
     assert conflicts.lighting is None
+
+
+def test_the_log_names_who_drives_what(tmp_path: Path) -> None:
+    assert describe(read_conflicts(tmp_path)) == "nothing"
+
+    install(tmp_path, "huesync", "HueSync")
+
+    assert describe(read_conflicts(tmp_path)) == "lighting HueSync"
