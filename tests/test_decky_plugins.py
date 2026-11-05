@@ -49,3 +49,22 @@ def test_ally_fix_holds_the_boost_and_fantastic_the_fans(tmp_path: Path) -> None
     assert (conflicts.power, conflicts.boost, conflicts.fans) == (None, "Ally Fix", "Ally Fix")
     (tmp_path / "plugins" / "Ally Fix" / "plugin.json").unlink()
     assert read_conflicts(tmp_path).fans == "Fantastic"
+
+
+def test_ally_center_holds_the_power_the_fans_and_the_lighting(tmp_path: Path) -> None:
+    install(tmp_path, "allycenter", "Ally Center")
+
+    conflicts = read_conflicts(tmp_path)
+
+    owners = (conflicts.power, conflicts.boost, conflicts.fans, conflicts.lighting)
+    assert owners == ("Ally Center",) * 4
+    assert (conflicts.saturation, conflicts.vibration, conflicts.triggers) == (None, None, None)
+
+
+def test_power_control_holds_the_power_and_the_fans(tmp_path: Path) -> None:
+    install(tmp_path, "PowerControl", "PowerControl")
+
+    conflicts = read_conflicts(tmp_path)
+
+    assert (conflicts.power, conflicts.boost, conflicts.fans) == ("PowerControl",) * 3
+    assert conflicts.lighting is None

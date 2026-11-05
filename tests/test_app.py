@@ -301,17 +301,18 @@ def test_lighting_is_sent_kept_and_journaled(
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize("plugin", LIGHTING_OWNERS)
 def test_lighting_is_left_alone_while_a_lighting_plugin_runs(
-    ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting]
+    ally_x: FakeRoot, tmp_path: Path, sent_lighting: list[Lighting], plugin: str
 ) -> None:
-    install_plugin(tmp_path, LIGHTING_OWNERS[0])
+    install_plugin(tmp_path, plugin)
 
     async def scenario() -> None:
         app = make_app(ally_x, tmp_path)
         await app.start()
-        assert (await app.conflicts()).lighting == LIGHTING_OWNERS[0]
+        assert (await app.conflicts()).lighting == plugin
 
-        with pytest.raises(RuntimeError, match=LIGHTING_OWNERS[0]):
+        with pytest.raises(RuntimeError, match=plugin):
             await app.update_settings({"lighting": RAINBOW})
 
         assert sent_lighting == []

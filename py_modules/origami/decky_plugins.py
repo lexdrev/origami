@@ -15,7 +15,7 @@ from origami.jsonio import parse_object
 
 log = logging.getLogger(__name__)
 
-LIGHTING_OWNERS = ("HueSync",)
+LIGHTING_OWNERS = ("HueSync", "Ally Center")
 """Plugins that drive the stick rings; while one runs, ORIGAMI leaves them alone."""
 SATURATION_OWNERS = ("vibrantDeck",)
 """Plugins that write gamescope's colour gamut themselves, past Steam's own saturation setting."""
@@ -23,14 +23,16 @@ VIBRATION_OWNERS = ("Ally Vibe Control", "Ally Fix")
 """Plugins that set the strength of the handle vibration."""
 TRIGGER_OWNERS = ("Ally Fix",)
 """Plugins that rumble the impulse triggers with a HID-BPF program of their own."""
-POWER_OWNERS = ("Panel de Control", "SimpleDeckyTDP", "PowerTools")
-"""Plugins that set the TDP or the CPU boost and frequency; ORIGAMI then shows the power only."""
+POWER_OWNERS = ("Panel de Control", "SimpleDeckyTDP", "PowerTools", "PowerControl", "Ally Center")
+"""Plugins that set the TDP or the CPU boost and frequency; ORIGAMI then shows the power only.
+Ally Center has a switch that leaves the TDP to another plugin, but keeps its own CPU settings."""
 BOOST_OWNERS = ("Ally Fix",)
 """Plugins that hold the CPU boost and its frequency cap but not the TDP (Ally Fix's CPU Boost Fix
 keeps the boost off and the cap applied); ORIGAMI then keeps the TDP only."""
-FAN_OWNERS = ("Panel de Control", "Ally Fix", "Fantastic")
+FAN_OWNERS = ("Panel de Control", "Ally Fix", "Fantastic", "PowerControl", "Ally Center")
 """Plugins that drive the fans; ORIGAMI then shows them only. Fantastic is made for the Steam Deck's
-fan, but an owner of a ROG Ally had it on (2026-11-04), so the two never take turns."""
+fan, but an owner of a ROG Ally had it on (2026-11-04), so the two never take turns. Ally Center's
+fan modes write the platform profile, which switches a fan curve off."""
 
 
 @dataclass(frozen=True, slots=True)
