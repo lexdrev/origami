@@ -8,6 +8,7 @@ import logging
 from collections.abc import Callable
 
 from origami.blocks import Context
+from origami.gamescope import gamescope_running
 from origami.lighting import CONTROLLER_LIGHTING, Lighting, apply_lighting
 from origami.proc import CommandError
 from origami.saturation import (
@@ -68,6 +69,9 @@ class DisplayBlock:
         tries again. Failures are logged on the last try, and at once when another try cannot help.
         """
         if settings.saturation is None:
+            return True
+        if not await asyncio.to_thread(gamescope_running, self._context.root):
+            # Steam in desktop mode loads ORIGAMI too; the saturation waits for game mode.
             return True
         try:
             await self.send_saturation(settings.saturation)

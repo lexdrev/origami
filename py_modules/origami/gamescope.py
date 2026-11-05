@@ -14,9 +14,31 @@ from pathlib import Path
 from origami.proc import CommandError, run, run_blocking
 
 DISPLAY = ":0"
+PROC = Path("proc")
+COMPOSITOR_NAMES = frozenset({"gamescope", "gamescope-wl"})
+"""gamescope's main thread is named gamescope-wl on Bazzite 45 and SteamOS 3.9 (2026-11-05); the
+session's scripts beside it (gamescope-session-plus) are not the compositor."""
 X_SOCKET = Path("tmp/.X11-unix/X0")
 """Socket of that display; it belongs to the session user, who may talk to it."""
 TIMEOUT_SECONDS = 5
+
+
+def gamescope_running(root: Path) -> bool:
+    """Whether gamescope runs, as in game mode; in desktop mode display :0 is the desktop's."""
+    try:
+        entries = list((root / PROC).iterdir())
+    except OSError:
+        return False
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            name = (entry / "comm").read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if name in COMPOSITOR_NAMES:
+            return True
+    return False
 
 
 def _display_owner(root: Path) -> tuple[int, int] | None:

@@ -5,6 +5,7 @@ import asyncio
 
 import pytest
 
+from origami.gamescope import gamescope_running
 from origami.proc import CommandError
 from origami.saturation import (
     ATOM,
@@ -73,3 +74,25 @@ def test_without_gamescope_reading_and_writing_fail(fake_root: FakeRoot) -> None
         asyncio.run(read_saturation(fake_root.path))
     with pytest.raises(CommandError):
         asyncio.run(write_saturation(fake_root.path, 150))
+
+
+@pytest.mark.parametrize(
+    ("comm", "running"),
+    [
+        ("gamescope", True),
+        ("gamescope-wl", True),
+        ("gamescope-sessi", False),  # the session's script
+        ("plasmashell", False),
+    ],
+)
+def test_gamescope_is_found_among_the_processes(
+    fake_root: FakeRoot, comm: str, running: bool
+) -> None:
+    fake_root.write("proc/77/comm", comm)
+    fake_root.write("proc/self/comm", "gamescope")  # not a process number
+
+    assert gamescope_running(fake_root.path) is running
+
+
+def test_no_processes_no_gamescope(fake_root: FakeRoot) -> None:
+    assert gamescope_running(fake_root.path) is False

@@ -38,6 +38,7 @@ def ally_x(fake_root: FakeRoot) -> FakeRoot:
     fake_root.hwmon(6, "asus", fan1_input=4600, fan2_input=4700)
     fake_root.hwmon(7, "k10temp", temp1_input=61625)
     fake_root.write("proc/sys/kernel/osrelease", "7.2.15-ogc1.1.fc45.x86_64")
+    fake_root.write("proc/4242/comm", "gamescope-wl")  # game mode
     fake_root.write(
         "usr/lib/os-release",
         'NAME="Bazzite"\nID=bazzite\nVERSION_ID="45"\nOSTREE_VERSION=\'45.20261104\'\n'

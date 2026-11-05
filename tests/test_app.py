@@ -485,6 +485,33 @@ def test_saturation_is_written_kept_journaled_and_restored(
     asyncio.run(scenario())
 
 
+def test_no_saturation_is_given_back_without_gamescope(
+    ally_x: FakeRoot,
+    tmp_path: Path,
+    screen: dict[str, list[int] | int],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Steam in desktop mode loads ORIGAMI too; display :0 is the desktop's there."""
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"saturation": 150})
+        written = screen["written"]
+        assert isinstance(written, list)
+        written.clear()
+        ally_x.write("proc/4242/comm", "plasmashell")
+
+        await app.restore_saturation()
+
+        assert screen["written"] == []
+        app.stop()
+
+    with caplog.at_level(logging.WARNING):
+        asyncio.run(scenario())
+    assert not any("Saturation" in record.message for record in caplog.records)
+
+
 def test_saturation_is_sent_again_while_gamescope_refuses(
     ally_x: FakeRoot,
     tmp_path: Path,
