@@ -5,18 +5,24 @@ import os
 import tempfile
 from pathlib import Path
 
+READABLE = 0o644
+"""Readable by everyone, written by root only: ORIGAMI's files hold no secrets, and the user and the
+report script read the settings and the journal of changes without sudo."""
+
 
 def atomic_write_text(path: Path, text: str) -> None:
     """Replace a file so readers see either the old or the new content.
 
     The plugin runs as root in folders the user owns: the temporary file is
     created with O_EXCL | O_NOFOLLOW (tempfile does this), and rename() replaces
-    a symlink at the target instead of writing through it.
+    a symlink at the target instead of writing through it. tempfile makes it
+    readable by root only, so it gets READABLE before it takes the file's place.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     temp = Path(temp_name)
     try:
+        os.fchmod(fd, READABLE)
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
             stream.write(text)
             stream.flush()

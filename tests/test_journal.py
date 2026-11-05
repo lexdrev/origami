@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import stat
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -30,6 +31,14 @@ def test_first_original_is_kept(tmp_path: Path) -> None:
 
     assert reopened(path).recorded("power", "ppt_pl1_spl")
     assert reopened(path).entries() == [Change("power", "ppt_pl1_spl", 17)]
+
+
+def test_the_journal_is_readable_without_root(tmp_path: Path) -> None:
+    path = tmp_path / "changes.json"
+
+    reopened(path).record("power", "ppt_pl1_spl", 17)
+
+    assert stat.S_IMODE(path.stat().st_mode) == 0o644
 
 
 def test_structured_originals_survive_a_restart(tmp_path: Path) -> None:

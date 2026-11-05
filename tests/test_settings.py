@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import json
+import stat
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,14 @@ def test_saved_settings_load_back(tmp_path: Path) -> None:
 
     assert SettingsStore(tmp_path / "settings.json").load() == Settings(language=Language.RU)
     assert [path.name for path in tmp_path.iterdir()] == ["settings.json"]
+
+
+def test_saved_settings_are_readable_without_root(tmp_path: Path) -> None:
+    path = tmp_path / "settings.json"
+
+    SettingsStore(path).save(Settings())
+
+    assert stat.S_IMODE(path.stat().st_mode) == 0o644
 
 
 def test_keys_from_a_newer_version_are_ignored(tmp_path: Path) -> None:
@@ -309,3 +318,4 @@ def test_bad_power_settings_are_rejected() -> None:
         Settings().updated({"power": {"tdp": 40}})
     with pytest.raises(ValueError, match="manage_tdp"):
         Settings().updated({"manage_tdp": 1})
+

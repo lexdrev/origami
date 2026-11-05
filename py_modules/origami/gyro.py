@@ -80,8 +80,6 @@ def write_fix(root: Path) -> None:
     """Write ORIGAMI's file; InputPlumber takes it when it starts next."""
     path = root / OVERRIDE
     atomic_write_text(path, fixed_text((root / STOCK).read_text(encoding="utf-8")))
-    # Readable like the other device files, not only by root as the temporary file was made.
-    path.chmod(0o644)
 
 
 def remove_fix(root: Path) -> bool:
