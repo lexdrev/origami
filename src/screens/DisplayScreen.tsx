@@ -7,10 +7,13 @@ import { useEffect } from "react";
 import type { Lighting } from "../backend";
 import { useMessages } from "../i18n";
 import {
+  BRIGHTNESS,
   DEFAULT_LIGHTING,
+  hasLevels,
   hasSpeed,
   hex,
   LIGHT_LEVELS,
+  levelOf,
   LIGHT_MODES,
   LIGHT_SPEEDS,
   PALETTE,
@@ -29,7 +32,7 @@ import {
   setSaturation,
 } from "../saturation";
 import { UISound } from "../sounds";
-import { conflicts, info, refreshConflicts, settings, updateSettings } from "../state";
+import { conflicts, info, refreshConflicts, setLighting, settings } from "../state";
 import { useStore } from "../store";
 import { Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, Pressable, Slider } from "../ui/controls";
@@ -148,8 +151,9 @@ function SaturationSettings() {
 function LightingSettings({ lighting }: { lighting: Lighting | null }) {
   const t = useMessages();
   // Until the lighting is first switched on, ORIGAMI leaves the rings to the controller.
-  const change = (changes: Partial<Lighting>) =>
-    void updateSettings({ lighting: { ...(lighting ?? DEFAULT_LIGHTING), ...changes } });
+  const change = (changes: Partial<Lighting>) => {
+    setLighting({ ...(lighting ?? DEFAULT_LIGHTING), ...changes });
+  };
   const enabled = lighting?.enabled ?? false;
 
   return (
@@ -199,12 +203,8 @@ function LightingSettings({ lighting }: { lighting: Lighting | null }) {
               />
             </>
           )}
-          <span className="og-card__label">{t.display.brightness}</span>
-          <ChoiceGroup
-            label={t.display.brightness}
-            choices={LIGHT_LEVELS.map((level) => ({ value: level, label: t.display.levels[level] }))}
-            value={lighting.brightness}
-            action={t.actions.select}
+          <Brightness
+            lighting={lighting}
             onChange={(brightness) => {
               change({ brightness });
             }}
@@ -212,6 +212,73 @@ function LightingSettings({ lighting }: { lighting: Lighting | null }) {
         </>
       )}
     </Card>
+  );
+}
+
+/**
+ * One slider for every mode: 5–100% for ORIGAMI's colours; rainbow and spiral, which only the
+ * controller's three levels dim, stop at three places named under it.
+ */
+function Brightness({ lighting, onChange }: { lighting: Lighting; onChange: (brightness: number) => void }) {
+  const t = useMessages();
+  const { brightness } = lighting;
+
+  if (hasLevels(lighting.mode)) {
+    const level = levelOf(brightness);
+    const top = LIGHT_LEVELS.length - 1;
+    return (
+      <>
+        <span className="og-card__label">{t.display.brightness}</span>
+        {/* Above the slider: below the card's last stop Steam's scrolling never gets there. */}
+        <span className="og-card__hint">{t.display.brightnessSteps}</span>
+        <Slider
+          label={t.display.brightness}
+          value={level}
+          min={0}
+          max={top}
+          step={1}
+          track={filledTrack(level, 0, top)}
+          thumb="var(--og-accent)"
+          notch={1}
+          lessLabel={t.actions.less}
+          moreLabel={t.actions.more}
+          onChange={(index) => {
+            onChange(LIGHT_LEVELS[index]?.brightness ?? BRIGHTNESS.max);
+          }}
+        />
+        <div className="og-slider__ends" aria-hidden="true">
+          {LIGHT_LEVELS.map((step, index) => (
+            <span key={step.id} className={index === level ? "og-slider__end--on" : undefined}>
+              {t.display.levels[step.id]}
+            </span>
+          ))}
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="og-card__head">
+        <span className="og-card__label">{t.display.brightness}</span>
+        <span className="og-card__value">{`${brightness}%`}</span>
+      </div>
+      <Slider
+        label={t.display.brightness}
+        value={brightness}
+        min={BRIGHTNESS.min}
+        max={BRIGHTNESS.max}
+        step={BRIGHTNESS.step}
+        track={filledTrack(brightness, BRIGHTNESS.min, BRIGHTNESS.max)}
+        thumb="var(--og-accent)"
+        lessLabel={t.actions.less}
+        moreLabel={t.actions.more}
+        onChange={onChange}
+      />
+      <div className="og-slider__ends" aria-hidden="true">
+        <span>{`${BRIGHTNESS.min}%`}</span>
+        <span>{`${BRIGHTNESS.max}%`}</span>
+      </div>
+    </>
   );
 }
 

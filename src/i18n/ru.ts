@@ -192,6 +192,7 @@ export const ru: Messages = {
     speed: "Скорость",
     speeds: { slow: "Медленно", medium: "Средне", fast: "Быстро" },
     brightness: "Яркость",
+    brightnessSteps: "Радугу и спираль рисует контроллер: у\u00a0них только 3\u00a0ступени",
     levels: { low: "Низкая", medium: "Средняя", high: "Высокая" },
     ownedBy: (plugin) => `Подсветкой управляет ${plugin}`,
     ownedText: (plugin) =>

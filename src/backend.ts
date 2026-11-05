@@ -65,7 +65,6 @@ export type LanguageSetting = "auto" | "ru" | "en";
 
 export type LightMode = "static" | "breathing" | "rainbow" | "spiral";
 export type LightSpeed = "slow" | "medium" | "fast";
-export type LightBrightness = "low" | "medium" | "high";
 
 /** Lighting of the stick rings (origami.lighting.Lighting); colours are 0xRRGGBB. */
 export interface Lighting {
@@ -75,7 +74,8 @@ export interface Lighting {
   left: number;
   right: number;
   speed: LightSpeed;
-  brightness: LightBrightness;
+  /** Percent, 5–100: smooth for ORIGAMI's colours, three levels for rainbow and spiral. */
+  brightness: number;
 }
 
 /** ORIGAMI's curve for both fans (origami.fans.FanCurve); speeds in percent at 30–90 °C. */

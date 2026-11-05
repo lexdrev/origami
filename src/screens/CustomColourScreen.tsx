@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Lighting } from "../backend";
 import { useMessages } from "../i18n";
-import { hex, hsToRgb, rgbToHs, type HueSaturation } from "../lighting";
+import { BRIGHTNESS, hex, hsToRgb, rgbToHs, type HueSaturation } from "../lighting";
 import { back } from "../navigation";
 import { previewLighting, settings, updateSettings } from "../state";
 import { latestOnly, useStore } from "../store";
@@ -94,7 +94,7 @@ function CustomColourEditor({ saved }: { saved: Lighting }) {
       <Card>
         {/* The colour itself, steady and bright; the rings on the console show the chosen mode. */}
         <Rings
-          lighting={{ ...lighting, mode: "static", brightness: "high" }}
+          lighting={{ ...lighting, mode: "static", brightness: BRIGHTNESS.max }}
           editing={{ left: target !== "right", right: target !== "left" }}
         />
         <div className="og-colour-value">

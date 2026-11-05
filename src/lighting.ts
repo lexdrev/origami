@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { LightBrightness, Lighting, LightMode, LightSpeed } from "./backend";
+import type { Lighting, LightMode, LightSpeed } from "./backend";
 
 /** The backend's Lighting(): switching the lighting on for the first time starts a spiral. */
 export const DEFAULT_LIGHTING: Lighting = {
@@ -10,7 +10,7 @@ export const DEFAULT_LIGHTING: Lighting = {
   left: 0xffd200,
   right: 0xffd200,
   speed: "medium",
-  brightness: "medium",
+  brightness: 70,
 };
 
 // Saturated values: the LEDs wash out soft screen colours (red looked like wine, white bluish).
@@ -30,7 +30,26 @@ export type PaletteColour = (typeof PALETTE)[number];
 
 export const LIGHT_MODES: readonly LightMode[] = ["static", "breathing", "rainbow", "spiral"];
 export const LIGHT_SPEEDS: readonly LightSpeed[] = ["slow", "medium", "fast"];
-export const LIGHT_LEVELS: readonly LightBrightness[] = ["low", "medium", "high"];
+/** Brightness in percent (origami.lighting): smooth for ORIGAMI's colours. */
+export const BRIGHTNESS = { min: 5, max: 100, step: 5 } as const;
+
+export type LightLevel = "low" | "medium" | "high";
+
+/**
+ * Rainbow and spiral bring their own colours, which only the controller's three levels dim: the
+ * brightness up to each value takes that level, and choosing the level sets the value.
+ */
+export const LIGHT_LEVELS: readonly { id: LightLevel; brightness: number }[] = [
+  { id: "low", brightness: 35 },
+  { id: "medium", brightness: 70 },
+  { id: "high", brightness: 100 },
+];
+
+/** Which of LIGHT_LEVELS rainbow and spiral show at the brightness. */
+export function levelOf(brightness: number): number {
+  const index = LIGHT_LEVELS.findIndex((level) => brightness <= level.brightness);
+  return index < 0 ? LIGHT_LEVELS.length - 1 : index;
+}
 
 export const hex = (rgb: number) => `#${rgb.toString(16).padStart(6, "0").toUpperCase()}`;
 
@@ -38,6 +57,9 @@ export const hex = (rgb: number) => `#${rgb.toString(16).padStart(6, "0").toUppe
 export const usesColour = (mode: LightMode) => mode === "static" || mode === "breathing";
 
 export const hasSpeed = (mode: LightMode) => mode !== "static";
+
+/** Rainbow and spiral: brightness by the controller's levels, not by the colour. */
+export const hasLevels = (mode: LightMode) => !usesColour(mode);
 
 /** The palette colour both rings show, or null for anything else. */
 export function paletteColour(lighting: Lighting): PaletteColour | null {
@@ -63,7 +85,7 @@ const CYCLES: Record<Exclude<LightMode, "static">, readonly [string, string, str
   rainbow: ["9s", "4.5s", "2s"],
   spiral: ["6s", "3s", "1.4s"],
 };
-const OPACITY: Record<LightBrightness, number> = { low: 0.45, medium: 0.75, high: 1 };
+const LEVEL_OPACITY = [0.45, 0.75, 1] as const;
 
 const glow = (rgb: number, alpha: number) =>
   `0 0 13px rgba(${(rgb >> 16) & 255}, ${(rgb >> 8) & 255}, ${rgb & 255}, ${alpha})`;
@@ -73,7 +95,9 @@ export function ringLook(lighting: Lighting | null, rgb: number): RingLook {
   if (!lighting?.enabled) {
     return { background: UNLIT, boxShadow: "none", animation: "none", opacity: 1 };
   }
-  const opacity = OPACITY[lighting.brightness];
+  const opacity = hasLevels(lighting.mode)
+    ? (LEVEL_OPACITY[levelOf(lighting.brightness)] ?? 1)
+    : 0.25 + (0.75 * lighting.brightness) / BRIGHTNESS.max;
   const cycle = lighting.mode === "static" ? "" : CYCLES[lighting.mode][LIGHT_SPEEDS.indexOf(lighting.speed)];
   switch (lighting.mode) {
     case "static":

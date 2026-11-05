@@ -276,6 +276,7 @@ ${fontFaces}
 .og-toggle.og-focused .og-switch { box-shadow: 0 0 0 2px var(--og-surface), 0 0 0 4px var(--og-accent); }
 .og-card__divider { height: 1px; margin: 2px -10px; background: var(--og-divider); }
 .og-card__title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.og-card__hint { margin-top: -4px; color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
 .og-card__aside { color: var(--og-muted); font: 500 10px var(--og-mono); text-transform: uppercase; white-space: nowrap; }
 .og-card .og-strip { background: var(--og-panel); }
 
@@ -325,6 +326,7 @@ ${fontFaces}
   text-transform: uppercase;
 }
 .og-slider__ends--captioned { padding-left: 96px; }
+.og-slider__end--on { color: var(--og-accent); font-weight: 700; }
 .og-choices__note { margin-top: -4px; color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-align: center; text-transform: uppercase; }
 
 /* Fans: two cards side by side for the fans and for the temperatures, then the curve. */

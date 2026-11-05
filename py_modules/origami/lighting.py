@@ -34,10 +34,13 @@ class Speed(StrEnum):
     FAST = "fast"
 
 
-class Brightness(StrEnum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
+MIN_BRIGHTNESS = 5
+MAX_BRIGHTNESS = 100
+LOW_BRIGHTNESS = 35
+"""Rainbow and spiral glow at the MCU's low level up to here, at medium up to MEDIUM_BRIGHTNESS."""
+MEDIUM_BRIGHTNESS = 70
+# Settings saved before the slider (1.0.0) kept one of the MCU's three levels by name.
+OLD_LEVELS = {"low": LOW_BRIGHTNESS, "medium": MEDIUM_BRIGHTNESS, "high": MAX_BRIGHTNESS}
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +52,8 @@ class Lighting:
     """Colour of the left ring as 0xRRGGBB; rainbow and spiral bring their own colours."""
     right: int = YELLOW
     speed: Speed = Speed.MEDIUM
-    brightness: Brightness = Brightness.MEDIUM
+    brightness: int = MEDIUM_BRIGHTNESS
+    """Percent, 5 to 100: smooth for ORIGAMI's colours, three levels for rainbow and spiral."""
 
     @classmethod
     def from_json(cls, value: object) -> Lighting:
@@ -68,9 +72,7 @@ class Lighting:
             left=_color("left", data.get("left", defaults.left)),
             right=_color("right", data.get("right", defaults.right)),
             speed=_member(Speed, "speed", data.get("speed", defaults.speed)),
-            brightness=_member(
-                Brightness, "brightness", data.get("brightness", defaults.brightness)
-            ),
+            brightness=_brightness(data.get("brightness", defaults.brightness)),
         )
 
     def to_json(self) -> dict[str, JsonValue]:
@@ -94,6 +96,18 @@ def _color(key: str, value: object) -> int:
     raise ValueError(f"{key} must be a colour from 0 to 0xFFFFFF")
 
 
+def _brightness(value: object) -> int:
+    if isinstance(value, str) and value in OLD_LEVELS:
+        return OLD_LEVELS[value]
+    if (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and MIN_BRIGHTNESS <= value <= MAX_BRIGHTNESS
+    ):
+        return value
+    raise ValueError(f"brightness must be a percent from {MIN_BRIGHTNESS} to {MAX_BRIGHTNESS}")
+
+
 def _json(value: object) -> JsonValue:
     return value.value if isinstance(value, StrEnum) else cast("JsonValue", value)
 
@@ -105,7 +119,11 @@ def _json(value: object) -> JsonValue:
 # Zone 0 is both rings; 1 and 2 are the halves of the left ring, 3 and 4 of the right one.
 # The second colour is where breathing fades to: black here. Brightness 0 does not keep the
 # rings dark (they light up again when the sticks are touched), so off is static black, as the
-# driver itself sets before sleep.
+# driver itself sets before sleep. Levels above 3 put the rings out as well (checked 2026-11-05).
+#
+# Three levels are all the MCU has, and rainbow and spiral hardly heed the colour sent with them,
+# so those two only get the levels. A colour of ORIGAMI's own dims smoothly instead: the MCU
+# stays at its top level and gets the colour scaled down, as the driver's LED class does it.
 MODE = 0xB3
 APPLY = bytes([VENDOR_REPORT, 0xB4])
 STORE = bytes([VENDOR_REPORT, 0xB5])
@@ -121,7 +139,24 @@ MODE_CODES = {
     LightMode.SPIRAL: 3,
 }
 SPEED_CODES = {Speed.SLOW: 0xE1, Speed.MEDIUM: 0xEB, Speed.FAST: 0xF5}
-BRIGHTNESS_LEVELS = {Brightness.LOW: 1, Brightness.MEDIUM: 2, Brightness.HIGH: 3}
+TOP_LEVEL = 3
+DIM_CURVE = 1.3
+"""The slider's 5% gives 2% of the colour: the dimmest checked on the console still in its hue."""
+
+
+def mcu_level(brightness: int) -> int:
+    """The MCU's level, 1 to 3, that rainbow and spiral show for the brightness."""
+    if brightness <= LOW_BRIGHTNESS:
+        return 1
+    return 2 if brightness <= MEDIUM_BRIGHTNESS else TOP_LEVEL
+
+
+def dimmed(colour: int, brightness: int) -> int:
+    """The colour scaled for the brightness; a channel that is on keeps at least 1, and the hue."""
+    share = (brightness / MAX_BRIGHTNESS) ** DIM_CURVE
+    channels = [(colour >> shift) & 0xFF for shift in (16, 8, 0)]
+    red, green, blue = (max(1, round(value * share)) if value else 0 for value in channels)
+    return (red << 16) | (green << 8) | blue
 
 
 def lighting_reports(lighting: Lighting) -> list[bytes]:
@@ -129,13 +164,19 @@ def lighting_reports(lighting: Lighting) -> list[bytes]:
     if not lighting.enabled:
         dark = Lighting(mode=LightMode.STATIC, left=0, right=0)
         return [_mode_report(ALL_ZONES, 0, dark), APPLY, STORE]
-    reports = [BRIGHTNESS + bytes([BRIGHTNESS_LEVELS[lighting.brightness]])]
     own_colours = lighting.mode in (LightMode.RAINBOW, LightMode.SPIRAL)
-    if own_colours or lighting.left == lighting.right:
-        zones = [(ALL_ZONES, lighting.left)]
+    if own_colours:
+        level, left, right = mcu_level(lighting.brightness), lighting.left, lighting.right
     else:
-        zones = [(zone, lighting.left) for zone in LEFT_ZONES]
-        zones += [(zone, lighting.right) for zone in RIGHT_ZONES]
+        level = TOP_LEVEL
+        left = dimmed(lighting.left, lighting.brightness)
+        right = dimmed(lighting.right, lighting.brightness)
+    if own_colours or left == right:
+        zones = [(ALL_ZONES, left)]
+    else:
+        zones = [(zone, left) for zone in LEFT_ZONES]
+        zones += [(zone, right) for zone in RIGHT_ZONES]
+    reports = [BRIGHTNESS + bytes([level])]
     reports += [_mode_report(zone, colour, lighting) for zone, colour in zones]
     return [*reports, APPLY, STORE]
 

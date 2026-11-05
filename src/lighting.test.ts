@@ -4,7 +4,19 @@
 import { describe, expect, it } from "vitest";
 
 import type { Lighting } from "./backend";
-import { DEFAULT_LIGHTING, hasSpeed, hex, hsToRgb, paletteColour, rgbToHs, ringLook, usesColour } from "./lighting";
+import {
+  DEFAULT_LIGHTING,
+  hasLevels,
+  hasSpeed,
+  hex,
+  hsToRgb,
+  LIGHT_LEVELS,
+  levelOf,
+  paletteColour,
+  rgbToHs,
+  ringLook,
+  usesColour,
+} from "./lighting";
 
 const lighting = (changes: Partial<Lighting>): Lighting => ({ ...DEFAULT_LIGHTING, ...changes });
 
@@ -17,10 +29,11 @@ describe("lighting on the screen", () => {
   it("asks for a colour and a speed only where the mode uses them", () => {
     expect([usesColour("static"), usesColour("breathing"), usesColour("rainbow")]).toEqual([true, true, false]);
     expect([hasSpeed("static"), hasSpeed("spiral")]).toEqual([false, true]);
+    expect([hasLevels("breathing"), hasLevels("rainbow"), hasLevels("spiral")]).toEqual([false, true, true]);
   });
 
   it("starts a medium spiral when the lighting is switched on for the first time", () => {
-    expect(DEFAULT_LIGHTING).toMatchObject({ enabled: true, mode: "spiral", speed: "medium", brightness: "medium" });
+    expect(DEFAULT_LIGHTING).toMatchObject({ enabled: true, mode: "spiral", speed: "medium", brightness: 70 });
   });
 
   it("names a palette colour only when both rings show it", () => {
@@ -37,12 +50,21 @@ describe("the rings", () => {
   });
 
   it("glow in their colour, dimmer at a lower brightness", () => {
-    const look = ringLook(lighting({ mode: "static", brightness: "low" }), 0xff3b3b);
+    const look = ringLook(lighting({ mode: "static", brightness: 5 }), 0xff3b3b);
 
     expect(look.background).toBe("#FF3B3B");
     expect(look.boxShadow).toContain("rgba(255, 59, 59");
-    const bright = ringLook(lighting({ mode: "static", brightness: "high" }), 0xff3b3b);
+    const bright = ringLook(lighting({ mode: "static", brightness: 100 }), 0xff3b3b);
     expect(look.opacity).toBeLessThan(bright.opacity);
+    expect(bright.opacity).toBe(1);
+  });
+
+  it("dim rainbow and spiral by the controller's level only", () => {
+    const opacity = (brightness: number) => ringLook(lighting({ mode: "spiral", brightness }), 0).opacity;
+
+    expect(opacity(5)).toBe(opacity(35));
+    expect(opacity(35)).toBeLessThan(opacity(36));
+    expect(opacity(70)).toBeLessThan(opacity(100));
   });
 
   it("play the effect faster at a higher speed", () => {
@@ -50,6 +72,16 @@ describe("the rings", () => {
       "og-ring-breath 4s ease-in-out infinite",
     );
     expect(ringLook(lighting({ mode: "spiral", speed: "fast" }), 0).animation).toBe("og-ring-spin 1.4s linear infinite");
+  });
+});
+
+describe("brightness levels of rainbow and spiral", () => {
+  it("cover the slider in three parts, as the backend picks the controller's level", () => {
+    expect([5, 35, 36, 70, 71, 100].map(levelOf)).toEqual([0, 0, 1, 1, 2, 2]);
+  });
+
+  it("set the brightness each level stands for, which keeps that level", () => {
+    expect(LIGHT_LEVELS.map((level) => levelOf(level.brightness))).toEqual([0, 1, 2]);
   });
 });
 

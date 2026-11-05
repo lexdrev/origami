@@ -6,14 +6,13 @@ import { createContext, useContext, type ReactNode } from "react";
 import type {
   ButtonAction,
   LanguageSetting,
-  LightBrightness,
   LightMode,
   LightSpeed,
   TriggerLevel,
   Triggers,
 } from "../backend";
 import type { FanPreset } from "../fans";
-import type { PaletteColour } from "../lighting";
+import type { LightLevel, PaletteColour } from "../lighting";
 import type { TriggerPattern } from "../triggers";
 import type { TdpPreset } from "../power";
 import type { VibrationPreset } from "../vibration";
@@ -200,7 +199,9 @@ export interface Messages {
     speed: string;
     speeds: Record<LightSpeed, string>;
     brightness: string;
-    levels: Record<LightBrightness, string>;
+    /** Over the slider of rainbow and spiral, which only the controller's three levels dim. */
+    brightnessSteps: string;
+    levels: Record<LightLevel, string>;
     ownedBy(plugin: string): string;
     ownedText(plugin: string): string;
   };

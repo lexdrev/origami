@@ -187,6 +187,8 @@ export const setPower = liveSetting("power", refreshHeldPower);
 export const setFans = liveSetting("fans");
 /** Saves the games' own power settings; the limits held follow them too. */
 export const setGamePower = liveSetting("gamePower", refreshHeldPower);
+/** Saves the stick lighting; the rings follow it, and its brightness slider follows a held D-pad. */
+export const setLighting = liveSetting("lighting");
 
 /** Switches the stick lighting on or off; it comes on as ORIGAMI's default the first time. */
 export function toggleLighting(): Promise<boolean> {

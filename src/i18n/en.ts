@@ -188,6 +188,7 @@ export const en: Messages = {
     speed: "Speed",
     speeds: { slow: "Slow", medium: "Medium", fast: "Fast" },
     brightness: "Brightness",
+    brightnessSteps: "The controller draws rainbow and spiral: they have only 3\u00a0steps",
     levels: { low: "Low", medium: "Medium", high: "High" },
     ownedBy: (plugin) => `${plugin} controls the lighting`,
     ownedText: (plugin) =>
