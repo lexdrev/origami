@@ -65,10 +65,15 @@ ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomeb
 
 ## На чём проверено
 
-- ROG Xbox Ally X (плата RC73XA)
-- Bazzite 45.20261104, ядро 7.2.15-ogc1.1, InputPlumber 0.83.1, Decky Loader 3.3.1
+- **ROG Xbox Ally X** (плата RC73XA): Bazzite 45.20261104, ядро 7.2.15-ogc1.1, InputPlumber 0.83.1,
+  Decky Loader 3.3.1
+- **ROG Ally** (плата RC71L): SteamOS 3.9.5, ядро 7.2.7-valve2, InputPlumber 0.78.0, Decky Loader 3.3.1
 
-ORIGAMI знает и ROG Xbox Ally X20 (плата RC74XA), но на ней его ещё не проверяли, как и на SteamOS.
+На ROG Ally обе кнопки остаются у системы, поэтому настроек кнопок там нет; насыщенность — до 100%, потому что
+SteamOS уже даёт самые яркие цвета; шкала TDP — до предела прошивки, 25 Вт от батареи и 30 Вт от зарядки.
+
+ORIGAMI знает и ROG Ally X (RC72LA), ROG Xbox Ally (RC73YA) и ROG Xbox Ally X20 (RC74XA), но на них его ещё не
+проверяли.
 
 ## Установка
 

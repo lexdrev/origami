@@ -64,10 +64,16 @@ Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or 
 
 ## Tested on
 
-- ROG Xbox Ally X (board RC73XA)
-- Bazzite 45.20261104, kernel 7.2.15-ogc1.1, InputPlumber 0.83.1, Decky Loader 3.3.1
+- **ROG Xbox Ally X** (board RC73XA): Bazzite 45.20261104, kernel 7.2.15-ogc1.1, InputPlumber 0.83.1,
+  Decky Loader 3.3.1
+- **ROG Ally** (board RC71L): SteamOS 3.9.5, kernel 7.2.7-valve2, InputPlumber 0.78.0, Decky Loader 3.3.1
 
-ORIGAMI also knows the ROG Xbox Ally X20 (board RC74XA), but it has not been tried on one yet, nor on SteamOS.
+On the ROG Ally, the system keeps both buttons, so there are no button settings there; saturation goes up to
+100%, because SteamOS already shows the richest colours; the TDP scale ends where the firmware does, at 25 W on
+battery and 30 W on the charger.
+
+ORIGAMI also knows the ROG Ally X (RC72LA), the ROG Xbox Ally (RC73YA) and the ROG Xbox Ally X20 (RC74XA), but it
+has not been tried on them yet.
 
 ## Install
 
