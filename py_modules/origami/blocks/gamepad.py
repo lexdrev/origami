@@ -26,8 +26,8 @@ from origami.triggers import (
 )
 from origami.vibration import (
     GRIP_AT_GAME_FULL,
-    PULSE_MAGNITUDE,
     PULSE_SECONDS,
+    XPAD_PULSE_STRENGTH,
     Vibration,
     apply_vibration,
     original_vibration,
@@ -263,7 +263,7 @@ class GamepadBlock:
 
     def _start_handle_pulse(self) -> None:
         if self._pulse_device is not None:
-            inputplumber.start_rumble(self._pulse_device, PULSE_MAGNITUDE / 100)
+            inputplumber.start_rumble(self._pulse_device, XPAD_PULSE_STRENGTH)
             return
         self._rumble.mute_triggers()
         start_pulse(self._context.root)

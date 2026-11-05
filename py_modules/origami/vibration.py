@@ -98,6 +98,11 @@ PULSE_MAGNITUDE = 32
 
 The rumble program lifts the test pulse as it lifts a game's rumble."""
 PULSE_SECONDS = 1.0
+XPAD_PULSE_STRENGTH = 1.0
+"""The test where the gamepad is a separate Xbox 360 controller, through InputPlumber: a game's full
+rumble. InputPlumber 0.78 on SteamOS passes Steam's speeds to it without the -5 dB
+(source/evdev/gamepad.rs), so games rumble there at full strength, as Steam's own test does; at
+PULSE_MAGNITUDE the test felt weaker than both (RC71L owner, 2026-11-05)."""
 
 
 def rumble_report(magnitude: int) -> bytes:

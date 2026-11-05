@@ -1073,7 +1073,7 @@ def test_the_rog_allys_handle_test_rumbles_through_inputplumber(
     asyncio.run(scenario())
 
     device = "/org/shadowblip/InputPlumber/CompositeDevice0"
-    assert told == [("rumble", device, "0.32"), ("stop", device)]
+    assert told == [("rumble", device, "1"), ("stop", device)]  # a game's full rumble there
     assert rumbles == []  # nothing went to the gamepad interface the ROG Ally has not
 
 
