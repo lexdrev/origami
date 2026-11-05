@@ -5,14 +5,20 @@ import { useQuickAccessVisible } from "@decky/api";
 import { useEffect } from "react";
 
 import type { Telemetry } from "./backend";
+import { quickAccessOpen } from "./qamTab";
 import { refreshHeldPower, refreshTelemetry, telemetry } from "./state";
 import { useStore, type Loadable } from "./store";
 
 const POLL_INTERVAL_MS = 1000;
 
-/** Live readings and the limits ORIGAMI holds, polled only while the quick access menu is open. */
+/**
+ * Live readings and the limits ORIGAMI holds, polled only while the quick access menu is open: as
+ * Decky tells its tab, or as Steam renders the menu, which ORIGAMI's own tab goes by.
+ */
 export function useTelemetry(): Loadable<Telemetry> {
-  const visible = useQuickAccessVisible();
+  const deckyVisible = useQuickAccessVisible();
+  const menuOpen = useStore(quickAccessOpen);
+  const visible = deckyVisible || menuOpen;
 
   useEffect(() => {
     if (!visible) return;

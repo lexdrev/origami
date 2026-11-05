@@ -9,7 +9,7 @@ import {
   getReactRoot,
   type Patch,
 } from "@decky/ui";
-import { createElement, type ElementType, type ReactNode } from "react";
+import { createElement, useEffect, type ElementType, type ReactNode } from "react";
 
 import { ORIGAMI_TAB } from "./quickAccess";
 import { createStore, useStore } from "./store";
@@ -27,6 +27,14 @@ export interface TabContent {
   icon: ReactNode;
   content: ReactNode;
 }
+
+/**
+ * Whether the quick access menu is open, as Steam renders it. Decky tells its tabs through a state of
+ * its own, which a plugin that replaces Decky's tab render can leave unset for ORIGAMI's tab: then
+ * the screen there took the menu for closed and its readings stood still (2026-11-05, with Panel de
+ * Control). The column ORIGAMI wraps gets the menu's own flag on every render.
+ */
+export const quickAccessOpen = createStore<boolean>(false);
 
 export interface OwnTab {
   /** Shows or hides ORIGAMI's tab and moves it to `position`. */
@@ -246,6 +254,9 @@ export function createOwnTab(tab: TabContent): OwnTab | null {
   // change shows at once instead of on the menu's next render.
   function OwnTabColumn({ [OWN_COLUMN]: { column, visible }, ...props }: OwnColumnProps) {
     useStore(placement);
+    useEffect(() => {
+      quickAccessOpen.set(visible);
+    }, [visible]);
     arrange(props.tabs, visible);
     return createElement(column, props);
   }
@@ -258,7 +269,11 @@ export function createOwnTab(tab: TabContent): OwnTab | null {
     (args: unknown[], tree: unknown) => {
       const node: unknown = findInReactTree(tree, (candidate: unknown) => Array.isArray(propsOf(candidate)?.tabs));
       if (isElement(node) && node.type !== OwnTabColumn && isComponent(node.type)) {
-        const stash: ColumnStash = { column: node.type, visible: propsOf(args[0])?.visible === true };
+        // The menu's renderer is called with its props, as Decky's patch reads them too.
+        const menuProps = args[0];
+        const open =
+          typeof menuProps === "object" && menuProps !== null && "visible" in menuProps && menuProps.visible === true;
+        const stash: ColumnStash = { column: node.type, visible: open };
         node.props = { ...node.props, [OWN_COLUMN]: stash };
         node.type = OwnTabColumn;
       }

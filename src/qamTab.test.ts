@@ -3,7 +3,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createOwnTab, KNOWN_ARRANGERS, placeTab, repairDeckyTabs } from "./qamTab";
+import { createOwnTab, KNOWN_ARRANGERS, placeTab, quickAccessOpen, repairDeckyTabs } from "./qamTab";
 import { ORIGAMI_TAB } from "./quickAccess";
 import type { Store } from "./store";
 import { FIRST_TAB, quickAccessColumn } from "./tabPosition";
@@ -38,6 +38,14 @@ vi.mock("@decky/ui", () => ({
 vi.mock("./store", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./store")>()),
   useStore: <T,>(store: Store<T>) => store.get(),
+}));
+
+// The column is called as a plain function here, so its effect runs right away.
+vi.mock("react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react")>()),
+  useEffect: (effect: () => void) => {
+    effect();
+  },
 }));
 
 const SOUNDTRACKS = 7;
@@ -111,10 +119,10 @@ function renderColumn(column: ColumnElement) {
 }
 
 /** One render of the menu: Decky's patch fills the list, then ORIGAMI's runs and the column renders. */
-function renderMenu(tabs: Entry[], hook: DeckyTabsHook): ColumnElement {
+function renderMenu(tabs: Entry[], hook: DeckyTabsHook, visible = true): ColumnElement {
   hook.render(tabs);
   const column: ColumnElement = { type: SteamColumn, props: { tabs, activeTab: 0 } };
-  decky.menuHandler?.([{ visible: true }], column);
+  decky.menuHandler?.([{ visible }], column);
   renderColumn(column);
   return column;
 }
@@ -128,6 +136,7 @@ afterEach(() => {
   decky.unpatch.mockClear();
   decky.menuHandler = null;
   quickAccessColumn.set({ tabs: [], arranger: null });
+  quickAccessOpen.set(false);
 });
 
 describe("placeTab", () => {
@@ -257,6 +266,17 @@ describe("ORIGAMI's own tab with Decky's own render", () => {
       ],
       arranger: null,
     });
+  });
+
+  it("tells ORIGAMI's screens whether the menu is open, as Steam renders it", () => {
+    const { hook, ownTab } = setUp();
+    const tabs = steamColumn();
+    ownTab?.apply(true, SOUNDTRACKS);
+
+    renderMenu(tabs, hook);
+    expect(quickAccessOpen.get()).toBe(true);
+    renderMenu(tabs, hook, false);
+    expect(quickAccessOpen.get()).toBe(false);
   });
 
   it("keeps Decky's render in place", () => {
