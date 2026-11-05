@@ -14,9 +14,9 @@
 
 <p align="center"><a href="README.md">English</a> · <b>Русский</b></p>
 
-ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) на ROG Xbox Ally X с Bazzite.
-Он собирает в одном месте настройки питания, вентиляторов, экрана, подсветки стиков и геймпада и исправляет
-проблемы, которые есть у консоли на Linux сейчас.
+ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) на ROG Xbox Ally X с Bazzite
+и ROG Ally со SteamOS. Он собирает в одном месте настройки питания, вентиляторов, экрана, подсветки стиков и геймпада
+и исправляет проблемы, которые есть у этих консолей на Linux сейчас.
 
 > ORIGAMI — независимый проект, он не связан с ASUS, Microsoft, Valve и командой Bazzite.
 
@@ -31,6 +31,9 @@ ORIGAMI — плагин для [Decky Loader](https://github.com/SteamDeckHomeb
 </p>
 
 ## Что умеет
+
+Здесь весь ORIGAMI, как на ROG Xbox Ally X. На других моделях он показывает только то, что есть у консоли: см.
+[На чём проверено](#на-чём-проверено).
 
 - **Питание:** TDP от 7 до 35 Вт с режимами «Эко», «Баланс» и «Турбо»; держится после сна, зарядки и запуска игр.
   Запас мощности на короткие всплески, буст частоты CPU, до 35 Вт от батареи, если разрешить, и профили для

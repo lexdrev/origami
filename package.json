@@ -1,7 +1,7 @@
 {
   "name": "origami",
   "version": "1.1.0",
-  "description": "Power, fans, display, light and gamepad settings for the ROG Xbox Ally X",
+  "description": "Power, fans, display, light and gamepad settings for the ROG Ally consoles",
   "license": "GPL-3.0-or-later",
   "author": "lexdrev",
   "repository": {

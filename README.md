@@ -15,8 +15,8 @@
 <p align="center"><b>English</b> · <a href="README.ru.md">Русский</a></p>
 
 ORIGAMI is a [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) plugin for the ROG Xbox Ally X on
-Bazzite. It puts power, fans, display, stick lighting and gamepad settings in one place and fixes the problems the
-console has on Linux today.
+Bazzite and the ROG Ally on SteamOS. It puts power, fans, display, stick lighting and gamepad settings in one place
+and fixes the problems these consoles have on Linux today.
 
 > ORIGAMI is an independent project, not affiliated with ASUS, Microsoft, Valve or the Bazzite team.
 
@@ -31,6 +31,9 @@ console has on Linux today.
 </p>
 
 ## What it does
+
+This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only what the console has: see
+[Tested on](#tested-on).
 
 - **Power:** TDP from 7 to 35 W with Eco, Balance and Turbo presets, held through sleep, the charger and game
   starts. Power headroom for short bursts, CPU frequency boost, up to 35 W on battery when you allow it, and
