@@ -83,23 +83,28 @@ class GamepadBlock:
         if bool(after.gyro_fix) != bool(before.gyro_fix):
             await self.set_gyro(on=bool(after.gyro_fix))
 
-    async def restore(self, settings: Settings) -> None:
+    async def restore(self, settings: Settings) -> list[str]:
         """Send the saved vibration and rumble program again, at start and after sleep.
 
-        Failures are only logged: the controller may be gone, or another plugin drives it now.
+        Return what was sent. Failures are only logged: the controller may be gone, or another
+        plugin drives it now.
         """
+        restored: list[str] = []
         vibration = settings.vibration
         if vibration is not None:
             try:
                 await self._send_vibration(vibration)
+                restored.append("vibration")
             except (OSError, RuntimeError) as error:
                 log.warning("Vibration not restored: %s", error)
         wants_program = vibration is not None or settings.trigger_rumble is not None
         if wants_program and not await self._over_xpad():
             try:
                 await self._send_rumble(settings)
+                restored.append("rumble program")
             except (OSError, RuntimeError) as error:
                 log.warning("Rumble program not restored: %s", error)
+        return restored
 
     def give_back_vibration(self, owner: str | None) -> None:
         """The handles' strength as it was before ORIGAMI; blocks briefly.
@@ -182,6 +187,7 @@ class GamepadBlock:
             return
         self._pulsing = True
         self._pulse_device = device
+        log.info("Vibration test%s", "" if device is None else " through InputPlumber")
         try:
             await asyncio.to_thread(self._start_handle_pulse)
             await asyncio.sleep(PULSE_SECONDS)
@@ -195,6 +201,7 @@ class GamepadBlock:
             return
         root = self._context.root
         self._pulsing = True
+        log.info("Trigger vibration test: %s", "taps" if trigger_rumble.taps else "a second")
         try:
             if trigger_rumble.taps:
                 # Taps as a game's shots give them, not one long rumble.

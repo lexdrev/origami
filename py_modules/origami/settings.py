@@ -208,6 +208,32 @@ def _tab_position(value: object) -> int | None:
 _FIELDS = frozenset(item.name for item in fields(Settings))
 
 
+def describe_changes(before: Settings, after: Settings) -> str:
+    """The settings that differ, with their new values, for one line of the log.
+
+    A game's profile is told by itself, not the whole list of them.
+    """
+    old, new = before.to_json(), after.to_json()
+    told = [
+        f"{key} {_compact(value)}"
+        for key, value in new.items()
+        if key != "game_power" and value != old.get(key)
+    ]
+    was = {profile.app_id: profile for profile in before.game_power}
+    now = {profile.app_id for profile in after.game_power}
+    told.extend(
+        f"game {profile.app_id} {_compact(profile.to_json())}"
+        for profile in after.game_power
+        if was.get(profile.app_id) != profile
+    )
+    told.extend(f"game {app_id} removed" for app_id in was if app_id not in now)
+    return "; ".join(told)
+
+
+def _compact(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
 class SettingsStore:
     def __init__(self, path: Path) -> None:
         self._path = path

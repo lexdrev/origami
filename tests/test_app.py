@@ -462,6 +462,22 @@ def test_on_steamos_the_scale_tops_at_what_the_system_shows(
     assert tops == [100, 100]  # the original read and the value written, both on SteamOS's scale
 
 
+@pytest.mark.usefixtures("screen")
+def test_a_settings_change_is_one_line_of_the_log(
+    ally_x: FakeRoot, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        with caplog.at_level(logging.INFO, logger="origami.app"):
+            await app.update_settings({"saturation": 150})
+            await app.update_settings({"saturation": 150})  # unchanged: nothing to tell
+
+    asyncio.run(scenario())
+    told = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Settings changed")]
+    assert told == ["Settings changed: saturation 150"]
+
+
 def test_saturation_is_written_kept_journaled_and_restored(
     ally_x: FakeRoot, tmp_path: Path, screen: dict[str, list[int] | int]
 ) -> None:

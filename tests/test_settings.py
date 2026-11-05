@@ -11,7 +11,14 @@ from origami.buttons import ButtonAction
 from origami.fans import FanCurve
 from origami.lighting import Lighting, LightMode
 from origami.power import GamePower, Power
-from origami.settings import FIRST_TAB, SOUNDTRACKS_TAB, Language, Settings, SettingsStore
+from origami.settings import (
+    FIRST_TAB,
+    SOUNDTRACKS_TAB,
+    Language,
+    Settings,
+    SettingsStore,
+    describe_changes,
+)
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers
 from origami.vibration import Vibration
 
@@ -319,3 +326,25 @@ def test_bad_power_settings_are_rejected() -> None:
     with pytest.raises(ValueError, match="manage_tdp"):
         Settings().updated({"manage_tdp": 1})
 
+
+def test_a_change_is_told_with_its_new_value_only() -> None:
+    before = Settings(saturation=100, power=Power(17))
+
+    after = before.updated({"saturation": 150, "power": {"tdp": 20}})
+
+    assert describe_changes(before, after) == (
+        'saturation 150; power {"tdp":20,"headroom":true,"cpu_boost":null}'
+    )
+
+
+def test_a_game_profile_is_told_by_itself() -> None:
+    kept = GamePower(1091500, "Cyberpunk 2077", Power(tdp=25))
+    gone = GamePower(1245620, "Elden Ring", Power(tdp=20))
+    before = Settings(game_power=(kept, gone))
+
+    after = Settings(game_power=(kept, GamePower(1920490, "The Outer Worlds", Power(tdp=15))))
+
+    assert describe_changes(before, after) == (
+        'game 1920490 {"app_id":1920490,"name":"The Outer Worlds",'
+        '"power":{"tdp":15,"headroom":true,"cpu_boost":null},"active":true}; game 1245620 removed'
+    )

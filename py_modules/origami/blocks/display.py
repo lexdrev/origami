@@ -81,6 +81,8 @@ class DisplayBlock:
             return False
         except (OSError, RuntimeError) as error:
             log.warning("Saturation not restored: %s", error)
+        else:
+            log.info("Saturation restored: %s%%", settings.saturation)
         return True
 
     async def give_back_saturation(self, owner: str | None) -> None:
@@ -122,14 +124,19 @@ class DisplayBlock:
             await asyncio.to_thread(self._context.journal.record, "lighting", "rings", None)
             await asyncio.to_thread(apply_lighting, self._context.root, lighting)
 
-    async def restore_lighting(self, settings: Settings) -> None:
-        """Send the saved lighting again, at start and after sleep; failures are only logged."""
+    async def restore_lighting(self, settings: Settings) -> bool:
+        """Send the saved lighting again, at start and after sleep; whether it was sent.
+
+        Failures are only logged.
+        """
         if settings.lighting is None:
-            return
+            return False
         try:
             await self.send_lighting(settings.lighting)
         except (OSError, RuntimeError) as error:
             log.warning("Lighting not restored: %s", error)
+            return False
+        return True
 
     def give_back_lighting(self, owner: str | None) -> None:
         """The rings' own animation, as before ORIGAMI; blocks briefly.

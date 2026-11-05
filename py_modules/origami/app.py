@@ -28,7 +28,7 @@ from origami.power import HeldPower, resumes
 from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach
 from origami.saturation import max_percent
-from origami.settings import Settings, SettingsStore
+from origami.settings import Settings, SettingsStore, describe_changes
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
 from origami.triggers import TriggerState
@@ -128,7 +128,7 @@ class Origami:
             self._ready.set()
         # Frontend calls may come in as soon as the settings are loaded: they wait for these.
         async with self._settings_lock:
-            await self._restore_controller()
+            await self._restore_controller("at start")
             await self._gamepad.restore_gyro(self._settings)
             await self._follow_settings()
 
@@ -165,6 +165,7 @@ class Origami:
                 await self._fans.send(updated.fans)
             await self._gamepad.send_gyro(self._settings, updated)
             await asyncio.to_thread(self._settings_store.save, updated)
+            log.info("Settings changed: %s", describe_changes(self._settings, updated))
             gave_up_tdp = self._settings.manage_tdp is True and updated.manage_tdp is not True
             self._settings = updated
             await self._follow_settings()
@@ -342,13 +343,16 @@ class Origami:
         self._display.give_back_lighting(owners.lighting)
         self._gamepad.give_back_vibration(owners.vibration)
 
-    async def _restore_controller(self) -> None:
+    async def _restore_controller(self, when: str) -> None:
         """Send the saved lighting, vibration and rumble program again, at start and after sleep.
 
-        Failures are only logged: the controller may be gone, or another plugin drives it now.
+        What was sent is told in one line. Failures are only logged: the controller may be gone,
+        or another plugin drives it now.
         """
-        await self._display.restore_lighting(self._settings)
-        await self._gamepad.restore(self._settings)
+        restored = ["lighting"] if await self._display.restore_lighting(self._settings) else []
+        restored += await self._gamepad.restore(self._settings)
+        if restored:
+            log.info("Restored %s: %s", when, ", ".join(restored))
 
     async def _follow_resumes(self) -> None:
         async with aclosing(resumes()) as wakes:
@@ -356,7 +360,7 @@ class Origami:
                 await asyncio.sleep(RESUME_SETTLE_SECONDS)
                 # A change saved meanwhile is not overwritten by what was set before it.
                 async with self._settings_lock:
-                    await self._restore_controller()
+                    await self._restore_controller("after sleep")
                     await self._restore_saturation()
 
     async def _restore_saturation(self) -> None:
