@@ -64,7 +64,11 @@ CHARGER_SETTLE_SECONDS = 0.0
 at once and answers Steam's write when it lands, within a look."""
 PROFILE_SETTLE_SECONDS = 1.5
 GAME_REWRITE_SECONDS = (2.0, 5.0, 10.0)
-"""Steam writes its own limits and the profile as a game starts, in no fixed order (B05)."""
+"""Steam writes its own limits and the profile as a game starts, in no fixed order (B05). A profile
+written again with the same name drops the firmware's limits while asus-armoury still shows
+ORIGAMI's, so the keeper writes three times on purpose; the log tells only the first."""
+GAME_STARTED = "game started"
+GAME_LOG_SECONDS = max(GAME_REWRITE_SECONDS) + 5.0
 QUIET_SECONDS = 5.0
 """After a change ORIGAMI follows, a write over its limits is Steam settling, not a dispute."""
 WATCH_SECONDS = 30.0
@@ -249,6 +253,8 @@ class PowerKeeper:
         self._contested = False
         self._over_since: float | None = None
         self._last_power_fix = -math.inf
+        self._game_logged = -math.inf
+        """When the first write after a game started was logged."""
         self._cap_due: float | None = None
         self._escapes = 0
         self._last_cap = -math.inf
@@ -277,7 +283,7 @@ class PowerKeeper:
         with self._lock:
             now = self._clock()
             self._last_event = now
-            self._due += [(now + delay, "game started") for delay in GAME_REWRITE_SECONDS]
+            self._due += [(now + delay, GAME_STARTED) for delay in GAME_REWRITE_SECONDS]
             self._cap_due = now + CAP_SETTLE_SECONDS
 
     def write_again(self, reason: str) -> None:
@@ -358,7 +364,14 @@ class PowerKeeper:
             self._written[mains] = want
             self._last_write = now
             self._over_since = None
-            log.info("TDP %d / %d / %d W written: %s", want.spl, want.sppt, want.fppt, reason)
+            if reason == GAME_STARTED and now - self._game_logged < GAME_LOG_SECONDS:
+                log.debug(
+                    "TDP %d / %d / %d W written again: %s", want.spl, want.sppt, want.fppt, reason
+                )
+            else:
+                log.info("TDP %d / %d / %d W written: %s", want.spl, want.sppt, want.fppt, reason)
+                if reason == GAME_STARTED:
+                    self._game_logged = now
         self._held = HeldPower(
             want, battery_capped=tdp < target.power.tdp, contested=self._contested
         )

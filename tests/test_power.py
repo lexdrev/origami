@@ -295,8 +295,9 @@ def test_a_short_boost_over_the_tdp_is_no_reason_to_write(
 
 
 def test_a_game_start_brings_three_writes_as_steam_settles_it(
-    console: Console, info: pytest.LogCaptureFixture
+    console: Console, caplog: pytest.LogCaptureFixture
 ) -> None:
+    caplog.set_level("DEBUG")
     hold(console, Power(15))
     console.tick()
     console.keeper.game_started()
@@ -304,12 +305,15 @@ def test_a_game_start_brings_three_writes_as_steam_settles_it(
 
     written: list[float] = []
     for _ in range(12):
-        before = info.text.count("game started")
+        before = caplog.text.count("game started")
         console.tick(1)
-        if info.text.count("game started") > before:
+        if caplog.text.count("game started") > before:
             written.append(console.now - start)
 
     assert written == [2, 5, 10]
+    # The log tells the first write; the two after it are the same insurance.
+    told = [r for r in caplog.records if r.levelname == "INFO" and "game started" in r.getMessage()]
+    assert len(told) == 1
 
 
 def test_on_the_battery_the_tdp_is_held_at_25_watts(console: Console) -> None:
