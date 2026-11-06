@@ -3,7 +3,6 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
 
 permissions:
@@ -38,35 +37,33 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/index.js
 
+  # Only checks that the zip builds. A release carries the zip built locally and tested on the
+  # console, so this job neither uploads the zip nor writes to releases.
   package:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist
+      - name: Install clang and the libbpf headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang llvm libbpf-dev
+      - name: Build the HID-BPF program
+        run: bash scripts/build_bpf.sh
       - name: Build the zip
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           python scripts/build_zip.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: origami-zip
-          path: out/
-      - name: Draft a release for a version tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" out/* --draft --verify-tag --title "ORIGAMI ${GITHUB_REF_NAME#v}"
+          cat out/ORIGAMI.zip.sha256
