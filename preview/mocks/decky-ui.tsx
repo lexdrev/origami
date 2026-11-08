@@ -12,7 +12,13 @@ function gamepadEvent(): GamepadEvent {
   return new CustomEvent("vgp_onbuttondown");
 }
 
-export const Focusable = forwardRef<HTMLDivElement, FocusableProps>(function Focusable(props, ref) {
+/** Steam's navigation properties ORIGAMI passes that @decky/ui does not type (src/ui/scrollTop.ts). */
+interface Navigation {
+  scrollIntoViewWhenChildFocused?: boolean;
+  fnScrollIntoViewHandler?: unknown;
+}
+
+export const Focusable = forwardRef<HTMLDivElement, FocusableProps & Navigation>(function Focusable(props, ref) {
   const {
     children,
     className,
@@ -25,6 +31,11 @@ export const Focusable = forwardRef<HTMLDivElement, FocusableProps>(function Foc
     focusWithinClassName,
     // The stand has no D-pad; Tab and the keyboard stand in for it.
     onGamepadDirection: _onGamepadDirection,
+    // Steam's navigation tree; the browser moves focus and scrolls by itself.
+    preferredFocus: _preferredFocus,
+    navEntryPreferPosition: _navEntryPreferPosition,
+    scrollIntoViewWhenChildFocused: _scrollIntoViewWhenChildFocused,
+    fnScrollIntoViewHandler: _fnScrollIntoViewHandler,
     ...attributes
   } = props;
   const [focused, setFocused] = useState(false);

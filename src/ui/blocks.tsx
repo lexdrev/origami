@@ -9,6 +9,7 @@ import { ENTER_PREFERRED_CHILD } from "../quickAccess";
 import { UISound } from "../sounds";
 import { Badge, IconButton, Pressable, Switch } from "./controls";
 import { BackIcon, ChevronIcon, WarningIcon } from "./icons";
+import { scrollToTop } from "./scrollTop";
 
 interface ScreenProps {
   /** Goes one screen back; B does the same. The main screen has none. */
@@ -21,7 +22,7 @@ export function Screen({ onBack, children }: ScreenProps) {
   if (onBack === undefined) {
     // Coming into the panel, the focus goes to the child marked preferredFocus, else the first.
     return (
-      <Focusable className="og-screen" navEntryPreferPosition={ENTER_PREFERRED_CHILD}>
+      <Focusable className="og-screen" navEntryPreferPosition={ENTER_PREFERRED_CHILD} {...scrollToTop}>
         {children}
       </Focusable>
     );
@@ -29,6 +30,7 @@ export function Screen({ onBack, children }: ScreenProps) {
   return (
     <Focusable
       className="og-screen"
+      {...scrollToTop}
       onCancelButton={(event: GamepadEvent) => {
         // Without this Decky would close the whole plugin instead of going one screen back.
         event.stopPropagation();

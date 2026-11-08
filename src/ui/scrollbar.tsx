@@ -72,7 +72,7 @@ export function ScrollBar() {
 }
 
 /** The nearest box above the element that scrolls its contents: the panel ORIGAMI is in. */
-function scrollingBox(element: HTMLElement): HTMLElement | null {
+export function scrollingBox(element: HTMLElement): HTMLElement | null {
   const view = element.ownerDocument.defaultView;
   for (let box = element.parentElement; box && view; box = box.parentElement) {
     const { overflowY } = view.getComputedStyle(box);
