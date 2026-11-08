@@ -12,7 +12,9 @@ with on Windows, and a limiter at -1 dBFS after it.
 
 Width adds the side of the stereo above 250 Hz but not in the voice band, and a cut above 250 Hz
 keeps the loudness. Voices lift the centre at 2 kHz and lower the sides there, the sides only while
-the centre leads them, so a sound on one side keeps its place.
+the centre leads them, so a sound on one side keeps its place. While the centre leads by far, as it
+does in dialogue (23 to 36 dB in a game recording, 2 to 7 dB in fights), its whole speech band rises
+too: the 2 kHz lift alone makes a voice clearer but hardly louder.
 """
 
 import json
@@ -113,18 +115,23 @@ VOICE_LIFT = 0.995
 """The centre at 2 kHz: +6 dB."""
 SIDE_CUT = 0.75
 """The sides at 2 kHz while the centre leads them: down to -12 dB."""
+DIALOGUE_LIFT = 0.585
+"""The centre from 300 Hz to 4 kHz while it leads by 9 to 15 dB and more: up to +4 dB."""
 
 
 def controls(sound: Sound) -> dict[str, float]:
     """The filter's live controls for these settings, by "node:port"."""
     side, cut = WIDTHS[sound.width]
-    lift, duck = (VOICE_LIFT, SIDE_CUT) if sound.voices else (0.0, 0.0)
+    lift, duck, dialogue = (
+        (VOICE_LIFT, SIDE_CUT, DIALOGUE_LIFT) if sound.voices else (0.0, 0.0, 0.0)
+    )
     return {
         "dc_g:Add": round(10 ** (sound.volume_db / 20), 9),
         "dc_k:Add": side,
         "dc_w:Add": cut,
         "dc_d:Add": lift,
         "dc_c:Add": duck,
+        "dc_v:Add": dialogue,
     }
 
 
@@ -250,8 +257,8 @@ def _width(graph: _Graph) -> None:
     graph.link("w_dip:Out", "w_side_k:In 1")
     graph.link("s_k:Out", "w_side_k:In 2")
     graph.link("w_side_k:Out", "w_inv_s:In")
-    # The sums: L or R, the width, the voice lift and the side cut.
-    gains = {"Gain 1": 1.0, "Gain 2": 1.0, "Gain 3": 1.0, "Gain 4": 1.0}
+    # The sums: L or R, the width, the voice lift, the side cut and the dialogue lift.
+    gains = {"Gain 1": 1.0, "Gain 2": 1.0, "Gain 3": 1.0, "Gain 4": 1.0, "Gain 5": 1.0}
     graph.node("mixer", "w_out_l", gains)
     graph.node("mixer", "w_out_r", gains)
     graph.link("w_l:Out", "w_out_l:In 1")
@@ -314,6 +321,33 @@ def _side_cut(graph: _Graph) -> None:
     graph.link("v_sc:Out", "w_out_r:In 4")
 
 
+def _dialogue(graph: _Graph) -> None:
+    """The mid from 300 Hz to 4 kHz, times dc_v and how far the centre leads at 2 kHz.
+
+    The lead is the side cut's 10 * log10 of the envelopes; 4.5 to 7.5 of it (an amplitude lead of 9
+    to 15 dB) maps onto 0 to 1. Its 5 Hz envelopes keep it smooth enough. No lowpass after it:
+    PipeWire runs biquads in float, and one at 2 Hz passes a constant at half its level (a 0.5 lift
+    at most); in the ratio of two envelopes such an error cancels out.
+    """
+    graph.node("bq_highpass", "d_hp", {"Freq": 300.0, "Q": 0.707})
+    graph.node("bq_lowpass", "d_lp", {"Freq": 4000.0, "Q": 0.707})
+    graph.node("linear", "d_ramp", {"Mult": 1 / 3, "Add": -1.5})
+    graph.node("clamp", "d_clamp", {"Min": 0.0, "Max": 1.0})
+    graph.constant("dc_v", "s_v")
+    graph.node("mult", "d_t")
+    graph.node("mult", "d_amt")
+    graph.link("v_mid:Out", "d_hp:In")
+    graph.link("d_hp:Out", "d_lp:In")
+    graph.link("e_ratio:Out", "d_ramp:In")
+    graph.link("d_ramp:Out", "d_clamp:In")
+    graph.link("d_clamp:Out", "d_t:In 1")
+    graph.link("s_v:Out", "d_t:In 2")
+    graph.link("d_lp:Out", "d_amt:In 1")
+    graph.link("d_t:Out", "d_amt:In 2")
+    graph.link("d_amt:Out", "w_out_l:In 5")
+    graph.link("d_amt:Out", "w_out_r:In 5")
+
+
 def _loudness(graph: _Graph) -> None:
     """The loudness the width adds, taken off above 250 Hz: y = x - dc_w * HP(x)."""
     graph.constant("dc_w", "s_w")
@@ -349,6 +383,7 @@ def _graph(zones: tuple[Zone, ...], start: Mapping[str, float]) -> _Graph:
     _width(graph)
     _voices(graph)
     _side_cut(graph)
+    _dialogue(graph)
     _loudness(graph)
     _output(graph, zones)
     return graph

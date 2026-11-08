@@ -125,12 +125,14 @@ def test_controls_follow_the_settings() -> None:
         "dc_w:Add": 0.0,
         "dc_d:Add": 0.0,
         "dc_c:Add": 0.0,
+        "dc_v:Add": 0.0,
     }
     values = controls(Sound(volume_db=6, width=Width.STRONG, voices=True))
     assert values["dc_g:Add"] == pytest.approx(10 ** (6 / 20))
     assert values["dc_k:Add"] > controls(Sound(width=Width.MODERATE))["dc_k:Add"]
     assert values["dc_d:Add"] > 0
     assert values["dc_c:Add"] > 0
+    assert values["dc_v:Add"] > 0
 
 
 def test_set_param_props() -> None:
