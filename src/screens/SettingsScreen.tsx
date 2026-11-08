@@ -8,13 +8,14 @@ import type { LanguageSetting } from "../backend";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
 import { unset } from "../problems";
-import { changes, info, refreshChanges, settings, updateSettings } from "../state";
+import { changes, refreshChanges, settings, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Header, Screen, SectionLabel } from "../ui/blocks";
 import { UISound } from "../sounds";
-import { ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
-import { FoxMark, GearIcon } from "../ui/icons";
+import { ActionRow, ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
+import { DownloadIcon, ExternalIcon, FoxMark, GearIcon, RefreshIcon } from "../ui/icons";
 import { ownTabSummary, quickAccessColumn } from "../tabPosition";
+import { checkForUpdates, currentVersion, installUpdate, updateState } from "../updates";
 import { LoadFailed } from "./LoadFailed";
 
 const REPOSITORY = "github.com/lexdrev/origami";
@@ -24,7 +25,6 @@ export function SettingsScreen() {
   const t = useMessages();
   const current = useStore(settings);
   const journal = useStore(changes);
-  const plugin = useStore(info);
   const column = useStore(quickAccessColumn);
 
   useEffect(() => {
@@ -83,6 +83,7 @@ export function SettingsScreen() {
           navigate("changes");
         }}
       />
+      <UpdateRow />
 
       {/* The last stop of the D-pad: Steam scrolls only to the focus, so the block shows whole. */}
       <div className="og-about">
@@ -98,7 +99,7 @@ export function SettingsScreen() {
           <FoxMark size={26} />
           <span className="og-about__lines">
             <span className="og-about__name">
-              <b>ORIGAMI</b> {plugin.status === "ready" ? plugin.value.version : ""} · {LICENSE}
+              <b>ORIGAMI</b> {currentVersion} · {LICENSE}
             </span>
             <span>{t.settings.slogan[0]}</span>
             <span>{t.settings.slogan[1]}</span>
@@ -107,5 +108,62 @@ export function SettingsScreen() {
         </Pressable>
       </div>
     </Screen>
+  );
+}
+
+/**
+ * Checks GitHub on a press, then offers the newer release in the same place: Steam cannot move the
+ * focus to a new button, so the one row first checks and then updates.
+ */
+function UpdateRow() {
+  const t = useMessages();
+  const state = useStore(updateState);
+  const texts = t.settings.updates;
+
+  if (state.status === "available") {
+    const { release } = state;
+    return (
+      <ActionRow
+        title={texts.update(release.version)}
+        subtitle={texts.current(currentVersion)}
+        note={texts.confirm}
+        icon={<DownloadIcon />}
+        offer
+        action={t.actions.update}
+        onPress={() => void installUpdate(release)}
+      />
+    );
+  }
+  if (state.status === "refused") {
+    const { release } = state;
+    return (
+      <ActionRow
+        title={texts.openRelease(release.version)}
+        subtitle={texts.refused}
+        note={texts.download}
+        icon={<ExternalIcon />}
+        action={t.actions.open}
+        onPress={() => {
+          Navigation.NavigateToExternalWeb(release.pageUrl);
+          Navigation.CloseSideMenus();
+        }}
+      />
+    );
+  }
+  const subtitles = {
+    idle: texts.idle(currentVersion),
+    checking: texts.checking,
+    latest: texts.latest(currentVersion),
+    failed: texts.failed,
+  };
+  return (
+    <ActionRow
+      title={texts.check}
+      subtitle={subtitles[state.status]}
+      icon={<RefreshIcon />}
+      busy={state.status === "checking"}
+      action={t.actions.check}
+      onPress={() => void checkForUpdates()}
+    />
   );
 }

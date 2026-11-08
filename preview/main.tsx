@@ -31,6 +31,22 @@ Object.assign(window, {
   SteamUIStore: { GamepadUIAudio: { PlayNavSound: () => undefined } },
   DeckyBackend: { call: () => Promise.resolve({ current: params.get("decky") ?? "v3.3.1" }) },
 });
+// "?release=1.2.0" stands for the latest release on GitHub and "?release=none" for no answer; without
+// it, "Check for updates" asks GitHub itself.
+const release = params.get("release");
+if (release !== null) {
+  const page = `https://github.com/lexdrev/origami/releases/tag/v${release}`;
+  window.fetch = () =>
+    release === "none"
+      ? Promise.reject(new TypeError("Failed to fetch"))
+      : Promise.resolve(
+          Response.json({
+            tag_name: `v${release}`,
+            html_url: page,
+            assets: [{ name: "ORIGAMI.zip", browser_download_url: `${page}/ORIGAMI.zip`, digest: `sha256:${"0".repeat(64)}` }],
+          }),
+        );
+}
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (

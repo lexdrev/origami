@@ -33,7 +33,16 @@ export interface Messages {
   unknown: string;
   /** The button under a section another plugin drives. */
   openDeckyPlugins: string;
-  actions: { open: string; back: string; select: string; toggle: string; less: string; more: string };
+  actions: {
+    open: string;
+    back: string;
+    select: string;
+    toggle: string;
+    less: string;
+    more: string;
+    check: string;
+    update: string;
+  };
   units: { watts: string; rpm: string; celsius: string };
   main: {
     settings: string;
@@ -73,6 +82,23 @@ export interface Messages {
     slogan: readonly [string, string];
     /** The action of the About block: the project's page in Steam's browser. */
     openProject: string;
+    /** The update row: one focus stop that checks GitHub, then offers the newer release. */
+    updates: {
+      check: string;
+      /** Before the first check: the version that runs, and that a press asks GitHub. */
+      idle(version: string): string;
+      checking: string;
+      latest(version: string): string;
+      failed: string;
+      update(version: string): string;
+      current(version: string): string;
+      /** Under an offered update: Decky asks first, and a running game is better closed. */
+      confirm: string;
+      /** When Decky did not take the update: the release page, which has the zip. */
+      openRelease(version: string): string;
+      refused: string;
+      download: string;
+    };
   };
   qamTab: {
     title: string;

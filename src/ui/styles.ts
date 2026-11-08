@@ -230,8 +230,16 @@ ${fontFaces}
   white-space: nowrap;
   vertical-align: 1px;
 }
-.og-row__chevron { position: absolute; top: 50%; right: 10px; display: flex; margin-top: -8px; color: var(--og-dim); }
-.og-row.og-focused .og-row__chevron { color: var(--og-accent); }
+.og-row__chevron,
+.og-row__icon { position: absolute; top: 50%; right: 10px; display: flex; margin-top: -8px; color: var(--og-dim); }
+.og-row.og-focused .og-row__chevron,
+.og-row.og-focused .og-row__icon { color: var(--og-accent); }
+/* A row that does something in place: amber while it offers the next step, grey while at work. */
+.og-row--offer .og-row__title,
+.og-row--offer .og-row__icon { color: var(--og-accent); }
+.og-row--busy .og-row__title { color: var(--og-muted); }
+.og-row--busy .og-row__icon,
+.og-row--busy.og-focused .og-row__icon { color: var(--og-border); }
 
 .og-toggle { padding-right: 58px; }
 .og-row--problem { border-color: var(--og-danger-line); }
