@@ -80,8 +80,9 @@ ORIGAMI знает и ROG Ally X (RC72LA), ROG Xbox Ally (RC73YA) и ROG Xbox Al
 
 ## Установка
 
-Нужен [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation). В игровом режиме откройте
-настройки Decky и включите **Режим разработчика**. Затем на странице **Разработчик**:
+Нужен [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation) 3.3.0 или новее: старые
+версии запускают плагины на Python 3.11, и ORIGAMI там не запускается — он напишет об этом в своём меню. В игровом
+режиме откройте настройки Decky и включите **Режим разработчика**. Затем на странице **Разработчик**:
 
 - **По ссылке:** в **Установить плагин из URL** введите
   `github.com/lexdrev/origami/releases/latest/download/ORIGAMI.zip` и нажмите **Установить**.

@@ -80,7 +80,8 @@ has not been tried on them yet.
 
 ## Install
 
-You need [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation). In Game Mode, open
+You need [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader#-installation) 3.3.0 or newer: older
+versions run plugins on Python 3.11, and ORIGAMI does not start there; it says so in its menu. In Game Mode, open
 Decky's settings and switch on **Developer mode**. Then, on the **Developer** page:
 
 - **By link:** in **Install Plugin from URL**, enter
