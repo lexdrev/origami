@@ -46,6 +46,8 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
   the Armoury Crate button, on a short and a long press.
 - **Quick access tab:** the fox in Steam's quick access column at the place you choose, or ORIGAMI only inside the
   Decky tab.
+- **Updates:** a newer release from GitHub on a press or once a day, what it brings in What's new, and the update
+  itself through Decky in one press.
 
 ## What it fixes
 
