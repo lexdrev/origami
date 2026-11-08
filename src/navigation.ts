@@ -8,6 +8,7 @@ export type ScreenId =
   | "main"
   | "power"
   | "fans"
+  | "sound"
   | "gameProfiles"
   | "gameProfile"
   | "display"

@@ -14,6 +14,7 @@ const fresh: Settings = {
   updateCheck: false,
   qamAssist: null,
   gyroFix: null,
+  clockFix: null,
   lighting: null,
   saturation: null,
   vibration: null,
@@ -25,6 +26,7 @@ const fresh: Settings = {
   batteryHighTdp: false,
   gamePower: [],
   fans: null,
+  sound: null,
 };
 
 const alone: Conflicts = {
@@ -35,6 +37,7 @@ const alone: Conflicts = {
   power: null,
   boost: null,
   fans: null,
+  sound: null,
 };
 
 const sources = (changes: Partial<ProblemSources> = {}): ProblemSources => ({
@@ -45,10 +48,11 @@ const sources = (changes: Partial<ProblemSources> = {}): ProblemSources => ({
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   steamTdpSlider: false,
   contested: false,
+  clockCrackle: null,
   ...changes,
 });
 
-const clear = { power: 0, fans: 0, display: 0, gamepad: 0 };
+const clear = { power: 0, fans: 0, display: 0, gamepad: 0, sound: 0 };
 
 describe("problems on the tiles", () => {
   it("are the four fixes on the Gamepad tile of a clean system", () => {
@@ -81,10 +85,18 @@ describe("problems on the tiles", () => {
       power: "Power Plugin",
       boost: "Power Plugin",
       fans: "Power Plugin",
+      sound: "Sound Plugin",
     };
 
-    expect(tileProblems(sources({ conflicts }))).toEqual({ power: 1, fans: 1, display: 2, gamepad: 4 });
+    expect(tileProblems(sources({ conflicts }))).toEqual({ power: 1, fans: 1, display: 2, gamepad: 4, sound: 1 });
     expect(tileProblems(sources({ conflicts: { ...alone, triggers: "Rumble Plugin" } })).gamepad).toBe(4);
+  });
+
+  it("count the crackle after sleep on the Sound tile until the user decides", () => {
+    expect(tileProblems(sources({ clockCrackle: true })).sound).toBe(1);
+    expect(tileProblems(sources({ clockCrackle: true, settings: { ...fresh, clockFix: false } })).sound).toBe(0);
+    expect(tileProblems(sources({ clockCrackle: false })).sound).toBe(0);
+    expect(tileProblems(sources({ clockCrackle: null })).sound).toBe(0);
   });
 
   it("count a plugin that holds the CPU boost alone on the Power tile", () => {

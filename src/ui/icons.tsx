@@ -61,6 +61,16 @@ function TileIcon({ children }: { children: ReactNode }) {
 const face = { fill: "currentColor", fillOpacity: FACE_OPACITY } as const;
 const open = { fill: "none" } as const;
 
+export function SoundIcon() {
+  return (
+    <TileIcon>
+      <polygon points="2.5,9 7,9 12.5,4.5 12.5,19.5 7,15 2.5,15" {...face} />
+      <path d="M15.6 9.2a4 4 0 0 1 0 5.6" {...open} />
+      <path d="M18.4 6.4a8 8 0 0 1 0 11.2" {...open} />
+    </TileIcon>
+  );
+}
+
 export function PowerIcon() {
   return (
     <TileIcon>

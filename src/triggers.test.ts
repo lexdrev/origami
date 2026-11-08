@@ -26,6 +26,7 @@ describe("trigger rumble", () => {
       power: null,
       boost: null,
       fans: null,
+      sound: null,
     };
     expect(separateTriggerOwner(none)).toBeNull();
     // One plugin sets the vibration too: its block for the vibration speaks for the triggers.

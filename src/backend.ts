@@ -33,6 +33,8 @@ export interface Info {
   versions: Versions;
   /** The buttons ORIGAMI may drive here; the system keeps the others (both of the ROG Ally's). */
   buttons: ConsoleButton[];
+  /** ORIGAMI processes this console's speakers: it has their protection. */
+  sound: boolean;
 }
 
 export interface BatteryTelemetry {
@@ -164,6 +166,28 @@ export interface HeldPower {
   contested: boolean;
 }
 
+export type SoundVolume = 0 | 4 | 6;
+export type SoundWidth = "off" | "moderate" | "strong";
+
+/** ORIGAMI's filter in front of the speakers (origami.sound.Sound). */
+export interface Sound {
+  enabled: boolean;
+  volumeDb: SoundVolume;
+  width: SoundWidth;
+  voices: boolean;
+}
+
+/** What the Sound screen shows besides the settings (origami.blocks.sound.SoundState). */
+export interface SoundState {
+  /** There is a speaker sink: PipeWire runs and the console has its speakers. */
+  speakers: boolean;
+  /** Headphones play on the speakers' sink, so the filter waits for the speakers. */
+  headphones: boolean;
+  running: boolean;
+  /** The crackle after sleep happens here, so the screen offers its fix. */
+  clockFix: boolean;
+}
+
 /** What the gyroscope's axes need here (origami.gyro.GyroState). */
 export type GyroState = "unavailable" | "fixed_in_system" | "foreign" | "wrong" | "fixed" | "outdated";
 
@@ -179,6 +203,8 @@ export interface Settings {
   qamAssist: boolean | null;
   /** ORIGAMI turns the gyroscope's yaw the right way for Steam; null until the user sets it. */
   gyroFix: boolean | null;
+  /** ORIGAMI steps the clock after sleep where the hardware clock keeps local time; null until set. */
+  clockFix: boolean | null;
   /** Null until the user sets it; the controller keeps its own lighting until then. */
   lighting: Lighting | null;
   /** Screen saturation in percent (100 = sRGB); null until the user sets it. */
@@ -203,6 +229,8 @@ export interface Settings {
   gamePower: GamePower[];
   /** Null until the user switches it on; the fans run the firmware's own curve until then. */
   fans: FanCurve | null;
+  /** Null until the user switches it on; the speakers play as the system has them until then. */
+  sound: Sound | null;
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
@@ -215,6 +243,8 @@ export interface Conflicts {
   /** The plugin that holds the CPU boost: one that sets the whole power, or the boost alone (Ally Fix). */
   boost: string | null;
   fans: string | null;
+  /** A plugin with a filter of its own in front of the speakers. */
+  sound: string | null;
 }
 
 export interface Change {
@@ -240,6 +270,7 @@ export const backend = {
   getSaturation: callable<[], number | null>("get_saturation"),
   restoreSaturation: callable("restore_saturation"),
   getPower: callable<[], HeldPower>("get_power"),
+  getSound: callable<[], SoundState>("get_sound"),
   gameStarted: callable("game_started"),
   setGame: callable<[appId: number | null]>("set_game"),
   setSteamTdpLimit: callable<[on: boolean]>("set_steam_tdp_limit"),

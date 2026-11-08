@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { Telemetry, TriggerRumble } from "../backend";
+import type { Sound, Telemetry, TriggerRumble } from "../backend";
 import { en } from "../i18n/en";
 import { ru } from "../i18n/ru";
 import { tileTexts } from "./tiles";
@@ -16,6 +16,7 @@ const none = {
   lighting: undefined,
   triggers: undefined,
   fanCurve: undefined,
+  sound: undefined,
 };
 
 const allyX: Telemetry = {
@@ -34,14 +35,25 @@ const allyX: Telemetry = {
 
 describe("tile texts", () => {
   it("show live values in Russian", () => {
-    const own = { ...none, saturation: 150, tdp: 17, lighting: true, triggers: null, fanCurve: null };
+    const own = { ...none, saturation: 150, tdp: 17, lighting: true, triggers: null, fanCurve: null, sound: null };
 
     expect(tileTexts(allyX, own, ru)).toEqual({
       power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · CPU${NBSP}буст${NBSP}выкл` },
       fans: { value: `4${NBSP}700`, subtitle: `об/мин · 63${NBSP}°C · кривая${NBSP}·${NBSP}Дефолт` },
       display: { value: "150%", subtitle: `Насыщенность · подсветка${NBSP}вкл` },
       gamepad: { value: "50%", subtitle: `Вибрация ручек · триггеры${NBSP}выкл` },
+      sound: { value: "Выкл", subtitle: `Динамики как в${NBSP}системе` },
     });
+  });
+
+  it("show the volume step and what else the sound does", () => {
+    const sound: Sound = { enabled: true, volumeDb: 4, width: "moderate", voices: true };
+    const text = (own: Partial<Sound>) => tileTexts(allyX, { ...none, sound: { ...sound, ...own } }, ru).sound;
+
+    expect(text({})).toEqual({ value: `+4${NBSP}дБ`, subtitle: `объём${NBSP}умеренно · голоса${NBSP}чётче` });
+    expect(text({ volumeDb: 0, width: "off", voices: false })).toEqual({ value: "Обычная", subtitle: `объём${NBSP}выкл` });
+    expect(text({ enabled: false }).value).toBe("Выкл");
+    expect(tileTexts(allyX, none, en).sound).toEqual({ value: "—", subtitle: "Another plugin" });
   });
 
   it("show how the triggers rumble", () => {

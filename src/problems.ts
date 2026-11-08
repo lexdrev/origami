@@ -50,6 +50,8 @@ export interface ProblemSources {
   steamTdpSlider: boolean;
   /** Something else keeps writing the TDP. */
   contested: boolean;
+  /** The crackle after sleep happens here; null until read. */
+  clockCrackle: boolean | null;
 }
 
 export interface TileProblems {
@@ -57,6 +59,7 @@ export interface TileProblems {
   fans: number;
   display: number;
   gamepad: number;
+  sound: number;
 }
 
 const count = (...red: boolean[]) => red.filter(Boolean).length;
@@ -86,5 +89,6 @@ export function tileProblems(sources: ProblemSources): TileProblems {
       gyro !== null && gyroProblem(gyro, settings.gyroFix),
       drives(buttons, "armoury_crate") && buttonUnset(settings.armouryCrate, settings.armouryCrateHold),
     ),
+    sound: count(conflicts.sound !== null, sources.clockCrackle === true && unset(settings.clockFix)),
   };
 }

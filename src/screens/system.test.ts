@@ -23,6 +23,7 @@ const info: Info = {
     decky: "v3.3.1",
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
+  sound: true,
 };
 
 const steamos: Info = {
@@ -35,6 +36,7 @@ const steamos: Info = {
     decky: "v3.3.1",
   },
   buttons: [],
+  sound: true,
 };
 
 const noOs = { id: null, name: null, versionId: null, imageVersion: null, buildId: null };

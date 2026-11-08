@@ -10,6 +10,7 @@ import {
   type Info,
   type Lighting,
   type Settings,
+  type SoundState,
   type Telemetry,
   type TriggerState,
 } from "./backend";
@@ -26,6 +27,7 @@ export const conflicts = createStore<Loadable<Conflicts>>({ status: "loading" })
 export const gyro = createStore<Loadable<GyroState>>({ status: "loading" });
 export const triggerState = createStore<Loadable<TriggerState>>({ status: "loading" });
 export const heldPower = createStore<Loadable<HeldPower>>({ status: "loading" });
+export const soundState = createStore<Loadable<SoundState>>({ status: "loading" });
 export const steamLanguage = createStore<Language>("en");
 /** The last failed action, shown until the next one succeeds. */
 export const actionError = createStore<string | null>(null);
@@ -89,6 +91,11 @@ export function refreshTriggerState(): Promise<void> {
  */
 export function refreshConflicts(): Promise<void> {
   return load(conflicts, backend.getConflicts);
+}
+
+/** Headphones come and go and PipeWire restarts, so this is read when the screens showing it open. */
+export function refreshSound(): Promise<void> {
+  return load(soundState, backend.getSound);
 }
 
 /** What ORIGAMI changed follows every setting, so this is read when a screen showing it opens. */
@@ -185,6 +192,8 @@ export const setTriggerRumble = liveSetting("triggerRumble");
 export const setPower = liveSetting("power", refreshHeldPower);
 /** Saves the fan curve. */
 export const setFans = liveSetting("fans");
+/** Saves the speaker sound; the filter takes it at once. */
+export const setSound = liveSetting("sound", refreshSound);
 /** Saves the games' own power settings; the limits held follow them too. */
 export const setGamePower = liveSetting("gamePower", refreshHeldPower);
 /** Saves the stick lighting; the rings follow it, and its brightness slider follows a held D-pad. */

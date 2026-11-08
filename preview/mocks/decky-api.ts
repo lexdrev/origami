@@ -3,7 +3,7 @@
 
 // Browser stand-in for @decky/api with readings taken from the console (HARDWARE.md).
 
-import type { Change, Conflicts, HeldPower, Info, Settings, Telemetry } from "../../src/backend";
+import type { Change, Conflicts, HeldPower, Info, Settings, SoundState, Telemetry } from "../../src/backend";
 
 const info: Info = {
   version: "1.0.0",
@@ -21,7 +21,9 @@ const info: Info = {
     decky: "v3.3.1",
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
+  sound: true,
 };
+const query = new URLSearchParams(location.search);
 
 let settings: Settings = {
   language: "auto",
@@ -30,6 +32,7 @@ let settings: Settings = {
   updateCheck: false,
   qamAssist: null,
   gyroFix: null,
+  clockFix: null,
   lighting: null,
   saturation: null,
   vibration: null,
@@ -50,6 +53,7 @@ let settings: Settings = {
     { appId: 990080, name: "Hogwarts Legacy", power: { tdp: 20, headroom: false, cpuBoost: false }, active: false },
   ],
   fans: { enabled: true, points: [0, 10, 25, 40, 55, 75, 100] },
+  sound: { enabled: true, volumeDb: 4, width: "moderate", voices: true },
 };
 // Steam's value, as gamescope shows it on the console while nothing else sets it.
 const STEAM_SATURATION = 100;
@@ -61,6 +65,8 @@ const conflicts: Conflicts = {
   power: null,
   boost: null,
   fans: null,
+  // "?soundplugin" stands for another plugin with a filter in front of the speakers.
+  sound: query.has("soundplugin") ? "Sound Plugin" : null,
 };
 const changes: Change[] = [
   { module: "power", key: "tdp", original: null },
@@ -75,6 +81,7 @@ function restoreAll(): Settings {
     ...settings,
     qamAssist: null,
     gyroFix: null,
+    clockFix: null,
     lighting: null,
     saturation: null,
     vibration: null,
@@ -85,6 +92,7 @@ function restoreAll(): Settings {
     power: withoutBoost(settings.power),
     gamePower: settings.gamePower.map((game) => ({ ...game, power: withoutBoost(game.power) })),
     fans: null,
+    sound: null,
   };
   changes.splice(0);
   return settings;
@@ -122,6 +130,7 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   test_trigger_rumble: () => undefined,
   get_gyro: () => (settings.gyroFix ? "fixed" : "wrong"),
   get_power: heldPower,
+  get_sound: soundState,
   game_started: () => undefined,
   set_game: () => undefined,
   set_steam_tdp_limit: () => undefined,
@@ -136,8 +145,14 @@ function heldPower(): HeldPower {
   return { limits: { spl: tdp, sppt, fppt }, batteryCapped: false, contested: false };
 }
 
+// "?headphones" puts headphones on the speakers' sink, "?localclock" a hardware clock in local time.
+function soundState(): SoundState {
+  const on = settings.sound?.enabled === true && conflicts.sound === null && !query.has("headphones");
+  return { speakers: true, headphones: query.has("headphones"), running: on, clockFix: query.has("localclock") };
+}
+
 // "?nobackend" in the address stands for a backend that never answers, as on a Decky Loader too old for it.
-const silent = new URLSearchParams(location.search).has("nobackend");
+const silent = query.has("nobackend");
 
 export function callable(route: string) {
   return async (...args: never[]): Promise<unknown> => {

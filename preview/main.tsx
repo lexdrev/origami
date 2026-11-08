@@ -17,6 +17,7 @@ import { MainScreen } from "../src/screens/MainScreen";
 import { PowerScreen } from "../src/screens/PowerScreen";
 import { QamTabScreen } from "../src/screens/QamTabScreen";
 import { SettingsScreen } from "../src/screens/SettingsScreen";
+import { SoundScreen } from "../src/screens/SoundScreen";
 import { PluginTitle } from "../src/PluginTitle";
 import { loadAll } from "../src/state";
 import { quickAccessColumn } from "../src/tabPosition";
@@ -110,6 +111,16 @@ function Stand() {
         <Frame title="Gamepad · RU">
           <Static language="ru">
             <GamepadScreen />
+          </Static>
+        </Frame>
+        <Frame title="Sound · RU">
+          <Static language="ru">
+            <SoundScreen />
+          </Static>
+        </Frame>
+        <Frame title="Sound · EN">
+          <Static language="en">
+            <SoundScreen />
           </Static>
         </Frame>
         <Frame title="Armoury Crate · RU">

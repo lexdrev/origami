@@ -8,6 +8,8 @@ import type {
   LanguageSetting,
   LightMode,
   LightSpeed,
+  SoundVolume,
+  SoundWidth,
   TriggerLevel,
   Triggers,
 } from "../backend";
@@ -46,7 +48,7 @@ export interface Messages {
   units: { watts: string; rpm: string; celsius: string };
   main: {
     settings: string;
-    tiles: { power: string; fans: string; display: string; gamepad: string };
+    tiles: { power: string; fans: string; display: string; gamepad: string; sound: string };
     powerNow(watts: string): string;
     boost(on: boolean): string;
     displaySub: string;
@@ -57,6 +59,13 @@ export interface Messages {
     curve(name: string): string;
     /** Under the system in the header, once the daily check has found a newer release. */
     updateAvailable(version: string): string;
+    /** The Sound tile while the filter is off, and under it. */
+    soundOff: string;
+    soundOffSub: string;
+    /** Under the Sound tile while another plugin processes the speakers. */
+    soundOther: string;
+    soundWidths: Record<SoundWidth, string>;
+    soundVoices: string;
   };
   settings: {
     title: string;
@@ -210,6 +219,30 @@ export interface Messages {
     safety: string;
     ownedBy(plugin: string): string;
     ownedText(plugin: string): string;
+  };
+  sound: {
+    title: string;
+    card: string;
+    on: string;
+    off: string;
+    /** While headphones play on the speakers' sink. */
+    headphones: string;
+    /** While PipeWire has no speaker sink. */
+    noSpeakers: string;
+    volume: string;
+    volumeNote: string;
+    volumes: Record<SoundVolume, string>;
+    width: string;
+    widthNote: string;
+    widths: Record<SoundWidth, string>;
+    voices: string;
+    voicesSub: string;
+    ownedBy(plugin: string): string;
+    ownedText(plugin: string): string;
+    clockFix: string;
+    clockFixOn: string;
+    clockFixOff: string;
+    clockFixWhy: string;
   };
   display: {
     title: string;

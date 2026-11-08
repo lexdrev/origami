@@ -17,6 +17,7 @@ import { GameProfilesScreen } from "./screens/GameProfilesScreen";
 import { GameProfileScreen, PowerScreen } from "./screens/PowerScreen";
 import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
+import { SoundScreen } from "./screens/SoundScreen";
 import { actionError, reloadFailed, settings, useLanguage } from "./state";
 import { useStore } from "./store";
 import { checkDaily } from "./updates";
@@ -28,6 +29,7 @@ const screens: Record<ScreenId, ComponentType> = {
   main: MainScreen,
   power: PowerScreen,
   fans: FansScreen,
+  sound: SoundScreen,
   gameProfiles: GameProfilesScreen,
   gameProfile: GameProfileScreen,
   display: DisplayScreen,

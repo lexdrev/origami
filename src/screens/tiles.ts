@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { FanCurve, Telemetry, TriggerRumble, Vibration } from "../backend";
+import type { FanCurve, Sound, Telemetry, TriggerRumble, Vibration } from "../backend";
 import { curveName } from "../fans";
 import type { Messages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
@@ -17,6 +17,7 @@ export interface TileTexts {
   fans: TileText;
   display: TileText;
   gamepad: TileText;
+  sound: TileText;
 }
 
 /** What ORIGAMI sets itself and reads apart from the telemetry. */
@@ -39,6 +40,8 @@ export interface OwnValues {
   triggers: TriggerRumble | null | undefined;
   /** ORIGAMI's fan curve, null until switched on; undefined while another plugin drives the fans. */
   fanCurve: FanCurve | null | undefined;
+  /** ORIGAMI's speaker sound, null until switched on; undefined while another plugin processes it. */
+  sound: Sound | null | undefined;
 }
 
 const SEPARATOR = " · ";
@@ -84,6 +87,16 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
       value: vibration !== null ? formatVibration(vibration, t.gamepad.off) : t.unknown,
       subtitle: line(t.main.gamepadSub, own.triggers !== undefined && t.main.triggers[triggerLine(own.triggers)]),
     },
+    sound: soundText(own.sound, t),
+  };
+}
+
+function soundText(sound: Sound | null | undefined, t: Messages): TileText {
+  if (sound === undefined) return { value: t.unknown, subtitle: t.main.soundOther };
+  if (!sound?.enabled) return { value: t.main.soundOff, subtitle: t.main.soundOffSub };
+  return {
+    value: t.sound.volumes[sound.volumeDb],
+    subtitle: line(t.main.soundWidths[sound.width], sound.voices && t.main.soundVoices),
   };
 }
 

@@ -17,14 +17,16 @@ import {
   info,
   refreshConflicts,
   refreshGyro,
+  refreshSound,
   refreshTriggerState,
   settings,
+  soundState,
   triggerState,
 } from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
-import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon } from "../ui/icons";
+import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon, SoundIcon } from "../ui/icons";
 import { useTelemetry } from "../useTelemetry";
 import { deviceName, systemName } from "./system";
 import { offeredRelease, updateState } from "../updates";
@@ -41,6 +43,8 @@ export function MainScreen() {
   const axes = useStore(gyro);
   const plugin = useStore(info);
   const slider = useStore(steamTdpSlider) === true;
+  const sound = useStore(soundState);
+  const speakers = plugin.status === "ready" && plugin.value.sound;
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.
   useEffect(() => {
@@ -49,6 +53,10 @@ export function MainScreen() {
     void refreshTriggerState();
     void refreshGyro();
   }, []);
+  // Whether the crackle after sleep happens here, for the Sound tile's count.
+  useEffect(() => {
+    if (speakers) void refreshSound();
+  }, [speakers]);
   const setting = current.status === "ready" ? current.value : null;
   const others = owners.status === "ready" ? owners.value : null;
   const ownTriggers = others?.triggers === null && motors.status === "ready" && motors.value === "available";
@@ -61,6 +69,7 @@ export function MainScreen() {
       lighting: setting?.lighting && others?.lighting === null ? setting.lighting.enabled : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
       fanCurve: setting && others?.fans === null ? setting.fans : undefined,
+      sound: setting && others?.sound === null ? setting.sound : undefined,
     },
     t,
   );
@@ -75,6 +84,7 @@ export function MainScreen() {
           buttons: plugin.status === "ready" ? plugin.value.buttons : null,
           steamTdpSlider: slider,
           contested: held.status === "ready" && held.value.contested,
+          clockCrackle: sound.status === "ready" ? sound.value.clockFix : null,
         })
       : null;
 
@@ -127,6 +137,18 @@ export function MainScreen() {
             navigate("gamepad");
           }}
         />
+        {/* Only the consoles whose speaker protection ORIGAMI has. */}
+        {speakers && (
+          <Tile
+            icon={<SoundIcon />}
+            name={t.main.tiles.sound}
+            {...tiles.sound}
+            problems={problems?.sound}
+            onOpen={() => {
+              navigate("sound");
+            }}
+          />
+        )}
       </Focusable>
     </Screen>
   );
