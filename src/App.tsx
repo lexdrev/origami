@@ -19,6 +19,7 @@ import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { actionError, reloadFailed, settings, useLanguage } from "./state";
 import { useStore } from "./store";
+import { checkDaily } from "./updates";
 import { Alert } from "./ui/blocks";
 import { ScrollBar } from "./ui/scrollbar";
 import { styles } from "./ui/styles";
@@ -40,10 +41,16 @@ const screens: Record<ScreenId, ComponentType> = {
 
 export function App() {
   const CurrentScreen = screens[useCurrentScreen()];
+  const current = useStore(settings);
+  const daily = current.status === "ready" && current.value.updateCheck;
   // The quick access menu mounts the view each time it opens: what failed then gets another try.
   useEffect(() => {
     void reloadFailed();
   }, []);
+  // The daily update check asks GitHub as ORIGAMI opens, once a day; switched on, it asks at once.
+  useEffect(() => {
+    if (daily) void checkDaily();
+  }, [daily]);
 
   return (
     <I18nProvider language={useLanguage()}>

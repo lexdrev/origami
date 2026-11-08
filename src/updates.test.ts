@@ -4,17 +4,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  checkDaily,
   checkForUpdates,
   currentVersion,
+  DAY_MS,
+  forgetLastCheck,
   installUpdate,
   isNewer,
   readRelease,
+  restoreLastCheck,
   updateState,
   type GitHubRelease,
   type Release,
 } from "./updates";
 
 const SHA256 = "df5705f97384a3fd61d057e8a44a5b006000a42d324685f4e20fccc78e535023";
+
+/** Steam's localStorage, which the tests run without. */
+function memoryStorage() {
+  const items = new Map<string, string>();
+  return {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      items.set(key, value);
+    },
+    removeItem: (key: string) => {
+      items.delete(key);
+    },
+  };
+}
 
 function gitHubRelease(tag: string, assets?: GitHubRelease["assets"]): GitHubRelease {
   return {
@@ -76,6 +94,7 @@ describe("checkForUpdates", () => {
 
   beforeEach(() => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("localStorage", memoryStorage());
   });
 
   afterEach(() => {
@@ -158,5 +177,82 @@ describe("installUpdate", () => {
     vi.stubGlobal("window", {});
     await installUpdate(release);
     expect(updateState.get()).toEqual({ status: "refused", release });
+  });
+});
+
+describe("the daily check", () => {
+  const answer = (tag: string) => {
+    const fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify(gitHubRelease(tag)))));
+    vi.stubGlobal("fetch", fetch);
+    return fetch;
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-08T12:00:00Z"));
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("localStorage", memoryStorage());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    updateState.set({ status: "idle" });
+  });
+
+  it("asks GitHub once a day", async () => {
+    const fetch = answer("v99.0.0");
+
+    await checkDaily();
+    vi.setSystemTime(Date.now() + DAY_MS - 1000);
+    await checkDaily();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(Date.now() + 2000);
+    await checkDaily();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks again the next time ORIGAMI opens when GitHub did not answer", async () => {
+    vi.stubGlobal("fetch", () => Promise.reject(new TypeError("Failed to fetch")));
+    await checkDaily();
+    expect(updateState.get()).toEqual({ status: "failed" });
+
+    const fetch = answer(`v${currentVersion}`);
+    await checkDaily();
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(updateState.get()).toEqual({ status: "latest" });
+  });
+
+  it("asks at once once the last answer is forgotten, as when switched off and on", async () => {
+    const fetch = answer("v99.0.0");
+    await checkDaily();
+
+    forgetLastCheck();
+    await checkDaily();
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers after a Steam restart the newer release it found, without asking again", async () => {
+    answer("v99.0.0");
+    await checkDaily();
+    updateState.set({ status: "idle" });
+
+    restoreLastCheck();
+
+    expect(updateState.get()).toMatchObject({ status: "available", release: { version: "99.0.0" } });
+  });
+
+  it("offers nothing after a restart once that release is installed", () => {
+    // Found while an older ORIGAMI ran, then installed: it is the one running now.
+    const installed = readRelease(gitHubRelease(`v${currentVersion}`));
+    localStorage.setItem("origami.updates", JSON.stringify({ checkedAt: Date.now(), release: installed }));
+
+    restoreLastCheck();
+
+    expect(updateState.get()).toEqual({ status: "idle" });
   });
 });

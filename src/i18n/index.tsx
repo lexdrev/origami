@@ -55,6 +55,8 @@ export interface Messages {
     triggers: { off: string; steady: string; taps: string };
     /** The fan curve on the Fans tile. */
     curve(name: string): string;
+    /** Under the system in the header, once the daily check has found a newer release. */
+    updateAvailable(version: string): string;
   };
   settings: {
     title: string;
@@ -82,25 +84,28 @@ export interface Messages {
     slogan: readonly [string, string];
     /** The action of the About block: the project's page in Steam's browser. */
     openProject: string;
-    /** The update row: one focus stop that checks GitHub, then offers the newer release. */
+    /** The updates card: the check, the update on offer, the releases on GitHub and the daily check. */
     updates: {
-      check: string;
+      title: string;
       /** Before the first check: the version that runs, and that a press asks GitHub. */
       idle(version: string): string;
-      checking: string;
+      checking(version: string): string;
       latest(version: string): string;
+      available(version: string): string;
       failed: string;
-      update(version: string): string;
-      current(version: string): string;
+      refused: string;
+      check: string;
+      /** The check button while GitHub has not answered yet. */
+      busy: string;
+      update: string;
+      whatsNew: string;
       /** Under an offered update: Decky asks first, and a running game is better closed. */
       confirm: string;
-      /** Under an offered update: the releases on GitHub, with what each one brings. */
-      whatsNew(version: string): string;
-      releases: string;
-      /** When Decky did not take the update: the release page, which has the zip. */
-      openRelease(version: string): string;
-      refused: string;
+      /** When Decky did not take the update: the zip is on the releases page. */
       download: string;
+      daily: string;
+      dailyOn: string;
+      dailyOff: string;
     };
   };
   qamTab: {

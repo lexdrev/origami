@@ -157,9 +157,6 @@ export const DownIcon = () => <StrokeIcon size={14} width={2.4} d="M5 9l7 7 7-7"
 export const ChevronIcon = () => <StrokeIcon size={16} width={2.2} d="M9 5l7 7-7 7" />;
 export const CheckIcon = () => <StrokeIcon size={12} width={3} d="M4 12l5 5L20 6" />;
 export const LockIcon = () => <StrokeIcon size={11} width={2.4} d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4" />;
-export const RefreshIcon = () => <StrokeIcon size={16} width={2.2} d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />;
-export const DownloadIcon = () => <StrokeIcon size={16} width={2.2} d="M12 4v11M7 10l5 5 5-5M5 20h14" />;
-export const ExternalIcon = () => <StrokeIcon size={16} width={2.2} d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" />;
 
 /** A thermometer beside a temperature, in the tile icons' amber. */
 export function ThermometerIcon() {

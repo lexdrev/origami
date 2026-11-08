@@ -19,12 +19,15 @@ import { createOwnTab } from "./qamTab";
 import { loadAll, refreshConflicts, settings } from "./state";
 import { TabApp } from "./TabApp";
 import { FoxGlyph } from "./ui/icons";
+import { restoreLastCheck } from "./updates";
 
 export default definePlugin(() => {
   // Loaded when Decky starts the plugin, so the first opening shows data at once.
   void loadAll();
   // On a Decky Loader too old for the backend the screens would stay empty without a word.
   const stopBackendStart = watchBackendStart();
+  // A newer release the update check found before Steam restarted is offered again, without asking.
+  restoreLastCheck();
   // gamescope forgets ORIGAMI's saturation when it restarts and Steam sets its own as it starts;
   // the plugin loads again after that, so this is the moment to bring ORIGAMI's back.
   backend.restoreSaturation().catch((error: unknown) => {

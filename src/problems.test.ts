@@ -11,6 +11,7 @@ const fresh: Settings = {
   language: "auto",
   qamTab: true,
   qamTabBefore: 7,
+  updateCheck: false,
   qamAssist: null,
   gyroFix: null,
   lighting: null,

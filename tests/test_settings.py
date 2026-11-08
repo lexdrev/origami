@@ -159,6 +159,7 @@ def test_restored_settings_leave_the_system_and_keep_the_interface_and_tdp() -> 
         {
             "language": "en",
             "qam_tab_before": FIRST_TAB,
+            "update_check": True,
             "qam_assist": True,
             "gyro_fix": False,
             "armoury_crate": "origami",
@@ -175,6 +176,7 @@ def test_restored_settings_leave_the_system_and_keep_the_interface_and_tdp() -> 
     assert chosen.restored() == Settings(
         language=Language.EN,
         qam_tab_before=FIRST_TAB,
+        update_check=True,
         vibration=None,
         manage_tdp=None,
         power=Power(tdp=20),
@@ -262,6 +264,20 @@ def test_origami_owns_the_tdp_at_the_factorys_limits_until_changed(tmp_path: Pat
     assert store.load() == Settings(
         manage_tdp=False, power=Power(25, headroom=False, cpu_boost=False), battery_high_tdp=True
     )
+
+
+def test_the_daily_update_check_is_off_until_switched_on_and_then_saved(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    assert Settings().update_check is False
+
+    store.save(Settings().updated({"update_check": True}))
+
+    assert store.load() == Settings(update_check=True)
+
+
+def test_the_daily_update_check_takes_only_true_or_false() -> None:
+    with pytest.raises(ValueError, match="update_check"):
+        Settings().updated({"update_check": "yes"})
 
 
 def test_the_tdp_left_to_steam_by_restoring_stays_undecided_until_the_user_sets_it(

@@ -44,6 +44,8 @@ class Settings:
     """ORIGAMI has its own tab in the quick access menu, besides its place inside Decky."""
     qam_tab_before: int | None = SOUNDTRACKS_TAB
     """Steam tab that ORIGAMI's tab stands before; FIRST_TAB puts it on top, None at the end."""
+    update_check: bool = False
+    """Once a day, as ORIGAMI opens, it asks GitHub for a newer release; off, only on a press."""
     # Fixes of system bugs are None until the user sets them: off all the same, but the screens show
     # them as problems until then. Switched off by hand, they are the user's choice.
     qam_assist: bool | None = None
@@ -88,14 +90,15 @@ class Settings:
         """These settings after "restore everything": nothing of the system is left to ORIGAMI.
 
         The fixes and all ORIGAMI drives are unset again, so the screens show the bugs as problems,
-        and Steam sets the TDP, which is a problem too until the user decides. The interface stays,
-        and so do the TDP and the games' profiles for the next time ORIGAMI manages it, without
-        their CPU boost: that flag is the system's again.
+        and Steam sets the TDP, which is a problem too until the user decides. The interface and the
+        daily update check stay, and so do the TDP and the games' profiles for the next time ORIGAMI
+        manages it, without their CPU boost: that flag is the system's again.
         """
         return Settings(
             language=self.language,
             qam_tab=self.qam_tab,
             qam_tab_before=self.qam_tab_before,
+            update_check=self.update_check,
             vibration=None,
             manage_tdp=None,
             power=replace(self.power, cpu_boost=None),
@@ -113,7 +116,7 @@ class Settings:
             match key:
                 case "language":
                     parsed[key] = Language(value)
-                case "qam_tab" | "battery_high_tdp":
+                case "qam_tab" | "battery_high_tdp" | "update_check":
                     parsed[key] = expect_bool(key, value)
                 case "qam_assist" | "gyro_fix" | "manage_tdp":
                     parsed[key] = None if value is None else expect_bool(key, value)
@@ -141,6 +144,7 @@ class Settings:
             "language": self.language.value,
             "qam_tab": self.qam_tab,
             "qam_tab_before": self.qam_tab_before,
+            "update_check": self.update_check,
             "qam_assist": self.qam_assist,
             "gyro_fix": self.gyro_fix,
             "lighting": None if self.lighting is None else self.lighting.to_json(),

@@ -272,42 +272,6 @@ export function NavRow(props: NavRowProps) {
   );
 }
 
-interface ActionRowProps {
-  title: string;
-  subtitle: string;
-  /** A grey line under the subtitle. */
-  note?: string | undefined;
-  /** At the right edge, where a row that opens a screen has its chevron. */
-  icon: ReactNode;
-  /** The one thing on the screen that waits for the user: amber title and icon. */
-  offer?: boolean;
-  /** At work: a grey title and icon, and a press does nothing until it is done. */
-  busy?: boolean;
-  action: string;
-  onPress: () => void;
-}
-
-/** A row that does something in place; its words follow what it does now. */
-export function ActionRow(props: ActionRowProps) {
-  const { title, subtitle, note, icon, offer = false, busy = false, action, onPress } = props;
-  const modifier = offer ? " og-row--offer" : "";
-  return (
-    <Pressable
-      className={busy ? "og-row og-row--busy" : `og-row${modifier}`}
-      action={action}
-      {...(!busy && { sound: UISound.Press })}
-      onPress={() => {
-        if (!busy) onPress();
-      }}
-    >
-      <span className="og-row__title">{title}</span>
-      <span className="og-row__sub">{subtitle}</span>
-      {note !== undefined && <span className="og-row__note">{note}</span>}
-      <span className="og-row__icon">{icon}</span>
-    </Pressable>
-  );
-}
-
 /** A grey tag beside a title, such as "≠ general" in a game's settings. */
 export function Badge({ text }: { text: string }) {
   return <span className="og-badge">{text}</span>;

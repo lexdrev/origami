@@ -1,21 +1,30 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Navigation } from "@decky/ui";
+import { Focusable, Navigation } from "@decky/ui";
 import { useEffect } from "react";
 
 import type { LanguageSetting } from "../backend";
-import { useMessages } from "../i18n";
+import { useMessages, type Messages } from "../i18n";
 import { back, navigate } from "../navigation";
 import { unset } from "../problems";
 import { changes, refreshChanges, settings, updateSettings } from "../state";
 import { useStore } from "../store";
-import { Header, Screen, SectionLabel } from "../ui/blocks";
+import { Card, Header, Screen, SectionLabel, SwitchLine } from "../ui/blocks";
 import { UISound } from "../sounds";
-import { ActionRow, ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
-import { DownloadIcon, ExternalIcon, FoxMark, GearIcon, RefreshIcon } from "../ui/icons";
+import { ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
+import { FoxMark, GearIcon } from "../ui/icons";
 import { ownTabSummary, quickAccessColumn } from "../tabPosition";
-import { checkForUpdates, currentVersion, installUpdate, RELEASES_PAGE, updateState } from "../updates";
+import {
+  checkForUpdates,
+  currentVersion,
+  forgetLastCheck,
+  installUpdate,
+  offeredRelease,
+  RELEASES_PAGE,
+  updateState,
+  type UpdateState,
+} from "../updates";
 import { LoadFailed } from "./LoadFailed";
 
 const REPOSITORY = "github.com/lexdrev/origami";
@@ -89,7 +98,7 @@ export function SettingsScreen() {
           navigate("changes");
         }}
       />
-      <UpdateRow />
+      <UpdateCard />
 
       {/* The last stop of the D-pad: Steam scrolls only to the focus, so the block shows whole. */}
       <div className="og-about">
@@ -116,70 +125,82 @@ export function SettingsScreen() {
   );
 }
 
-/**
- * Checks GitHub on a press, then offers the newer release in the same place: Steam cannot move the
- * focus to a new button, so the one row first checks and then updates. Under an offered update, a
- * second row opens the releases, where the newest one and those skipped say what they bring.
- */
-function UpdateRow() {
-  const t = useMessages();
-  const state = useStore(updateState);
-  const texts = t.settings.updates;
+/** The card's line under its title: what the last check found. */
+function updateSummary(state: UpdateState, texts: Messages["settings"]["updates"]): string {
+  switch (state.status) {
+    case "idle":
+      return texts.idle(currentVersion);
+    case "checking":
+      return texts.checking(currentVersion);
+    case "latest":
+      return texts.latest(currentVersion);
+    case "available":
+      return texts.available(state.release.version);
+    case "failed":
+      return texts.failed;
+    case "refused":
+      return texts.refused;
+  }
+}
 
-  if (state.status === "available") {
-    const { release } = state;
-    return (
-      <>
-        <ActionRow
-          title={texts.update(release.version)}
-          subtitle={texts.current(currentVersion)}
-          note={texts.confirm}
-          icon={<DownloadIcon />}
-          offer
-          action={t.actions.update}
-          onPress={() => void installUpdate(release)}
-        />
-        <ActionRow
-          title={texts.whatsNew(release.version)}
-          subtitle={texts.releases}
-          icon={<ExternalIcon />}
+/**
+ * Everything about updates in one card. The first button keeps its place while its words follow the
+ * check, as Steam cannot move the focus to a new button: it checks, then updates. What's new opens
+ * the releases on GitHub, the newest first; the daily check below is off until the user switches it on.
+ */
+function UpdateCard() {
+  const t = useMessages();
+  const texts = t.settings.updates;
+  const state = useStore(updateState);
+  const current = useStore(settings);
+  const release = offeredRelease(state);
+  const checking = state.status === "checking";
+  let label = texts.check;
+  if (release !== null) label = texts.update;
+  else if (checking) label = texts.busy;
+
+  return (
+    <Card title={texts.title} subtitle={updateSummary(state, texts)} offer={state.status === "available"}>
+      {/* Steam moves the focus only up and down by default; the two buttons go left and right too. */}
+      <Focusable className="og-actions" flow-children="row">
+        <Pressable
+          className={release === null ? "og-button" : "og-button og-button--primary"}
+          action={release === null ? t.actions.check : t.actions.update}
+          sound={UISound.Press}
+          disabled={checking}
+          onPress={() => void (release === null ? checkForUpdates() : installUpdate(release))}
+        >
+          {label}
+        </Pressable>
+        <Pressable
+          className="og-button"
           action={t.actions.open}
+          sound={UISound.Press}
           onPress={() => {
             openPage(RELEASES_PAGE);
           }}
-        />
-      </>
-    );
-  }
-  if (state.status === "refused") {
-    const { release } = state;
-    return (
-      <ActionRow
-        title={texts.openRelease(release.version)}
-        subtitle={texts.refused}
-        note={texts.download}
-        icon={<ExternalIcon />}
-        action={t.actions.open}
-        onPress={() => {
-          openPage(release.pageUrl);
-        }}
-      />
-    );
-  }
-  const subtitles = {
-    idle: texts.idle(currentVersion),
-    checking: texts.checking,
-    latest: texts.latest(currentVersion),
-    failed: texts.failed,
-  };
-  return (
-    <ActionRow
-      title={texts.check}
-      subtitle={subtitles[state.status]}
-      icon={<RefreshIcon />}
-      busy={state.status === "checking"}
-      action={t.actions.check}
-      onPress={() => void checkForUpdates()}
-    />
+        >
+          {texts.whatsNew}
+        </Pressable>
+      </Focusable>
+      {state.status === "available" && <span className="og-card__subtitle">{texts.confirm}</span>}
+      {state.status === "refused" && <span className="og-card__subtitle">{texts.download}</span>}
+      {current.status === "ready" && (
+        <>
+          <span className="og-card__divider" aria-hidden="true" />
+          <SwitchLine
+            title={texts.daily}
+            subtitle={current.value.updateCheck ? texts.dailyOn : texts.dailyOff}
+            value={current.value.updateCheck}
+            action={t.actions.toggle}
+            onChange={(updateCheck) => {
+              // Switched on again, it asks at once rather than a day after the last answer.
+              if (!updateCheck) forgetLastCheck();
+              void updateSettings({ updateCheck });
+            }}
+          />
+        </>
+      )}
+    </Card>
   );
 }

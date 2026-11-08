@@ -114,14 +114,19 @@ interface CardProps {
   subtitle?: string | undefined;
   /** The subtitle names a problem the card fixes (style B2: red frame, triangle and text). */
   problem?: boolean;
+  /** The subtitle offers a step the user may take, such as an update: amber, not a problem. */
+  offer?: boolean;
   aside?: ReactNode;
   /** A switch in the head; while it is off the card is only its head, as every feature with one. */
   toggle?: CardSwitch;
   children: ReactNode;
 }
 
-export function Card({ title, badge, subtitle, problem = false, aside, toggle, children }: CardProps) {
-  const titles = title && <CardTitles title={title} badge={badge} subtitle={subtitle} problem={problem} />;
+export function Card(props: CardProps) {
+  const { title, badge, subtitle, problem = false, offer = false, aside, toggle, children } = props;
+  const titles = title && (
+    <CardTitles title={title} badge={badge} subtitle={subtitle} problem={problem} offer={offer} />
+  );
   return (
     <section className={problem ? "og-card og-card--problem" : "og-card"}>
       {toggle === undefined ? (
@@ -176,10 +181,12 @@ interface CardTitlesProps {
   badge?: string | undefined;
   subtitle?: string | undefined;
   problem?: boolean;
+  /** The subtitle offers a step the user may take: amber. */
+  offer?: boolean;
 }
 
 /** A card's title and subtitle; a card without a head places them itself, as the TDP card beside its dial. */
-export function CardTitles({ title, badge, subtitle, problem = false }: CardTitlesProps) {
+export function CardTitles({ title, badge, subtitle, problem = false, offer = false }: CardTitlesProps) {
   return (
     <span className="og-card__titles">
       <span className="og-card__title">
@@ -187,7 +194,7 @@ export function CardTitles({ title, badge, subtitle, problem = false }: CardTitl
         {badge !== undefined && <Badge text={badge} />}
       </span>
       {subtitle && (
-        <span className="og-card__subtitle">
+        <span className={offer ? "og-card__subtitle og-card__subtitle--offer" : "og-card__subtitle"}>
           {problem && <WarningIcon size={12} />}
           {subtitle}
         </span>

@@ -5,9 +5,10 @@ import { version } from "../package.json";
 import { callLoader, PLUGIN_NAME } from "./deckyLoader";
 import { createStore } from "./store";
 
-// ORIGAMI goes online only here, when the user presses "Check for updates": one request to GitHub
-// for the latest release. Decky does the update itself, as for the plugins of its store: it asks the
-// user, downloads the zip, checks its SHA-256 and puts the new ORIGAMI in place of the old one.
+// ORIGAMI goes online only here: one request to GitHub for the latest release, when the user presses
+// "Check", or once a day as ORIGAMI opens while the daily check is on. Decky does the update itself, as
+// for the plugins of its store: it asks the user, downloads the zip, checks its SHA-256 and puts the new
+// ORIGAMI in place of the old one.
 
 const LATEST_RELEASE = "https://api.github.com/repos/lexdrev/origami/releases/latest";
 /** Every release with its notes, the newest first: what a skipped version brought is there too. */
@@ -18,6 +19,10 @@ const INSTALL_AS_UPDATE = 2;
 /** Long enough for a slow link; without one, as on a ship at sea, the check says so instead of spinning. */
 export const CHECK_TIMEOUT_MS = 15_000;
 const VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
+/** The daily check asks again once this much has passed since the last answer. */
+export const DAY_MS = 24 * 60 * 60 * 1000;
+/** Where Steam keeps the last answer between its restarts, so the marks of an update stay. */
+const LAST_CHECK = "origami.updates";
 
 /** The ORIGAMI that runs, from the package.json it was built with; the backend is not needed for it. */
 export const currentVersion = version;
@@ -42,6 +47,51 @@ export type UpdateState =
 
 /** The last check, kept while ORIGAMI runs, so the settings show it again when they reopen. */
 export const updateState = createStore<UpdateState>({ status: "idle" });
+
+/** The newer release on offer, from a check just now or one remembered. */
+export function offeredRelease(state: UpdateState): Release | null {
+  return state.status === "available" || state.status === "refused" ? state.release : null;
+}
+
+interface LastCheck {
+  checkedAt: number;
+  /** The newer release GitHub had then; null when ORIGAMI was the latest. */
+  release: Release | null;
+}
+
+function isRelease(value: unknown): value is Release {
+  if (typeof value !== "object" || value === null) return false;
+  const fields = value as Record<string, unknown>;
+  return ["version", "zipUrl", "sha256", "pageUrl"].every((key) => typeof fields[key] === "string");
+}
+
+function readLastCheck(): LastCheck | null {
+  const text = localStorage.getItem(LAST_CHECK);
+  if (text === null) return null;
+  const saved: unknown = JSON.parse(text);
+  if (typeof saved !== "object" || saved === null) return null;
+  const { checkedAt, release } = saved as Record<string, unknown>;
+  if (typeof checkedAt !== "number" || (release !== null && !isRelease(release))) return null;
+  return { checkedAt, release };
+}
+
+/** Forgets the last answer: the daily check, switched on again, asks at once. */
+export function forgetLastCheck(): void {
+  localStorage.removeItem(LAST_CHECK);
+}
+
+/** Offers again the newer release a check found before Steam restarted, unless it is installed by now. */
+export function restoreLastCheck(): void {
+  const release = readLastCheck()?.release ?? null;
+  if (release !== null && isNewer(release.version, currentVersion)) updateState.set({ status: "available", release });
+}
+
+/** The daily check: once a day as ORIGAMI opens; without an answer it asks again the next time. */
+export async function checkDaily(): Promise<void> {
+  const last = readLastCheck();
+  if (updateState.get().status === "checking" || (last !== null && Date.now() - last.checkedAt < DAY_MS)) return;
+  await checkForUpdates();
+}
 
 /** The part of GitHub's answer ORIGAMI reads. */
 export interface GitHubRelease {
@@ -92,6 +142,8 @@ export async function checkForUpdates(): Promise<void> {
     const release = readRelease((await response.json()) as GitHubRelease);
     const newer = isNewer(release.version, currentVersion);
     updateState.set(newer ? { status: "available", release } : { status: "latest" });
+    const answer: LastCheck = { checkedAt: Date.now(), release: newer ? release : null };
+    localStorage.setItem(LAST_CHECK, JSON.stringify(answer));
   } catch (error) {
     console.warn("ORIGAMI: cannot check for updates", error);
     updateState.set({ status: "failed" });

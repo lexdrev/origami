@@ -27,6 +27,7 @@ import { IconButton } from "../ui/controls";
 import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon } from "../ui/icons";
 import { useTelemetry } from "../useTelemetry";
 import { deviceName, systemName } from "./system";
+import { offeredRelease, updateState } from "../updates";
 import { tileTexts } from "./tiles";
 
 export function MainScreen() {
@@ -135,14 +136,19 @@ export function MainScreen() {
 function DeviceHeader() {
   const t = useMessages();
   const plugin = useStore(info);
+  const current = useStore(settings);
+  const update = useStore(updateState);
   const device = plugin.status === "ready" ? deviceName(plugin.value) : null;
   const system = plugin.status === "ready" ? systemName(plugin.value) : null;
+  // What the daily update check found: marked here until it is installed or the check is switched off.
+  const offered = current.status === "ready" && current.value.updateCheck ? offeredRelease(update) : null;
 
   return (
     <header className="og-header">
       <span className="og-header__titles">
         <span className="og-header__title">{device ?? t.unknown}</span>
         <span className="og-header__subtitle">{system ?? t.unknown}</span>
+        {offered && <span className="og-header__update">{t.main.updateAvailable(offered.version)}</span>}
       </span>
       <IconButton
         label={t.main.settings}
@@ -152,6 +158,7 @@ function DeviceHeader() {
         }}
       >
         <GearIcon size={18} />
+        {offered && <span className="og-icon-button__dot" aria-hidden="true" />}
       </IconButton>
     </header>
   );

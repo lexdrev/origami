@@ -173,6 +173,8 @@ export interface Settings {
   qamTab: boolean;
   /** Steam tab that ORIGAMI's tab stands before; -1 on top, null at the end. */
   qamTabBefore: number | null;
+  /** Once a day, as ORIGAMI opens, it asks GitHub for a newer release; off, only on a press. */
+  updateCheck: boolean;
   /** ORIGAMI opens the quick access menu when Steam misses a press of its button; null until the user sets it. */
   qamAssist: boolean | null;
   /** ORIGAMI turns the gyroscope's yaw the right way for Steam; null until the user sets it. */

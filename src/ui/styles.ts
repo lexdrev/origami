@@ -78,8 +78,10 @@ ${fontFaces}
 .og-header__titles { display: flex; flex-direction: column; gap: 3px; flex-grow: 1; min-width: 0; }
 .og-header__title { font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 .og-header__subtitle { color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
+.og-header__update { color: var(--og-accent); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
 
 .og-icon-button {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -90,6 +92,16 @@ ${fontFaces}
   border-radius: 2px;
   background: var(--og-surface);
   color: var(--og-text);
+}
+/* An amber dot in the corner: what the button opens has a step waiting, such as an update. */
+.og-icon-button__dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--og-accent);
 }
 .og-icon-button.og-focused {
   border-color: var(--og-accent);
@@ -230,16 +242,8 @@ ${fontFaces}
   white-space: nowrap;
   vertical-align: 1px;
 }
-.og-row__chevron,
-.og-row__icon { position: absolute; top: 50%; right: 10px; display: flex; margin-top: -8px; color: var(--og-dim); }
-.og-row.og-focused .og-row__chevron,
-.og-row.og-focused .og-row__icon { color: var(--og-accent); }
-/* A row that does something in place: amber while it offers the next step, grey while at work. */
-.og-row--offer .og-row__title,
-.og-row--offer .og-row__icon { color: var(--og-accent); }
-.og-row--busy .og-row__title { color: var(--og-muted); }
-.og-row--busy .og-row__icon,
-.og-row--busy.og-focused .og-row__icon { color: var(--og-border); }
+.og-row__chevron { position: absolute; top: 50%; right: 10px; display: flex; margin-top: -8px; color: var(--og-dim); }
+.og-row.og-focused .og-row__chevron { color: var(--og-accent); }
 
 .og-toggle { padding-right: 58px; }
 .og-row--problem { border-color: var(--og-danger-line); }
@@ -275,6 +279,8 @@ ${fontFaces}
 .og-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .og-card__titles { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .og-card__subtitle { color: var(--og-muted); font: 500 10px/1.35 var(--og-mono); text-transform: uppercase; }
+/* After the plain subtitle, which it recolours: a step on offer, such as an update. */
+.og-card__subtitle--offer { color: var(--og-accent); }
 .og-card__value { color: var(--og-accent); font: 700 17px var(--og-mono); }
 .og-card__label { color: var(--og-muted); font: 700 10px var(--og-mono); letter-spacing: 0.08em; text-transform: uppercase; }
 /* A switch in the card head: the card frame shows the focus is inside, a ring that it is on the switch. */
