@@ -94,6 +94,7 @@ class SoundBlock:
         self._sink: str | None = None
         self._lock = asyncio.Lock()
         self._watch = BackgroundTask("origami-sound", self._keep)
+        self._clock = BackgroundTask("origami-clock", lambda: clock.step_when_off(self._run))
 
     def supported(self) -> bool:
         board = self._board()
@@ -119,15 +120,18 @@ class SoundBlock:
         )
 
     async def after_resume(self, settings: Settings) -> None:
-        """Step the clock the moment the console wakes, before the slew makes the audio crackle."""
+        """Watch chrony a while after the console wakes and step the clock as soon as it is off."""
         if settings.clock_fix and await asyncio.to_thread(
             clock.crackles_after_sleep, self._context.root
         ):
-            await clock.step()
+            # A new wake starts the wait for chrony's measurement over.
+            self._clock.cancel()
+            self._clock.start()
 
     def stop(self) -> None:
         """Stop watching, and the filter with it, without waiting: Decky is unloading ORIGAMI."""
         self._watch.cancel()
+        self._clock.cancel()
         user = self._user()
         if user is None:
             return

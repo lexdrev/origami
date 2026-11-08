@@ -236,6 +236,108 @@ def test_the_crackle_needs_a_local_rtc_a_zone_and_chrony(tmp_path: Path) -> None
     assert not clock.crackles_after_sleep(tmp_path, offset_seconds=0)
 
 
+# chronyc -c tracking on the console: Ref time, then System time, negative while the clock is fast.
+TRACKING = (
+    "C3FA7269,195.250.114.105,3,{},{},0.000521504,0.018085383,-10.323,0.007,0.206,0.014,0.005,"
+    "1034.1,Normal\n"
+)
+
+
+class FakeChrony:
+    """chronyc: one tracking answer after another, the last again and again; makestep."""
+
+    def __init__(self, *tracking: tuple[float, float]) -> None:
+        self.tracking = list(tracking)
+        self.calls: list[tuple[str, ...]] = []
+
+    async def __call__(
+        self, *args: str, user: tuple[int, int] | None = None, env: Mapping[str, str] | None = None
+    ) -> str:
+        assert user is None and env is None
+        self.calls.append(args)
+        if args == ("chronyc", "-c", "tracking"):
+            measured, offset = self.tracking.pop(0) if len(self.tracking) > 1 else self.tracking[0]
+            return TRACKING.format(measured, offset)
+        return ""
+
+    @property
+    def stepped(self) -> bool:
+        return ("chronyc", "makestep") in self.calls
+
+
+def test_chrony_tracking() -> None:
+    tracking = clock.Tracking.parse(TRACKING.format("1794174174.232582072", "-0.000158642"))
+    assert tracking == clock.Tracking(measured=1794174174.232582072, offset=-0.000158642)
+    with pytest.raises(ValueError, match="Cannot talk"):
+        clock.Tracking.parse("506 Cannot talk to daemon\n")
+
+
+def test_the_clock_is_stepped_once_chrony_finds_it_off(caplog: pytest.LogCaptureFixture) -> None:
+    # The wake: chrony slews nothing until its first measurement finds the clock an hour fast.
+    chrony = FakeChrony((100.0, -0.0001), (100.0, -0.0001), (4000.0, -3599.31))
+    caplog.set_level("INFO")
+
+    asyncio.run(clock.step_when_off(chrony, poll_seconds=0))
+
+    assert chrony.calls[-1] == ("chronyc", "makestep")
+    assert "3599.3 s off" in caplog.text
+
+
+def test_the_clock_is_left_alone_when_the_measurement_after_the_wake_finds_it_right() -> None:
+    chrony = FakeChrony((100.0, -0.0001), (130.0, 0.002))
+
+    asyncio.run(clock.step_when_off(chrony, poll_seconds=0))
+
+    assert not chrony.stepped
+    assert len(chrony.calls) == 2
+
+
+def test_the_wait_for_chrony_ends_without_the_network(caplog: pytest.LogCaptureFixture) -> None:
+    chrony = FakeChrony((100.0, 0.0))
+    caplog.set_level("INFO")
+
+    asyncio.run(clock.step_when_off(chrony, watch_seconds=0.05, poll_seconds=0.01))
+
+    assert not chrony.stepped
+    assert "measured nothing" in caplog.text
+
+
+def test_a_chrony_that_does_not_answer_is_no_failure(caplog: pytest.LogCaptureFixture) -> None:
+    async def silent(*args: str) -> str:
+        raise CommandError(f"{args[0]} exited with 1: 506 Cannot talk to daemon", 1)
+
+    asyncio.run(clock.step_when_off(silent, poll_seconds=0))
+
+    assert "Clock not checked after sleep" in caplog.text
+
+
+def test_a_wake_steps_the_clock_only_with_the_fix_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def crackles(_root: Path) -> bool:
+        return True
+
+    monkeypatch.setattr(clock, "crackles_after_sleep", crackles)
+    chrony = FakeChrony((100.0, -3599.31))
+
+    async def conflicts() -> Conflicts:
+        return no_conflicts()
+
+    context = Context(tmp_path, ChangeJournal(tmp_path / "changes.json"), conflicts)
+    block = SoundBlock(
+        context, lv2_dir=Path("/plugin/bin/lv2"), board=lambda: "RC73XA", runner=chrony
+    )
+
+    async def wake(settings: Settings) -> None:
+        await block.after_resume(settings)
+        await asyncio.sleep(0.05)
+
+    asyncio.run(wake(Settings(clock_fix=False)))
+    assert chrony.calls == []
+    asyncio.run(wake(Settings(clock_fix=True)))
+    assert chrony.stepped
+
+
 class FakeSession:
     """The session user's commands: PipeWire's objects, and the filter's service."""
 

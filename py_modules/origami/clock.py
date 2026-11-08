@@ -6,14 +6,21 @@
 With the RTC in local time, as Windows keeps it beside Linux, the system clock comes back from
 sleep off by the time zone's offset. chrony then slews it at up to 1/12, for hours, and the audio
 clock follows the slewed one: PipeWire feeds the speakers too fast and they crackle (measured 12/11
-of 48 kHz on the console). Stepping the clock right after the resume ends it. The RTC's mode stays:
-switching it to UTC would put Windows' clock off.
+of 48 kHz on the console). Stepping the clock ends it. The RTC's mode stays: switching it to UTC
+would put Windows' clock off.
+
+chrony only learns the clock is off from its first measurement after the wake, once the network is
+back (6 s on the console), and its makestep steps no more than it is slewing. So after a resume
+ORIGAMI watches chrony's tracking for a while and steps the clock as soon as it is off.
 """
 
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from origami.proc import CommandError, run
 
@@ -24,6 +31,36 @@ CHRONYC = Path("usr/bin/chronyc")
 STEP_TIMEOUT_SECONDS = 5
 MODE_LINE = 2
 """The line of /etc/adjtime that says UTC or LOCAL, counted from 0."""
+STEP_THRESHOLD_SECONDS = 1.0
+"""Fedora's chrony.conf steps from 1 s too, but only in its first three updates."""
+WATCH_SECONDS = 120
+"""How long after a resume ORIGAMI waits for chrony's first measurement."""
+POLL_SECONDS = 2.0
+TRACKING_FIELDS = 5
+
+
+class Runner(Protocol):
+    """origami.proc.run, as the clock calls it."""
+
+    def __call__(self, *args: str) -> Awaitable[str]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class Tracking:
+    """What `chronyc -c tracking` tells of the clock."""
+
+    measured: float
+    """When chrony took in its last measurement (Ref time)."""
+    offset: float
+    """How far off the system clock is: what chrony still slews (System time), in seconds."""
+
+    @classmethod
+    def parse(cls, text: str) -> Tracking:
+        """Parse the CSV line; raise ValueError when it is not one."""
+        fields = text.strip().split(",")
+        if len(fields) < TRACKING_FIELDS:
+            raise ValueError(f"chronyc tracking said {text.strip()!r}")
+        return cls(measured=float(fields[3]), offset=float(fields[4]))
 
 
 def local_rtc(root: Path) -> bool:
@@ -41,12 +78,43 @@ def crackles_after_sleep(root: Path, *, offset_seconds: int | None = None) -> bo
     return local_rtc(root) and offset != 0 and (root / CHRONYC).exists()
 
 
-async def step() -> None:
-    """Set the system clock to chrony's time at once instead of slewing it."""
+async def step_when_off(
+    runner: Runner = run,
+    *,
+    watch_seconds: float = WATCH_SECONDS,
+    poll_seconds: float = POLL_SECONDS,
+) -> None:
+    """After a resume: step the clock once chrony finds it off, instead of letting it slew."""
+    try:
+        offset = await _first_offset(runner, watch_seconds, poll_seconds)
+    except TimeoutError:
+        log.info("Clock not checked after sleep: chrony measured nothing in %d s", watch_seconds)
+        return
+    except (CommandError, ValueError) as error:
+        log.warning("Clock not checked after sleep: %s", error)
+        return
+    if offset is None:
+        return
     try:
         async with asyncio.timeout(STEP_TIMEOUT_SECONDS):
-            await run("chronyc", "makestep")
+            await runner("chronyc", "makestep")
     except (CommandError, TimeoutError) as error:
         log.warning("Clock not stepped after sleep: %s", error)
         return
-    log.info("Clock stepped after sleep")
+    log.info("Clock stepped after sleep: it was %.1f s off", abs(offset))
+
+
+async def _first_offset(runner: Runner, watch_seconds: float, poll_seconds: float) -> float | None:
+    """chrony's offset as soon as the clock is off; None once a new measurement finds it right."""
+    async with asyncio.timeout(watch_seconds):
+        first = now = await _tracking(runner)
+        while abs(now.offset) < STEP_THRESHOLD_SECONDS:
+            if now.measured != first.measured:
+                return None
+            await asyncio.sleep(poll_seconds)
+            now = await _tracking(runner)
+        return now.offset
+
+
+async def _tracking(runner: Runner) -> Tracking:
+    return Tracking.parse(await runner("chronyc", "-c", "tracking"))
