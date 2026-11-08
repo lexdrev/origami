@@ -62,6 +62,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang llvm libbpf-dev
       - name: Build the HID-BPF program
         run: bash scripts/build_bpf.sh
+      - name: Fetch the LSP plugins of the sound filter
+        run: python scripts/fetch_lsp.py
       - name: Build the zip
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"

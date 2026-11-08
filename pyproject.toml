@@ -33,6 +33,8 @@ known-local-folder = ["fakes"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "PLR2004", "FBT"]
+# The build script downloads the LSP package for the zip; the plugin itself makes no requests.
+"scripts/fetch_lsp.py" = ["TID251", "S310"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "urllib".msg = "ORIGAMI makes no network requests."
