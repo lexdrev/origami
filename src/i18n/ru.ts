@@ -68,6 +68,8 @@ export const ru: Messages = {
       update: (version) => `Обновить до ${version}`,
       current: (version) => `Сейчас ${version}`,
       confirm: "Decky спросит подтверждение · закройте игру",
+      whatsNew: (version) => `Что нового в ${version}`,
+      releases: "Выпуски на GitHub",
       openRelease: (version) => `Открыть выпуск ${version}`,
       refused: "Decky не принял обновление",
       download: "Скачайте ORIGAMI.zip со страницы выпуска",

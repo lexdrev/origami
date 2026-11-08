@@ -94,6 +94,9 @@ export interface Messages {
       current(version: string): string;
       /** Under an offered update: Decky asks first, and a running game is better closed. */
       confirm: string;
+      /** Under an offered update: the releases on GitHub, with what each one brings. */
+      whatsNew(version: string): string;
+      releases: string;
       /** When Decky did not take the update: the release page, which has the zip. */
       openRelease(version: string): string;
       refused: string;

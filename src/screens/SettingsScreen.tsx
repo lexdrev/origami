@@ -15,11 +15,17 @@ import { UISound } from "../sounds";
 import { ActionRow, ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
 import { DownloadIcon, ExternalIcon, FoxMark, GearIcon, RefreshIcon } from "../ui/icons";
 import { ownTabSummary, quickAccessColumn } from "../tabPosition";
-import { checkForUpdates, currentVersion, installUpdate, updateState } from "../updates";
+import { checkForUpdates, currentVersion, installUpdate, RELEASES_PAGE, updateState } from "../updates";
 import { LoadFailed } from "./LoadFailed";
 
 const REPOSITORY = "github.com/lexdrev/origami";
 const LICENSE = "GPL-3.0";
+
+/** Opens a page in Steam's browser, which shows over the closed side menus. */
+function openPage(url: string) {
+  Navigation.NavigateToExternalWeb(url);
+  Navigation.CloseSideMenus();
+}
 
 export function SettingsScreen() {
   const t = useMessages();
@@ -92,8 +98,7 @@ export function SettingsScreen() {
           action={t.settings.openProject}
           sound={UISound.Press}
           onPress={() => {
-            Navigation.NavigateToExternalWeb(`https://${REPOSITORY}`);
-            Navigation.CloseSideMenus();
+            openPage(`https://${REPOSITORY}`);
           }}
         >
           <FoxMark size={26} />
@@ -113,7 +118,8 @@ export function SettingsScreen() {
 
 /**
  * Checks GitHub on a press, then offers the newer release in the same place: Steam cannot move the
- * focus to a new button, so the one row first checks and then updates.
+ * focus to a new button, so the one row first checks and then updates. Under an offered update, a
+ * second row opens the releases, where the newest one and those skipped say what they bring.
  */
 function UpdateRow() {
   const t = useMessages();
@@ -123,15 +129,26 @@ function UpdateRow() {
   if (state.status === "available") {
     const { release } = state;
     return (
-      <ActionRow
-        title={texts.update(release.version)}
-        subtitle={texts.current(currentVersion)}
-        note={texts.confirm}
-        icon={<DownloadIcon />}
-        offer
-        action={t.actions.update}
-        onPress={() => void installUpdate(release)}
-      />
+      <>
+        <ActionRow
+          title={texts.update(release.version)}
+          subtitle={texts.current(currentVersion)}
+          note={texts.confirm}
+          icon={<DownloadIcon />}
+          offer
+          action={t.actions.update}
+          onPress={() => void installUpdate(release)}
+        />
+        <ActionRow
+          title={texts.whatsNew(release.version)}
+          subtitle={texts.releases}
+          icon={<ExternalIcon />}
+          action={t.actions.open}
+          onPress={() => {
+            openPage(RELEASES_PAGE);
+          }}
+        />
+      </>
     );
   }
   if (state.status === "refused") {
@@ -144,8 +161,7 @@ function UpdateRow() {
         icon={<ExternalIcon />}
         action={t.actions.open}
         onPress={() => {
-          Navigation.NavigateToExternalWeb(release.pageUrl);
-          Navigation.CloseSideMenus();
+          openPage(release.pageUrl);
         }}
       />
     );

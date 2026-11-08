@@ -10,6 +10,8 @@ import { createStore } from "./store";
 // user, downloads the zip, checks its SHA-256 and puts the new ORIGAMI in place of the old one.
 
 const LATEST_RELEASE = "https://api.github.com/repos/lexdrev/origami/releases/latest";
+/** Every release with its notes, the newest first: what a skipped version brought is there too. */
+export const RELEASES_PAGE = "https://github.com/lexdrev/origami/releases";
 const ZIP = "ORIGAMI.zip";
 /** Decky's PluginInstallType.UPDATE: its prompt then speaks of an update. */
 const INSTALL_AS_UPDATE = 2;
