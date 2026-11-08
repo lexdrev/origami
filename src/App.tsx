@@ -3,6 +3,7 @@
 
 import { useEffect, type ComponentType } from "react";
 
+import { missingBackend } from "./backendStart";
 import { I18nProvider, useMessages } from "./i18n";
 import { useCurrentScreen, type ScreenId } from "./navigation";
 import { ArmouryCrateScreen } from "./screens/ArmouryCrateScreen";
@@ -16,7 +17,7 @@ import { GameProfilesScreen } from "./screens/GameProfilesScreen";
 import { GameProfileScreen, PowerScreen } from "./screens/PowerScreen";
 import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
-import { actionError, reloadFailed, useLanguage } from "./state";
+import { actionError, reloadFailed, settings, useLanguage } from "./state";
 import { useStore } from "./store";
 import { Alert } from "./ui/blocks";
 import { ScrollBar } from "./ui/scrollbar";
@@ -50,10 +51,24 @@ export function App() {
       <style>{styles}</style>
       <div className="og-root">
         <ScrollBar />
+        <MissingBackend />
         <ActionError />
         <CurrentScreen />
       </div>
     </I18nProvider>
+  );
+}
+
+/** Without the backend the screens stay empty; this says why, until its first answer comes. */
+function MissingBackend() {
+  const t = useMessages();
+  const missing = useStore(missingBackend);
+  const loaded = useStore(settings).status === "ready";
+  if (missing === null || loaded) return null;
+  return missing.reason === "oldDecky" ? (
+    <Alert title={t.errors.notStarted}>{t.errors.oldDecky(missing.deckyVersion)}</Alert>
+  ) : (
+    <Alert title={t.errors.notResponding}>{t.errors.restart}</Alert>
   );
 }
 

@@ -321,5 +321,12 @@ export const ru: Messages = {
     cancel: "Отмена",
     confirm: "Вернуть",
   },
-  errors: { backend: "Бэкенд ORIGAMI не ответил" },
+  errors: {
+    backend: "Бэкенд ORIGAMI не ответил",
+    notStarted: "ORIGAMI не запустился",
+    oldDecky: (version) =>
+      `Нужен Decky\u00a0Loader\u00a03.3.0 или новее, а сейчас стоит ${version}. Обновите Decky в\u00a0его настройках.`,
+    notResponding: "ORIGAMI не отвечает",
+    restart: "Перезагрузите консоль. Если не поможет, установите ORIGAMI заново.",
+  },
 };

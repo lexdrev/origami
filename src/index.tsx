@@ -6,6 +6,7 @@ import { definePlugin } from "@decky/api";
 import { backend } from "./backend";
 
 import { App } from "./App";
+import { watchBackendStart } from "./backendStart";
 import { watchButtonActions } from "./buttonActions";
 import { watchDeckyPlugins } from "./deckyPlugins";
 import { PluginTitle } from "./PluginTitle";
@@ -22,6 +23,8 @@ import { FoxGlyph } from "./ui/icons";
 export default definePlugin(() => {
   // Loaded when Decky starts the plugin, so the first opening shows data at once.
   void loadAll();
+  // On a Decky Loader too old for the backend the screens would stay empty without a word.
+  const stopBackendStart = watchBackendStart();
   // gamescope forgets ORIGAMI's saturation when it restarts and Steam sets its own as it starts;
   // the plugin loads again after that, so this is the moment to bring ORIGAMI's back.
   backend.restoreSaturation().catch((error: unknown) => {
@@ -55,6 +58,7 @@ export default definePlugin(() => {
     content: <App />,
     onDismount() {
       unsubscribe();
+      stopBackendStart();
       ownTab?.dispose();
       stopQamAssist();
       stopButtonActions();

@@ -317,5 +317,12 @@ export const en: Messages = {
     cancel: "Cancel",
     confirm: "Restore",
   },
-  errors: { backend: "ORIGAMI backend did not respond" },
+  errors: {
+    backend: "ORIGAMI backend did not respond",
+    notStarted: "ORIGAMI did not start",
+    oldDecky: (version) =>
+      `It needs Decky\u00a0Loader\u00a03.3.0 or newer, and this console has ${version}. Update Decky in\u00a0its settings.`,
+    notResponding: "ORIGAMI is not responding",
+    restart: "Restart the console. If that does not help, install ORIGAMI again.",
+  },
 };

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "../src/App";
+import { watchBackendStart } from "../src/backendStart";
 import { recordFanHistory } from "../src/fanHistory";
 import { watchRunningGame } from "../src/games";
 import { I18nProvider, type Language } from "../src/i18n";
@@ -21,11 +22,14 @@ import { loadAll } from "../src/state";
 import { quickAccessColumn } from "../src/tabPosition";
 import { styles } from "../src/ui/styles";
 
-// Steam reports its interface language through SteamClient; the stand pretends to be Russian.
-// Interface sounds go through Steam; the stand stays silent.
+// Steam reports its interface language through SteamClient; the stand pretends to be Russian unless
+// "?lang=english" says otherwise. Interface sounds go through Steam; the stand stays silent. Decky
+// reports its version as 3.3.1, or as "?decky=v3.2.10" says.
+const params = new URLSearchParams(location.search);
 Object.assign(window, {
-  SteamClient: { Settings: { GetCurrentLanguage: () => Promise.resolve("russian") } },
+  SteamClient: { Settings: { GetCurrentLanguage: () => Promise.resolve(params.get("lang") ?? "russian") } },
   SteamUIStore: { GamepadUIAudio: { PlayNavSound: () => undefined } },
+  DeckyBackend: { call: () => Promise.resolve({ current: params.get("decky") ?? "v3.3.1" }) },
 });
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
@@ -124,6 +128,7 @@ quickAccessColumn.set({
   arranger: null,
 });
 void loadAll();
+watchBackendStart();
 // "?game" in the address stands for a game Steam runs (mocks/decky-ui.tsx).
 watchRunningGame();
 recordFanHistory();

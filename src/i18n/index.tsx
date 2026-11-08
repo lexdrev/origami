@@ -326,7 +326,15 @@ export interface Messages {
     cancel: string;
     confirm: string;
   };
-  errors: { backend: string };
+  errors: {
+    backend: string;
+    /** The backend cannot run on this Decky Loader: what is needed and what the console has. */
+    notStarted: string;
+    oldDecky: (version: string) => string;
+    /** The backend has not answered for a while for some other reason. */
+    notResponding: string;
+    restart: string;
+  };
 }
 
 const catalogs: Record<Language, Messages> = { en, ru };

@@ -135,8 +135,12 @@ function heldPower(): HeldPower {
   return { limits: { spl: tdp, sppt, fppt }, batteryCapped: false, contested: false };
 }
 
+// "?nobackend" in the address stands for a backend that never answers, as on a Decky Loader too old for it.
+const silent = new URLSearchParams(location.search).has("nobackend");
+
 export function callable(route: string) {
   return async (...args: never[]): Promise<unknown> => {
+    if (silent) return new Promise(() => undefined);
     await new Promise((resolve) => setTimeout(resolve, 30));
     const handler = routes[route];
     if (handler === undefined) throw new Error(`No mock for ${route}`);
