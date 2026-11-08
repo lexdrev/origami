@@ -33,6 +33,9 @@ FAN_OWNERS = ("Panel de Control", "Ally Fix", "Fantastic", "PowerControl", "Ally
 """Plugins that drive the fans; ORIGAMI then shows them only. Fantastic is made for the Steam Deck's
 fan, but an owner of a ROG Ally had it on (2026-11-04), so the two never take turns. Ally Center's
 fan modes write the platform profile, which switches a fan curve off."""
+SOUND_OWNERS = ("Ally DSP",)
+"""Plugins that put a filter of their own in front of the speakers; two would process the sound
+twice, so ORIGAMI then leaves the speakers alone."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +50,7 @@ class Conflicts:
     boost: str | None
     """The plugin that holds the CPU boost: one that sets the whole power, or the boost alone."""
     fans: str | None
+    sound: str | None
 
 
 def describe(conflicts: Conflicts) -> str:
@@ -73,6 +77,7 @@ def read_conflicts(decky_home: Path) -> Conflicts:
         power=owner(POWER_OWNERS),
         boost=owner(POWER_OWNERS + BOOST_OWNERS),
         fans=owner(FAN_OWNERS),
+        sound=owner(SOUND_OWNERS),
     )
 
 

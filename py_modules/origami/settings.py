@@ -16,6 +16,7 @@ from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
 from origami.power import GamePower, Power
 from origami.saturation import MAX_PERCENT as MAX_SATURATION
+from origami.sound import Sound
 from origami.triggers import TriggerRumble
 from origami.vibration import Vibration
 
@@ -52,6 +53,8 @@ class Settings:
     """ORIGAMI opens the quick access menu when Steam misses a press of its button (B16)."""
     gyro_fix: bool | None = None
     """ORIGAMI turns the gyroscope's yaw the right way for Steam (B08)."""
+    clock_fix: bool | None = None
+    """ORIGAMI steps the clock after sleep where the hardware clock keeps local time (B14)."""
     lighting: Lighting | None = None
     """Lighting of the stick rings; None until the user sets it, so the controller keeps its own."""
     saturation: int | None = None
@@ -78,6 +81,8 @@ class Settings:
     """Games with power settings of their own, one profile each."""
     fans: FanCurve | None = None
     """ORIGAMI's curve for both fans (B07); None until switched on: the firmware's own."""
+    sound: Sound | None = None
+    """ORIGAMI's filter in front of the speakers; None until switched on: the system's sound."""
 
     def power_for(self, game: int | None) -> Power:
         """The power a game runs with: its own profile while that is active, else the general."""
@@ -118,11 +123,11 @@ class Settings:
                     parsed[key] = Language(value)
                 case "qam_tab" | "battery_high_tdp" | "update_check":
                     parsed[key] = expect_bool(key, value)
-                case "qam_assist" | "gyro_fix" | "manage_tdp":
+                case "qam_assist" | "gyro_fix" | "clock_fix" | "manage_tdp":
                     parsed[key] = None if value is None else expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
-                case "lighting" | "vibration" | "trigger_rumble" | "fans":
+                case "lighting" | "vibration" | "trigger_rumble" | "fans" | "sound":
                     parsed[key] = None if value is None else _OPTIONAL[key].from_json(value)
                 case "saturation":
                     parsed[key] = _saturation(value)
@@ -147,6 +152,7 @@ class Settings:
             "update_check": self.update_check,
             "qam_assist": self.qam_assist,
             "gyro_fix": self.gyro_fix,
+            "clock_fix": self.clock_fix,
             "lighting": None if self.lighting is None else self.lighting.to_json(),
             "saturation": self.saturation,
             "vibration": None if self.vibration is None else self.vibration.to_json(),
@@ -162,14 +168,16 @@ class Settings:
             "battery_high_tdp": self.battery_high_tdp,
             "game_power": [profile.to_json() for profile in self.game_power],
             "fans": None if self.fans is None else self.fans.to_json(),
+            "sound": None if self.sound is None else self.sound.to_json(),
         }
 
 
-_OPTIONAL: dict[str, type[Lighting | Vibration | TriggerRumble | FanCurve]] = {
+_OPTIONAL: dict[str, type[Lighting | Vibration | TriggerRumble | FanCurve | Sound]] = {
     "lighting": Lighting,
     "vibration": Vibration,
     "trigger_rumble": TriggerRumble,
     "fans": FanCurve,
+    "sound": Sound,
 }
 """Settings that stay None until the user sets them, and the parsers of their values."""
 

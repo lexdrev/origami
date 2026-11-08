@@ -16,6 +16,7 @@ from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
 from origami.blocks.gamepad import GamepadBlock
 from origami.blocks.power import PowerBlock, power_settings_changed
+from origami.blocks.sound import LV2_DIR, SoundBlock, SoundState
 from origami.buttons import Button, layout_for
 from origami.decky_plugins import Conflicts, describe, read_conflicts
 from origami.device import Device, read_device
@@ -29,6 +30,7 @@ from origami.proc import CommandError
 from origami.rumble import PROGRAM, Attach
 from origami.saturation import max_percent
 from origami.settings import Settings, SettingsStore, describe_changes
+from origami.sound import SPEAKER_ZONES
 from origami.tasks import BackgroundTask
 from origami.telemetry import Telemetry, read_telemetry
 from origami.triggers import TriggerState
@@ -64,6 +66,8 @@ class Info:
     versions: Versions
     buttons: tuple[Button, ...]
     """The buttons ORIGAMI may drive here; the system keeps the others (both on the ROG Ally)."""
+    sound: bool
+    """ORIGAMI processes this console's speakers: it has their protection."""
 
 
 class Origami:
@@ -109,6 +113,9 @@ class Origami:
             board=self._board,
         )
         self._buttons = ButtonsBlock(context, emit=emit, board=self._board_now)
+        self._sound = SoundBlock(
+            context, lv2_dir=environment.plugin_dir / LV2_DIR, board=self._board_now
+        )
 
     async def start(self) -> None:
         try:
@@ -118,7 +125,11 @@ class Origami:
             versions = await read_versions(self._env.root, decky=self._env.decky_version)
             buttons = sorted(layout_for(device.board).buttons, key=lambda button: button.value)
             self._info = Info(
-                version=self._env.version, device=device, versions=versions, buttons=tuple(buttons)
+                version=self._env.version,
+                device=device,
+                versions=versions,
+                buttons=tuple(buttons),
+                sound=device.board in SPEAKER_ZONES,
             )
             log.info("ORIGAMI %s started, board %s", self._env.version, device.board)
         except Exception as error:
@@ -230,6 +241,11 @@ class Origami:
         async with self._settings_lock:
             await self._restore_saturation()
 
+    async def sound(self) -> SoundState:
+        """Whether the speakers play, the filter runs and the clock fix applies, for the screen."""
+        await self._started()
+        return await self._sound.state(self._settings)
+
     async def power(self) -> HeldPower:
         """The limits ORIGAMI holds now, for the Power screen."""
         return self._power.held()
@@ -324,6 +340,7 @@ class Origami:
         self._power.give_back_boost(owners.boost)
         self._give_back_controller(owners)
         self._display.give_back_saturation_now(owners.saturation)
+        self._sound.give_back()
         log.info("ORIGAMI uninstalled")
 
     def stop(self) -> None:
@@ -341,6 +358,7 @@ class Origami:
         self._power.stop()
         self._gamepad.stop()
         self._buttons.stop()
+        self._sound.stop()
         log.info("ORIGAMI stopped")
 
     async def _follow_settings(self) -> None:
@@ -348,13 +366,16 @@ class Origami:
         await self._power.follow(settings)
         await self._fans.follow(settings)
         await self._buttons.follow(settings)
+        await self._sound.follow(settings)
         # The controller forgets ORIGAMI's lighting and vibration in sleep, and may come back as
-        # new devices without the rumble program; the saturation goes back to Steam's on resume.
+        # new devices without the rumble program; the saturation goes back to Steam's on resume,
+        # and the clock comes back off where the hardware clock keeps local time.
         await self._after_resume.run_while(
             on=settings.lighting is not None
             or settings.vibration is not None
             or settings.trigger_rumble is not None
             or settings.saturation is not None
+            or settings.clock_fix is True
         )
 
     def _give_back_controller(self, owners: Conflicts) -> None:
@@ -379,6 +400,7 @@ class Origami:
     async def _follow_resumes(self) -> None:
         async with aclosing(resumes()) as wakes:
             async for _ in wakes:
+                await self._sound.after_resume(self._settings)
                 await asyncio.sleep(RESUME_SETTLE_SECONDS)
                 # A change saved meanwhile is not overwritten by what was set before it.
                 async with self._settings_lock:

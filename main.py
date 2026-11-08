@@ -75,6 +75,9 @@ class Plugin:
     async def paste(self) -> bool:
         return await self._app.paste()
 
+    async def get_sound(self) -> JsonValue:
+        return to_wire(await self._app.sound())
+
     async def get_power(self) -> JsonValue:
         return to_wire(await self._app.power())
 
