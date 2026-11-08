@@ -91,8 +91,10 @@ Decky's settings and switch on **Developer mode**. Then, on the **Developer** pa
 
 Decky warns that its team has not reviewed the plugin; confirm, and open ORIGAMI from the quick access menu.
 
-To update, install it again the same way: the link always leads to the latest release, and your settings stay.
-Installing restarts Decky, and Decky reloads Steam's interface, so close your game first.
+To update, choose **Settings → Check for updates** in ORIGAMI: it finds a newer release and hands it to Decky,
+which asks before it installs it. Or install it again the same way as above: the link always leads to the latest
+release. Your settings stay either way. While Decky swaps the versions, ORIGAMI stops for a moment and the system
+gets its own settings back, so update outside a game.
 
 ## Undo everything
 
@@ -108,8 +110,8 @@ leaves that part alone and shows which plugin has it.
 
 ## Privacy
 
-ORIGAMI never goes online and collects nothing. It runs as root, because the power, fan and lighting settings
-need it.
+ORIGAMI goes online only when you choose **Check for updates** in its settings: it asks GitHub once for the
+latest release. It collects nothing. It runs as root, because the power, fan and lighting settings need it.
 
 ## Feedback
 
