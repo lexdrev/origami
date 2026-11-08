@@ -20,19 +20,29 @@ const decky = vi.hoisted(() => ({
   unpatch: vi.fn(),
   menuHandler: null as TreeHandler | null,
   renderer: { type: () => "QuickAccessMenuBrowserView" },
+  /** The fibers of a menu Steam rendered before ORIGAMI started, or null when there is none. */
+  root: null as object | null,
 }));
 
-vi.mock("@decky/ui", () => ({
-  afterPatch: vi.fn(() => ({ unpatch: decky.unpatch })),
-  createReactTreePatcher: vi.fn((_steps: unknown, handler: TreeHandler) => {
-    decky.menuHandler = handler;
-    return handler;
-  }),
-  findInReactTree: (tree: { props?: unknown } | null, filter: (node: unknown) => boolean) =>
-    tree !== null && filter(tree) ? tree : undefined,
-  findModuleByExport: () => ({ renderer: decky.renderer }),
-  getReactRoot: () => null,
-}));
+vi.mock("@decky/ui", () => {
+  // Searches a node and the fibers under it, as @decky/ui does through `child` and `sibling`.
+  const find = (node: unknown, filter: (node: unknown) => boolean): unknown => {
+    if (typeof node !== "object" || node === null) return undefined;
+    if (filter(node)) return node;
+    const { child, sibling } = node as { child?: unknown; sibling?: unknown };
+    return find(child, filter) ?? find(sibling, filter);
+  };
+  return {
+    afterPatch: vi.fn(() => ({ unpatch: decky.unpatch })),
+    createReactTreePatcher: vi.fn((_steps: unknown, handler: TreeHandler) => {
+      decky.menuHandler = handler;
+      return handler;
+    }),
+    findInReactTree: find,
+    findModuleByExport: () => ({ renderer: decky.renderer }),
+    getReactRoot: () => decky.root,
+  };
+});
 
 // The column is rendered by calling it, outside React, so its store hook just reads the store.
 vi.mock("./store", async (importOriginal) => ({
@@ -118,6 +128,14 @@ function renderColumn(column: ColumnElement) {
   render(column.props);
 }
 
+/** A menu Steam has on screen already: its outer part, the inner one with its visibility, and the column. */
+function menuOnScreen(tabs: Entry[], visible = true) {
+  const column = { memoizedProps: { tabs } };
+  const inner = { memoizedProps: { onFocusNavDeactivated: () => undefined, visible }, child: column };
+  decky.root = { elementType: decky.renderer, type: decky.renderer.type, alternate: null, child: inner };
+  vi.stubGlobal("document", { getElementById: () => ({}) });
+}
+
 /** One render of the menu: Decky's patch fills the list, then ORIGAMI's runs and the column renders. */
 function renderMenu(tabs: Entry[], hook: DeckyTabsHook, visible = true): ColumnElement {
   hook.render(tabs);
@@ -135,6 +153,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   decky.unpatch.mockClear();
   decky.menuHandler = null;
+  decky.root = null;
   quickAccessColumn.set({ tabs: [], arranger: null });
   quickAccessOpen.set(false);
 });
@@ -249,6 +268,34 @@ describe("ORIGAMI's own tab with Decky's own render", () => {
     expect(decky.unpatch).toHaveBeenCalled();
     expect(hook.tabs).toEqual([{ id: DECKY_TAB }]);
     expect(keys(tabs)).toEqual(keys(steamColumn()));
+  });
+
+  it("arranges a menu already on screen, which its column wrapper reaches only when the menu opens again", () => {
+    const tabs = steamColumn();
+    menuOnScreen(tabs);
+    const { hook, ownTab } = setUp();
+
+    ownTab?.apply(true, SOUNDTRACKS);
+    hook.render(tabs);
+
+    expect(keys(tabs)).toEqual([0, 3, 4, 5, ORIGAMI_TAB, 7, 6, DECKY_TAB]);
+  });
+
+  it("survives an update in place with the menu open, where Decky appended its tabs on every render", () => {
+    const tabs = steamColumn();
+    menuOnScreen(tabs);
+    const { hook, ownTab: before } = setUp();
+    before?.apply(true, SOUNDTRACKS);
+    renderMenu(tabs, hook);
+
+    // Decky unloads the old ORIGAMI and starts the new one; the menu stays open, so its outer part
+    // does not render and only Decky's patch runs on the next renders.
+    before?.dispose();
+    const after = createOwnTab(content);
+    after?.apply(true, SOUNDTRACKS);
+    for (let render = 0; render < 3; render++) hook.render(tabs);
+
+    expect(keys(tabs)).toEqual([0, 3, 4, 5, ORIGAMI_TAB, 7, 6, DECKY_TAB]);
   });
 
   it("tells the settings screen what the column looks like", async () => {

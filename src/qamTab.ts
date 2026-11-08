@@ -171,16 +171,51 @@ function isFiber(value: unknown): value is Fiber {
   return typeof value === "object" && value !== null && "elementType" in value && "type" in value;
 }
 
-/** A menu already on screen keeps the component it was created with; point it at the patched one. */
-function refreshMountedMenu(renderers: object[]): void {
+/** The menu Steam has on screen, once it has rendered one. */
+function mountedMenu(renderers: object[]): Fiber | null {
   const container = document.getElementById("root");
-  if (container === null) return;
+  if (container === null) return null;
   const node: unknown = findInReactTree(getReactRoot(container), (candidate: Fiber | null) =>
     renderers.includes(candidate?.elementType as object),
   );
-  if (!isFiber(node)) return;
+  return isFiber(node) ? node : null;
+}
+
+/** A menu already on screen keeps the component it was created with; point it at the patched one. */
+function refreshMountedMenu(renderers: object[]): void {
+  const node = mountedMenu(renderers);
+  if (node === null) return;
   node.type = (node.elementType as { type: unknown }).type;
   if (node.alternate) node.alternate.type = node.type;
+}
+
+function renderedProps(node: unknown): Record<string, unknown> | undefined {
+  if (typeof node !== "object" || node === null || !("memoizedProps" in node)) return undefined;
+  const props = node.memoizedProps;
+  return typeof props === "object" && props !== null ? (props as Record<string, unknown>) : undefined;
+}
+
+const isTabList = (value: unknown): value is SteamTab[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((entry: unknown) => typeof (entry as SteamTab | null)?.key === "number");
+
+/**
+ * Steam's list in the menu on screen, and whether the menu is open, as its last render left them.
+ * ORIGAMI's column wrapper reaches such a menu only when the menu's outer part renders again, which
+ * happens as it opens or closes; Decky updating ORIGAMI in place, with the menu open, gets no such
+ * render (2026-11-08).
+ */
+function mountedList(renderers: object[]): { tabs: SteamTab[]; visible: boolean } | null {
+  const menu: unknown = (mountedMenu(renderers) as { child?: unknown } | null)?.child;
+  if (menu === undefined || menu === null) return null;
+  const inner: unknown = findInReactTree(
+    menu,
+    (node: unknown) => renderedProps(node)?.onFocusNavDeactivated !== undefined,
+  );
+  const column: unknown = findInReactTree(menu, (node: unknown) => isTabList(renderedProps(node)?.tabs));
+  const tabs = renderedProps(column)?.tabs;
+  return isTabList(tabs) ? { tabs, visible: renderedProps(inner)?.visible === true } : null;
 }
 
 const sameArranger = (a: Arranger | null, b: Arranger | null) =>
@@ -293,6 +328,11 @@ export function createOwnTab(tab: TabContent): OwnTab | null {
       else if (!enabled && registered()) hook.removeById(ORIGAMI_TAB);
       const current = placement.get();
       if (current.enabled !== enabled || current.position !== position) placement.set({ enabled, position });
+      // A menu on screen that the column wrapper has not reached yet is arranged from here: otherwise
+      // Decky, finding more of its tabs in Steam's list than it has registered, appends them all again
+      // on each of its renders until the menu is closed.
+      const mounted = mountedList(renderers);
+      if (mounted !== null) arrange(mounted.tabs, mounted.visible);
     },
     shown: registered,
     dispose() {
