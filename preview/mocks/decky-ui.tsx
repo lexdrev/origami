@@ -85,3 +85,9 @@ export const Navigation = {
 
 // Steam's webpack modules; the stand has none, so Steam's stores read as missing.
 export const findModuleByExport = () => undefined;
+
+// Steam's quick access menu, which ORIGAMI patches to place its own tab; the stand never places it.
+export const afterPatch = () => ({ unpatch: () => undefined });
+export const createReactTreePatcher = () => () => undefined;
+export const findInReactTree = () => undefined;
+export const getReactRoot = () => null;
