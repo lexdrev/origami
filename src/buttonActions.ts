@@ -5,6 +5,7 @@ import { addEventListener, removeEventListener, toaster } from "@decky/api";
 import { Router } from "@decky/ui";
 
 import type { ButtonAction } from "./backend";
+import { PLUGIN_NAME } from "./deckyLoader";
 import { cycleOverlay } from "./overlay";
 import { mainWindow, ORIGAMI_TAB, QuickAccessTab, SideMenu, steamTab } from "./quickAccess";
 import { actionError, currentMessages, toggleLighting } from "./state";
@@ -17,9 +18,6 @@ import { actionError, currentMessages, toggleLighting } from "./state";
 
 /** Sent by the backend (origami.app.BUTTON_ACTION) with the action of a pressed button. */
 const BUTTON_ACTION = "button_action";
-
-/** ORIGAMI's name in Decky (plugin.json), under which Decky opens it inside its own tab. */
-const PLUGIN_NAME = "ORIGAMI";
 
 /** Closing a game asks first: the button has to be held again within this time. */
 export const CLOSE_CONFIRM_MS = 3000;

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { callLoader } from "./deckyLoader";
 import { settings } from "./state";
 import { createStore } from "./store";
 
@@ -15,16 +16,6 @@ export type MissingBackend = { reason: "oldDecky"; deckyVersion: string } | { re
 /** Why the backend has not answered, once that is known. */
 export const missingBackend = createStore<MissingBackend | null>(null);
 
-interface DeckyBackend {
-  call: <Result>(route: string) => Promise<Result>;
-}
-
-declare global {
-  interface Window {
-    DeckyBackend?: DeckyBackend;
-  }
-}
-
 /** Whether a Decky Loader version, such as "v3.2.10", is too old for the backend. Unreadable ones ("dev") pass. */
 export function isOldDecky(version: string): boolean {
   const match = /^v?(\d+)\.(\d+)\./.exec(version);
@@ -36,10 +27,8 @@ export function isOldDecky(version: string): boolean {
 
 /** Decky's own version, as its settings page reads it; null when Decky cannot tell. */
 async function readDeckyVersion(): Promise<string | null> {
-  const decky = window.DeckyBackend;
-  if (decky === undefined) return null;
   try {
-    return (await decky.call<{ current: string }>("updater/get_version_info")).current;
+    return (await callLoader<{ current: string }>("updater/get_version_info")).current;
   } catch (error) {
     console.warn("ORIGAMI: cannot read the Decky Loader version", error);
     return null;
