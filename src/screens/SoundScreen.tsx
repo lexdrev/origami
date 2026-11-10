@@ -7,7 +7,7 @@ import type { Sound, SoundState } from "../backend";
 import { useMessages } from "../i18n";
 import { back } from "../navigation";
 import { unset } from "../problems";
-import { DEFAULT_SOUND, SOUND_VOLUMES, SOUND_WIDTHS } from "../sound";
+import { DEFAULT_SOUND, SOUND_VOLUMES, SOUND_WIDTHS, soundStatus } from "../sound";
 import {
   conflicts,
   refreshConflicts,
@@ -74,9 +74,7 @@ function SoundCard({ setting, state }: { setting: Sound | null; state: SoundStat
   const change = (changes: Partial<Sound>) => {
     setSound({ ...sound, ...changes });
   };
-  let subtitle = sound.enabled ? t.sound.on : t.sound.off;
-  if (sound.enabled && state?.headphones) subtitle = t.sound.headphones;
-  else if (sound.enabled && state?.speakers === false) subtitle = t.sound.noSpeakers;
+  const subtitle = sound.enabled ? t.sound[soundStatus(state)] : t.sound.off;
   return (
     <Card
       title={t.sound.card}

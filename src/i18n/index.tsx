@@ -64,6 +64,12 @@ export interface Messages {
     soundOffSub: string;
     /** Under the Sound tile while another plugin processes the speakers. */
     soundOther: string;
+    /** The Sound tile while headphones play, and under it. */
+    soundPaused: string;
+    soundHeadphones: string;
+    /** Under the Sound tile while the filter is on and not at work. */
+    soundFailed: string;
+    soundNoSpeakers: string;
     soundWidths: Record<SoundWidth, string>;
     soundVoices: string;
   };
@@ -229,6 +235,9 @@ export interface Messages {
     headphones: string;
     /** While PipeWire has no speaker sink. */
     noSpeakers: string;
+    /** While the filter comes up, and when it did not. */
+    starting: string;
+    failed: string;
     volume: string;
     volumeNote: string;
     volumes: Record<SoundVolume, string>;

@@ -17,6 +17,7 @@ const none = {
   triggers: undefined,
   fanCurve: undefined,
   sound: undefined,
+  soundState: null,
 };
 
 const allyX: Telemetry = {
@@ -53,6 +54,21 @@ describe("tile texts", () => {
     expect(text({})).toEqual({ value: `+4${NBSP}дБ`, subtitle: `объём${NBSP}умеренно · голоса${NBSP}чётче` });
     expect(text({ volumeDb: 0, width: "off", voices: false })).toEqual({ value: "Обычная", subtitle: `объём${NBSP}выкл` });
     expect(text({ enabled: false }).value).toBe("Выкл");
+  });
+
+  it("say why a switched-on filter is not at work", () => {
+    const sound: Sound = { enabled: true, volumeDb: 4, width: "moderate", voices: true };
+    const playing = { speakers: true, headphones: false, running: true, failed: false, clockFix: false };
+    const text = (state: Partial<typeof playing>, own: Partial<Sound> = {}) =>
+      tileTexts(allyX, { ...none, sound: { ...sound, ...own }, soundState: { ...playing, ...state } }, ru).sound;
+
+    expect(text({}).value).toBe(`+4${NBSP}дБ`);
+    expect(text({ headphones: true, running: false })).toEqual({ value: "Пауза", subtitle: "Наушники подключены" });
+    expect(text({ speakers: false, running: false })).toEqual({ value: "—", subtitle: `Динамики не${NBSP}найдены` });
+    expect(text({ running: false, failed: true })).toEqual({ value: "—", subtitle: `Не${NBSP}запустилась` });
+    // Still coming up, it shows as at work; switched off, the headphones do not matter.
+    expect(text({ running: false }).value).toBe(`+4${NBSP}дБ`);
+    expect(text({ headphones: true, running: false }, { enabled: false }).value).toBe("Выкл");
   });
 
   it("say another plugin has the sound only once that is known", () => {

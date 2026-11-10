@@ -248,7 +248,7 @@ class Origami:
     async def sound(self) -> SoundState:
         """Whether the speakers play, the filter runs and the clock fix applies, for the screen."""
         await self._started()
-        return await self._sound.state(self._settings)
+        return await self._sound.state()
 
     async def power(self) -> HeldPower:
         """The limits ORIGAMI holds now, for the Power screen."""

@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { FanCurve, Sound, Telemetry, TriggerRumble, Vibration } from "../backend";
+import type { FanCurve, Sound, SoundState, Telemetry, TriggerRumble, Vibration } from "../backend";
 import { curveName } from "../fans";
 import type { Messages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
+import { soundStatus } from "../sound";
 import { currentVibration, formatVibration } from "../vibration";
 
 export interface TileText {
@@ -45,6 +46,8 @@ export interface OwnValues {
    * "unknown" until the settings and the other plugins are read.
    */
   sound: Sound | null | undefined | "unknown";
+  /** Whether the speakers play and the filter runs; null until read. */
+  soundState: SoundState | null;
 }
 
 const SEPARATOR = " · ";
@@ -90,14 +93,19 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
       value: vibration !== null ? formatVibration(vibration, t.gamepad.off) : t.unknown,
       subtitle: line(t.main.gamepadSub, own.triggers !== undefined && t.main.triggers[triggerLine(own.triggers)]),
     },
-    sound: soundText(own.sound, t),
+    sound: soundText(own.sound, own.soundState, t),
   };
 }
 
-function soundText(sound: OwnValues["sound"], t: Messages): TileText {
+function soundText(sound: OwnValues["sound"], state: SoundState | null, t: Messages): TileText {
   if (sound === "unknown") return { value: t.unknown, subtitle: "" };
   if (sound === undefined) return { value: t.unknown, subtitle: t.main.soundOther };
   if (!sound?.enabled) return { value: t.main.soundOff, subtitle: t.main.soundOffSub };
+  // A filter still coming up shows as one at work: it takes a second or two.
+  const status = soundStatus(state);
+  if (status === "headphones") return { value: t.main.soundPaused, subtitle: t.main.soundHeadphones };
+  if (status === "noSpeakers") return { value: t.unknown, subtitle: t.main.soundNoSpeakers };
+  if (status === "failed") return { value: t.unknown, subtitle: t.main.soundFailed };
   return {
     value: t.sound.volumes[sound.volumeDb],
     subtitle: line(t.main.soundWidths[sound.width], sound.voices && t.main.soundVoices),

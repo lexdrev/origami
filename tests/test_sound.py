@@ -572,8 +572,10 @@ def test_a_filter_that_does_not_come_up_is_tried_again_after_longer_waits(
         # Still coming up: left alone.
         assert await look_at(2) == 1
         assert await look_at(6) == 1
+        assert not (await block.state()).failed
         # It did not come up: the next try waits 4 s, the one after it 15 s.
         assert await look_at(9) == 1
+        assert (await block.state()).failed
         assert await look_at(12) == 1
         assert await look_at(13) == 2
         assert await look_at(22) == 2
@@ -587,6 +589,38 @@ def test_a_filter_that_does_not_come_up_is_tried_again_after_longer_waits(
     asyncio.run(scenario())
     assert caplog.text.count("did not stay up") == 2
     assert "Sound filter started" not in caplog.text
+
+
+def test_the_state_tells_a_running_filter_and_offers_the_clock_fix_only_where_it_applies(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = FakeSession()
+    block = make_block(tmp_path, session, [None])
+    crackles = [False]
+
+    def crackles_here(_root: Path) -> bool:
+        return crackles[0]
+
+    monkeypatch.setattr(clock, "crackles_after_sleep", crackles_here)
+
+    async def scenario() -> None:
+        await block.follow(Settings(sound=Sound(), clock_fix=True))
+        state = await block.state()
+        assert (state.speakers, state.headphones, state.running, state.failed) == (
+            True,
+            False,
+            True,
+            False,
+        )
+        # Switched on earlier, the fix is not shown where the crackle no longer happens.
+        assert not state.clock_fix
+        crackles[0] = True
+        assert (await block.state()).clock_fix
+        session.route = "analog-output-headphones"
+        assert (await block.state()).headphones
+        block.stop()
+
+    asyncio.run(scenario())
 
 
 def test_a_filter_that_ran_and_went_starts_again_at_once(tmp_path: Path) -> None:

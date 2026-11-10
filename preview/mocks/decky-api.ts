@@ -145,10 +145,16 @@ function heldPower(): HeldPower {
   return { limits: { spl: tdp, sppt, fppt }, batteryCapped: false, contested: false };
 }
 
-// "?headphones" puts headphones on the speakers' sink, "?localclock" a hardware clock in local time.
+// "?headphones" puts headphones on the speakers' sink, "?localclock" a hardware clock in local time;
+// "?nospeakers" takes the speaker sink away, "?soundfailed" is a filter that did not stay up and
+// "?soundstarting" one that still comes up.
 function soundState(): SoundState {
-  const on = settings.sound?.enabled === true && conflicts.sound === null && !query.has("headphones");
-  return { speakers: true, headphones: query.has("headphones"), running: on, clockFix: query.has("localclock") };
+  const speakers = !query.has("nospeakers");
+  const headphones = speakers && query.has("headphones");
+  const failed = query.has("soundfailed");
+  const wanted = settings.sound?.enabled === true && conflicts.sound === null && speakers && !headphones;
+  const running = wanted && !failed && !query.has("soundstarting");
+  return { speakers, headphones, running, failed: wanted && failed, clockFix: query.has("localclock") };
 }
 
 // "?nobackend" in the address stands for a backend that never answers, as on a Decky Loader too old for it.

@@ -73,8 +73,12 @@ class SoundState:
     """Headphones play on the speakers' sink, so the filter waits for the speakers."""
     running: bool
     """The filter runs in front of the speakers now."""
+    failed: bool
+    """The filter did not stay up after its last start, and ORIGAMI waits to try again."""
     clock_fix: bool
-    """The crackle after sleep happens here, so the screen offers its fix."""
+    """The crackle after sleep happens here, so the screen offers its fix. Where it does not
+    (the hardware clock went to UTC, or the zone is UTC+0 for the winter) a fix switched on
+    earlier does nothing, and the screen does not show it."""
 
 
 class SoundBlock:
@@ -133,16 +137,18 @@ class SoundBlock:
         await self._look()
         await self._watch.run_while(on=on)
 
-    async def state(self, settings: Settings) -> SoundState:
+    async def state(self) -> SoundState:
         root = self._context.root
         offered = await asyncio.to_thread(clock.crackles_after_sleep, root)
         objects = await self._dump()
         speakers = find_speakers(objects) if objects is not None else None
+        running = objects is not None and filter_node(objects) is not None
         return SoundState(
             speakers=speakers is not None,
             headphones=speakers is not None and not speakers.playing,
-            running=objects is not None and filter_node(objects) is not None,
-            clock_fix=offered or settings.clock_fix is True,
+            running=running,
+            failed=not running and self._failures > 0,
+            clock_fix=offered,
         )
 
     async def watch_clock(self, settings: Settings) -> None:

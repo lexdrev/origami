@@ -27,10 +27,14 @@ import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
 import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon, SoundIcon } from "../ui/icons";
+import { usePoll } from "../usePoll";
 import { useTelemetry } from "../useTelemetry";
 import { deviceName, systemName } from "./system";
 import { offeredRelease, updateState } from "../updates";
 import { tileTexts } from "./tiles";
+
+const SOUND_POLL_INTERVAL_MS = 2000;
+const nothing = () => Promise.resolve();
 
 export function MainScreen() {
   const t = useMessages();
@@ -53,10 +57,9 @@ export function MainScreen() {
     void refreshTriggerState();
     void refreshGyro();
   }, []);
-  // Whether the crackle after sleep happens here, for the Sound tile's count.
-  useEffect(() => {
-    if (speakers) void refreshSound();
-  }, [speakers]);
+  // Whether the speakers play and the filter runs, and whether the crackle after sleep happens
+  // here, for the Sound tile and its count; headphones come and go while the menu is open.
+  usePoll(speakers ? refreshSound : nothing, SOUND_POLL_INTERVAL_MS);
   const setting = current.status === "ready" ? current.value : null;
   const others = owners.status === "ready" ? owners.value : null;
   const ownTriggers = others?.triggers === null && motors.status === "ready" && motors.value === "available";
@@ -70,6 +73,7 @@ export function MainScreen() {
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
       fanCurve: setting && others?.fans === null ? setting.fans : undefined,
       sound: setting && others ? (others.sound === null ? setting.sound : undefined) : "unknown",
+      soundState: sound.status === "ready" ? sound.value : null,
     },
     t,
   );
