@@ -5,6 +5,7 @@
 
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,6 +41,15 @@ CONFIG = "origami-sound.conf"
 POLL_SECONDS = 2.0
 """How often ORIGAMI looks whether the speakers play and the filter runs, while it is on."""
 TIMEOUT_SECONDS = 10
+GIVE_BACK_SECONDS = 3
+"""Decky ends a plugin 5 s into its removal, so the last stop waits less than that."""
+START_GRACE_SECONDS = 8.0
+"""How long a started filter may take to show its node: under 2 s on a console at rest."""
+STEADY_SECONDS = 60.0
+"""A filter that ran this long and then went is started again at once, as after a PipeWire
+restart; one that went sooner did not stay up."""
+RETRY_SECONDS = (4.0, 15.0, 60.0, 300.0)
+"""The waits before starting again a filter that did not stay up: the last one from then on."""
 RUN_USER = Path("run/user")
 LV2_DIR = Path("bin/lv2")
 """The LSP plugins the filter runs, in ORIGAMI's folder."""
@@ -74,6 +84,10 @@ class SoundBlock:
     in the user's PipeWire session and goes when that does. ORIGAMI looks every POLL_SECONDS while
     the sound is on: headphones on the speakers' sink stop the filter, and a PipeWire restart that
     took it away starts it again. A changed setting goes into the running filter through set-param.
+
+    A filter that does not stay up (PipeWire cannot load it) is started again after longer and
+    longer waits, not every time ORIGAMI looks. A command that fails is logged and the watching
+    goes on: the next look puts things right.
     """
 
     def __init__(
@@ -83,15 +97,27 @@ class SoundBlock:
         lv2_dir: Path,
         board: Callable[[], str | None],
         runner: Runner = run,
+        now: Callable[[], float] = time.monotonic,
     ) -> None:
         self._context = context
         self._lv2_dir = lv2_dir
         self._board = board
         self._run = runner
+        self._now = now
         self._sound: Sound | None = None
         self._applied: dict[str, float] | None = None
         """The controls the running filter has; None until ORIGAMI started it in this run."""
         self._sink: str | None = None
+        self._started_at = 0.0
+        self._seen = False
+        """The filter ORIGAMI started has shown its node."""
+        self._failures = 0
+        """Starts in a row after which the filter did not stay up."""
+        self._retry_at = 0.0
+        self._clean = False
+        """ORIGAMI has seen that no filter of its own runs: switched off, nothing is to stop."""
+        self._problem: str | None = None
+        """The last failure logged, so one that repeats every look is logged once."""
         self._lock = asyncio.Lock()
         self._watch = BackgroundTask("origami-sound", self._keep)
         self._clock = BackgroundTask("origami-clock", lambda: clock.step_when_off(self._run))
@@ -104,7 +130,7 @@ class SoundBlock:
         """Start, change or stop the filter for these settings, and keep watching while it is on."""
         self._sound = settings.sound if self.supported() else None
         on = self._sound is not None and self._sound.enabled
-        await self._sync()
+        await self._look()
         await self._watch.run_while(on=on)
 
     async def state(self, settings: Settings) -> SoundState:
@@ -154,7 +180,7 @@ class SoundBlock:
                 "--user",
                 "stop",
                 UNIT,
-                timeout=TIMEOUT_SECONDS,
+                timeout=GIVE_BACK_SECONDS,
                 user=user,
                 env=_session(user),
             )
@@ -171,15 +197,35 @@ class SoundBlock:
     async def _keep(self) -> None:
         while True:
             await asyncio.sleep(POLL_SECONDS)
+            await self._look()
+
+    async def _look(self) -> None:
+        """One look at the filter; a failed command is logged, once while it repeats."""
+        try:
             await self._sync()
+        except (CommandError, TimeoutError, OSError) as error:
+            problem = str(error) or type(error).__name__
+            if problem != self._problem:
+                log.warning("Sound filter not set: %s", problem)
+            self._problem = problem
+        else:
+            self._problem = None
 
     async def _sync(self) -> None:
         async with self._lock:
             sound = self._sound
+            wanted = sound is not None and sound.enabled
+            if not wanted and self._clean:
+                return
             owner = (await self._context.conflicts()).sound
             objects = await self._dump()
-            speakers = find_speakers(objects) if objects is not None else None
-            node = filter_node(objects) if objects is not None else None
+            if objects is None:
+                # The session's PipeWire does not answer: nothing to go by, except switched off.
+                if not wanted and self._applied is not None:
+                    await self._stop()
+                return
+            speakers = find_speakers(objects)
+            node = filter_node(objects)
             if (
                 sound is None
                 or not sound.enabled
@@ -187,13 +233,25 @@ class SoundBlock:
                 or speakers is None
                 or not speakers.playing
             ):
-                if node is not None:
-                    await self._stop()
+                # A filter just started shows no node yet and is stopped all the same.
+                stopped = True
+                if node is not None or self._applied is not None:
+                    stopped = await self._stop()
+                self._clean = stopped
+                # Switched on again, the filter starts at once.
+                self._failures = 0
+                self._retry_at = 0.0
                 return
             applied = self._applied
-            if node is None or applied is None or speakers.sink != self._sink:
+            if node is None:
+                await self._start_again(sound, speakers)
+                return
+            if applied is None or speakers.sink != self._sink:
                 await self._start(sound, speakers)
                 return
+            if not self._seen:
+                self._seen = True
+                log.info("Sound filter started in front of %s: %s", speakers.sink, sound.to_json())
             values = controls(sound)
             changed = {name: value for name, value in values.items() if applied.get(name) != value}
             if changed:
@@ -201,6 +259,30 @@ class SoundBlock:
                     "pw-cli", "set-param", str(node), "Props", set_param_props(changed)
                 )
                 self._applied = values
+
+    async def _start_again(self, sound: Sound, speakers: Speakers) -> None:
+        """No node: start the filter, unless it is still coming up or a failed start waits."""
+        now = self._now()
+        if self._applied is not None:
+            age = now - self._started_at
+            if not self._seen and age < START_GRACE_SECONDS:
+                return
+            if self._seen and age >= STEADY_SECONDS:
+                self._failures = 0
+                self._retry_at = now
+            else:
+                wait = RETRY_SECONDS[min(self._failures, len(RETRY_SECONDS) - 1)]
+                self._failures += 1
+                self._retry_at = now + wait
+                log.warning(
+                    "Sound filter did not stay up (%d in a row); the next try is in %d s",
+                    self._failures,
+                    wait,
+                )
+            self._applied = None
+            self._seen = False
+        if now >= self._retry_at:
+            await self._start(sound, speakers)
 
     async def _start(self, sound: Sound, speakers: Speakers) -> None:
         user = self._user()
@@ -224,18 +306,26 @@ class SoundBlock:
         )
         self._applied = controls(sound)
         self._sink = speakers.sink
-        log.info("Sound filter started in front of %s: %s", speakers.sink, sound.to_json())
+        self._started_at = self._now()
+        self._seen = False
+        self._clean = False
 
-    async def _stop(self) -> None:
+    async def _stop(self) -> bool:
+        """Stop the filter's service; False when it could not be stopped."""
         try:
             await self._user_run("systemctl", "--user", "stop", UNIT)
         except CommandError as error:
             if error.returncode != UNIT_NOT_LOADED:
                 log.warning("Sound filter not stopped: %s", error)
-                return
-        if self._applied is not None:
+                return False
+        except TimeoutError:
+            log.warning("Sound filter not stopped: systemctl did not answer")
+            return False
+        if self._seen:
             log.info("Sound filter stopped")
         self._applied = None
+        self._seen = False
+        return True
 
     async def _dump(self) -> list[JsonValue] | None:
         """pw-dump's objects, or None while the session's PipeWire does not answer."""

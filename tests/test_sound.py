@@ -4,7 +4,8 @@
 import asyncio
 import json
 import re
-from collections.abc import Mapping
+import time
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 import pytest
@@ -366,6 +367,14 @@ class FakeSession:
     def __init__(self) -> None:
         self.route = "analog-output-speaker"
         self.running = False
+        """The node of the filter shows in pw-dump."""
+        self.active = False
+        """The service of the filter exists."""
+        self.comes_up = True
+        """A started filter shows its node; False for one PipeWire cannot load."""
+        self.failing: str | None = None
+        """A command that fails."""
+        self.dumps = 0
         self.calls: list[tuple[str, ...]] = []
         self.users: list[tuple[int, int] | None] = []
 
@@ -375,18 +384,25 @@ class FakeSession:
         assert env is not None and env["XDG_RUNTIME_DIR"].startswith("/run/user/")
         self.users.append(user)
         if args[0] == "pw-dump":
+            self.dumps += 1
             return json.dumps(hda_dump(self.route, filter_running=self.running))
         self.calls.append(args)
+        if args[0] == self.failing:
+            raise CommandError(f"{args[0]} exited with 1: no", 1)
         if args[0] == "systemd-run":
-            self.running = True
+            self.active = True
+            self.running = self.comes_up
         elif args[:3] == ("systemctl", "--user", "stop"):
-            if not self.running:
+            if not self.active:
                 # systemd collects the stopped service, and stopping what is not there fails so.
                 raise CommandError(
                     "systemctl exited with 5: Unit origami-sound.service not loaded.", 5
                 )
-            self.running = False
+            self.running = self.active = False
         return ""
+
+    def started(self) -> int:
+        return sum(call[0] == "systemd-run" for call in self.calls)
 
 
 def no_conflicts(sound: str | None = None) -> Conflicts:
@@ -403,7 +419,11 @@ def no_conflicts(sound: str | None = None) -> Conflicts:
 
 
 def make_block(
-    tmp_path: Path, session: FakeSession, owner: list[str | None], board: str = "RC73XA"
+    tmp_path: Path,
+    session: FakeSession,
+    owner: list[str | None],
+    board: str = "RC73XA",
+    now: Callable[[], float] = time.monotonic,
 ) -> SoundBlock:
     socket = tmp_path / "run/user/1000/pipewire-0"
     socket.parent.mkdir(parents=True)
@@ -413,7 +433,9 @@ def make_block(
         return no_conflicts(owner[0])
 
     context = Context(tmp_path, ChangeJournal(tmp_path / "changes.json"), conflicts)
-    return SoundBlock(context, lv2_dir=Path("/plugin/bin/lv2"), board=lambda: board, runner=session)
+    return SoundBlock(
+        context, lv2_dir=Path("/plugin/bin/lv2"), board=lambda: board, runner=session, now=now
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -470,6 +492,109 @@ def test_the_filter_starts_changes_live_and_stops(
     assert set(session.users) == {(tmp_path.stat().st_uid, tmp_path.stat().st_gid)}
     # Stopping before the first start finds no service, which is no failure.
     assert "not stopped" not in caplog.text
+
+
+def test_a_filter_that_does_not_come_up_is_tried_again_after_longer_waits(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    session = FakeSession()
+    session.comes_up = False
+    clock_now = [0.0]
+    block = make_block(tmp_path, session, [None], now=lambda: clock_now[0])
+    settings = Settings(sound=Sound())
+
+    async def scenario() -> None:
+        async def look_at(seconds: float) -> int:
+            clock_now[0] = seconds
+            await block.follow(settings)
+            return session.started()
+
+        assert await look_at(0) == 1
+        # Still coming up: left alone.
+        assert await look_at(2) == 1
+        assert await look_at(6) == 1
+        # It did not come up: the next try waits 4 s, the one after it 15 s.
+        assert await look_at(9) == 1
+        assert await look_at(12) == 1
+        assert await look_at(13) == 2
+        assert await look_at(22) == 2
+        assert await look_at(30) == 2
+        assert await look_at(37) == 3
+        # Switched off and on, it is tried at once.
+        await block.follow(Settings(sound=Sound(enabled=False)))
+        assert await look_at(38) == 4
+        block.stop()
+
+    asyncio.run(scenario())
+    assert caplog.text.count("did not stay up") == 2
+    assert "Sound filter started" not in caplog.text
+
+
+def test_a_filter_that_ran_and_went_starts_again_at_once(tmp_path: Path) -> None:
+    session = FakeSession()
+    clock_now = [0.0]
+    block = make_block(tmp_path, session, [None], now=lambda: clock_now[0])
+    settings = Settings(sound=Sound())
+
+    async def scenario() -> None:
+        await block.follow(settings)
+        clock_now[0] = 2.0
+        await block.follow(settings)
+        # PipeWire restarts an hour later and takes the filter with it.
+        clock_now[0] = 3600.0
+        session.running = session.active = False
+        await block.follow(settings)
+        assert session.started() == 2
+        block.stop()
+
+    asyncio.run(scenario())
+
+
+def test_switching_off_stops_a_filter_that_has_not_shown_its_node_yet(tmp_path: Path) -> None:
+    session = FakeSession()
+    session.comes_up = False
+    block = make_block(tmp_path, session, [None])
+
+    async def scenario() -> None:
+        await block.follow(Settings(sound=Sound()))
+        await block.follow(Settings(sound=Sound(enabled=False)))
+
+    asyncio.run(scenario())
+    assert session.calls[-1] == ("systemctl", "--user", "stop", UNIT)
+    assert not session.active
+
+
+def test_a_command_that_fails_is_logged_once_and_the_watching_goes_on(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    session = FakeSession()
+    session.failing = "systemd-run"
+    block = make_block(tmp_path, session, [None])
+    settings = Settings(sound=Sound())
+
+    async def scenario() -> None:
+        await block.follow(settings)
+        await block.follow(settings)
+        session.failing = None
+        await block.follow(settings)
+        block.stop()
+
+    asyncio.run(scenario())
+    assert caplog.text.count("Sound filter not set") == 1
+    assert session.active
+
+
+def test_switched_off_the_sound_asks_pipewire_only_once(tmp_path: Path) -> None:
+    session = FakeSession()
+    block = make_block(tmp_path, session, [None])
+
+    async def scenario() -> None:
+        for _ in range(3):
+            await block.follow(Settings(sound=None))
+
+    asyncio.run(scenario())
+    assert session.dumps == 1
+    assert session.calls == []
 
 
 def test_removing_origami_stops_the_filter_and_removes_its_configuration(
