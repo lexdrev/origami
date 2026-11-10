@@ -145,12 +145,15 @@ class SoundBlock:
             clock_fix=offered or settings.clock_fix is True,
         )
 
-    async def after_resume(self, settings: Settings) -> None:
-        """Watch chrony a while after the console wakes and step the clock as soon as it is off."""
+    async def watch_clock(self, settings: Settings) -> None:
+        """Watch chrony a while and step the clock as soon as it is off.
+
+        Called as the console wakes and as the fix is switched on.
+        """
         if settings.clock_fix and await asyncio.to_thread(
             clock.crackles_after_sleep, self._context.root
         ):
-            # A new wake starts the wait for chrony's measurement over.
+            # A new call starts the wait for chrony's measurement over.
             self._clock.cancel()
             self._clock.start()
 

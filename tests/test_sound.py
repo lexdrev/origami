@@ -349,10 +349,39 @@ def test_the_wait_for_chrony_ends_without_the_network(caplog: pytest.LogCaptureF
     chrony = FakeChrony((100.0, 0.0))
     caplog.set_level("INFO")
 
-    asyncio.run(clock.step_when_off(chrony, watch_seconds=0.05, poll_seconds=0.01))
+    asyncio.run(
+        clock.step_when_off(
+            chrony,
+            watch_seconds=0.03,
+            poll_seconds=0.01,
+            late_watch_seconds=0.03,
+            late_poll_seconds=0.01,
+        )
+    )
 
     assert not chrony.stepped
     assert "measured nothing" in caplog.text
+
+
+def test_the_clock_is_stepped_when_the_network_comes_back_late(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Nothing measured during the early watch; the measurement comes in the late one.
+    chrony = FakeChrony(*[(100.0, -0.0001)] * 12, (4000.0, -3599.31))
+    caplog.set_level("INFO")
+
+    asyncio.run(
+        clock.step_when_off(
+            chrony,
+            watch_seconds=0.03,
+            poll_seconds=0.01,
+            late_watch_seconds=5.0,
+            late_poll_seconds=0.01,
+        )
+    )
+
+    assert chrony.stepped
+    assert "measured nothing" not in caplog.text
 
 
 def test_a_chrony_that_does_not_answer_is_no_failure(caplog: pytest.LogCaptureFixture) -> None:
@@ -361,7 +390,7 @@ def test_a_chrony_that_does_not_answer_is_no_failure(caplog: pytest.LogCaptureFi
 
     asyncio.run(clock.step_when_off(silent, poll_seconds=0))
 
-    assert "Clock not checked after sleep" in caplog.text
+    assert "Clock not checked" in caplog.text
 
 
 def test_a_wake_steps_the_clock_only_with_the_fix_on(
@@ -382,7 +411,7 @@ def test_a_wake_steps_the_clock_only_with_the_fix_on(
     )
 
     async def wake(settings: Settings) -> None:
-        await block.after_resume(settings)
+        await block.watch_clock(settings)
         await asyncio.sleep(0.05)
 
     asyncio.run(wake(Settings(clock_fix=False)))

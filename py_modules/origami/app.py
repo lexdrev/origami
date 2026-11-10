@@ -181,8 +181,12 @@ class Origami:
             await asyncio.to_thread(self._settings_store.save, updated)
             log.info("Settings changed: %s", describe_changes(self._settings, updated))
             gave_up_tdp = self._settings.manage_tdp is True and updated.manage_tdp is not True
+            clock_fix_on = self._settings.clock_fix is not True and updated.clock_fix is True
             self._settings = updated
             await self._follow_settings()
+            if clock_fix_on:
+                # A clock that chrony slews right now is stepped without waiting for a sleep.
+                await self._sound.watch_clock(updated)
             if gave_up_tdp:
                 owner = (await self.conflicts()).power
                 await asyncio.to_thread(self._power.give_back_tdp, owner)
@@ -400,7 +404,7 @@ class Origami:
     async def _follow_resumes(self) -> None:
         async with aclosing(resumes()) as wakes:
             async for _ in wakes:
-                await self._sound.after_resume(self._settings)
+                await self._sound.watch_clock(self._settings)
                 await asyncio.sleep(RESUME_SETTLE_SECONDS)
                 # A change saved meanwhile is not overwritten by what was set before it.
                 async with self._settings_lock:

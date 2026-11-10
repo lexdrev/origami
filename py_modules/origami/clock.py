@@ -11,7 +11,10 @@ would put Windows' clock off.
 
 chrony only learns the clock is off from its first measurement after the wake, once the network is
 back (6 s on the console), and its makestep steps no more than it is slewing. So after a resume
-ORIGAMI watches chrony's tracking for a while and steps the clock as soon as it is off.
+ORIGAMI watches chrony's tracking and steps the clock as soon as it is off: every 2 s at first,
+then every 30 s for an hour, for a console that wakes without a network and finds one later.
+The same watch starts when the fix is switched on, so a clock chrony slews right then is
+stepped at once.
 """
 
 import asyncio
@@ -34,8 +37,11 @@ MODE_LINE = 2
 STEP_THRESHOLD_SECONDS = 1.0
 """Fedora's chrony.conf steps from 1 s too, but only in its first three updates."""
 WATCH_SECONDS = 120
-"""How long after a resume ORIGAMI waits for chrony's first measurement."""
+"""How long after a resume ORIGAMI looks every POLL_SECONDS for chrony's first measurement."""
 POLL_SECONDS = 2.0
+LATE_WATCH_SECONDS = 3600
+"""How long after that it still looks, every LATE_POLL_SECONDS: the network may come back late."""
+LATE_POLL_SECONDS = 30.0
 TRACKING_FIELDS = 5
 
 
@@ -83,15 +89,25 @@ async def step_when_off(
     *,
     watch_seconds: float = WATCH_SECONDS,
     poll_seconds: float = POLL_SECONDS,
+    late_watch_seconds: float = LATE_WATCH_SECONDS,
+    late_poll_seconds: float = LATE_POLL_SECONDS,
 ) -> None:
-    """After a resume: step the clock once chrony finds it off, instead of letting it slew."""
+    """Step the clock once chrony finds it off, instead of letting it slew.
+
+    Runs after a resume and when the fix is switched on.
+    """
     try:
-        offset = await _first_offset(runner, watch_seconds, poll_seconds)
+        offset = await _first_offset(
+            runner, (watch_seconds, poll_seconds), (late_watch_seconds, late_poll_seconds)
+        )
     except TimeoutError:
-        log.info("Clock not checked after sleep: chrony measured nothing in %d s", watch_seconds)
+        log.info(
+            "Clock not checked: chrony measured nothing in %d s",
+            watch_seconds + late_watch_seconds,
+        )
         return
     except (CommandError, ValueError) as error:
-        log.warning("Clock not checked after sleep: %s", error)
+        log.warning("Clock not checked: %s", error)
         return
     if offset is None:
         return
@@ -99,21 +115,32 @@ async def step_when_off(
         async with asyncio.timeout(STEP_TIMEOUT_SECONDS):
             await runner("chronyc", "makestep")
     except (CommandError, TimeoutError) as error:
-        log.warning("Clock not stepped after sleep: %s", error)
+        log.warning("Clock not stepped: %s", error)
         return
-    log.info("Clock stepped after sleep: it was %.1f s off", abs(offset))
+    log.info("Clock stepped: it was %.1f s off", abs(offset))
 
 
-async def _first_offset(runner: Runner, watch_seconds: float, poll_seconds: float) -> float | None:
-    """chrony's offset as soon as the clock is off; None once a new measurement finds it right."""
-    async with asyncio.timeout(watch_seconds):
-        first = now = await _tracking(runner)
-        while abs(now.offset) < STEP_THRESHOLD_SECONDS:
-            if now.measured != first.measured:
-                return None
-            await asyncio.sleep(poll_seconds)
-            now = await _tracking(runner)
-        return now.offset
+async def _first_offset(
+    runner: Runner, early: tuple[float, float], late: tuple[float, float]
+) -> float | None:
+    """chrony's offset as soon as the clock is off; None once a new measurement finds it right.
+
+    `early` and `late` are how long to watch and how often to look, one after the other; raises
+    TimeoutError when chrony measured nothing in all that time.
+    """
+    first = now = await _tracking(runner)
+    for watch_seconds, poll_seconds in (early, late):
+        try:
+            async with asyncio.timeout(watch_seconds):
+                while abs(now.offset) < STEP_THRESHOLD_SECONDS:
+                    if now.measured != first.measured:
+                        return None
+                    await asyncio.sleep(poll_seconds)
+                    now = await _tracking(runner)
+                return now.offset
+        except TimeoutError:
+            continue
+    raise TimeoutError
 
 
 async def _tracking(runner: Runner) -> Tracking:
