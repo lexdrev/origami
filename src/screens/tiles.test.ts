@@ -53,7 +53,11 @@ describe("tile texts", () => {
     expect(text({})).toEqual({ value: `+4${NBSP}дБ`, subtitle: `объём${NBSP}умеренно · голоса${NBSP}чётче` });
     expect(text({ volumeDb: 0, width: "off", voices: false })).toEqual({ value: "Обычная", subtitle: `объём${NBSP}выкл` });
     expect(text({ enabled: false }).value).toBe("Выкл");
+  });
+
+  it("say another plugin has the sound only once that is known", () => {
     expect(tileTexts(allyX, none, en).sound).toEqual({ value: "—", subtitle: "Another plugin" });
+    expect(tileTexts(allyX, { ...none, sound: "unknown" }, en).sound).toEqual({ value: "—", subtitle: "" });
   });
 
   it("show how the triggers rumble", () => {

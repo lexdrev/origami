@@ -69,7 +69,7 @@ export function MainScreen() {
       lighting: setting?.lighting && others?.lighting === null ? setting.lighting.enabled : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
       fanCurve: setting && others?.fans === null ? setting.fans : undefined,
-      sound: setting && others?.sound === null ? setting.sound : undefined,
+      sound: setting && others ? (others.sound === null ? setting.sound : undefined) : "unknown",
     },
     t,
   );

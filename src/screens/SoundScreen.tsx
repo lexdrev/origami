@@ -18,10 +18,14 @@ import {
   updateSettings,
 } from "../state";
 import { useStore } from "../store";
+import { usePoll } from "../usePoll";
 import { Card, Header, Screen, SwitchLine } from "../ui/blocks";
 import { ChoiceGroup, ToggleRow } from "../ui/controls";
 import { LoadFailed } from "./LoadFailed";
 import { OwnedBy } from "./OwnedBy";
+
+/** As often as the backend itself looks whether the speakers play and the filter runs. */
+const POLL_INTERVAL_MS = 2000;
 
 export function SoundScreen() {
   const t = useMessages();
@@ -31,8 +35,9 @@ export function SoundScreen() {
 
   useEffect(() => {
     void refreshConflicts();
-    void refreshSound();
   }, []);
+  // Headphones come and go while the screen is open.
+  usePoll(refreshSound, POLL_INTERVAL_MS);
 
   const owner = owners.status === "ready" ? owners.value.sound : null;
   const sound = state.status === "ready" ? state.value : null;

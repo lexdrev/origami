@@ -132,7 +132,7 @@ async function act(action: () => Promise<unknown>): Promise<boolean> {
 export function restoreAll(): Promise<boolean> {
   return act(async () => {
     settings.set({ status: "ready", value: await backend.restoreAll() });
-    await Promise.all([refreshChanges(), refreshGyro(), refreshHeldPower()]);
+    await Promise.all([refreshChanges(), refreshGyro(), refreshHeldPower(), refreshSound()]);
   });
 }
 

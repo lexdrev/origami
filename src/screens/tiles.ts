@@ -40,8 +40,11 @@ export interface OwnValues {
   triggers: TriggerRumble | null | undefined;
   /** ORIGAMI's fan curve, null until switched on; undefined while another plugin drives the fans. */
   fanCurve: FanCurve | null | undefined;
-  /** ORIGAMI's speaker sound, null until switched on; undefined while another plugin processes it. */
-  sound: Sound | null | undefined;
+  /**
+   * ORIGAMI's speaker sound, null until switched on; undefined while another plugin processes it,
+   * "unknown" until the settings and the other plugins are read.
+   */
+  sound: Sound | null | undefined | "unknown";
 }
 
 const SEPARATOR = " · ";
@@ -91,7 +94,8 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
   };
 }
 
-function soundText(sound: Sound | null | undefined, t: Messages): TileText {
+function soundText(sound: OwnValues["sound"], t: Messages): TileText {
+  if (sound === "unknown") return { value: t.unknown, subtitle: "" };
   if (sound === undefined) return { value: t.unknown, subtitle: t.main.soundOther };
   if (!sound?.enabled) return { value: t.main.soundOff, subtitle: t.main.soundOffSub };
   return {
