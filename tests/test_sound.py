@@ -20,6 +20,8 @@ from origami.proc import CommandError
 from origami.settings import Settings
 from origami.sound import (
     NODE,
+    ROG_ALLY,
+    ROG_ALLY_X,
     SPEAKER_ZONES,
     XBOX_ALLY,
     XBOX_ALLY_X20,
@@ -167,11 +169,29 @@ def test_the_protection_takes_at_most_eight_bands() -> None:
         regulator_controls(tuple(Zone(float(100 * index), -6.0) for index in range(9)))
 
 
-def test_the_supported_consoles() -> None:
-    assert set(SPEAKER_ZONES) == {"RC73XA", "RC73YA", "RC74XA"}
+def test_every_rog_ally_is_supported() -> None:
+    assert set(SPEAKER_ZONES) == {"RC71L", "RC72LA", "RC73XA", "RC73YA", "RC74XA"}
 
 
-@pytest.mark.parametrize("zones", [XBOX_ALLY, XBOX_ALLY_X20])
+@pytest.mark.parametrize("zones", [ROG_ALLY, ROG_ALLY_X, XBOX_ALLY, XBOX_ALLY_X20])
+def test_the_zones_of_a_console_fit_the_protection(zones: tuple[Zone, ...]) -> None:
+    crossovers = [zone.up_to_hz for zone in zones[:-1] if zone.up_to_hz is not None]
+    assert len(crossovers) == len(zones) - 1
+    assert crossovers == sorted(set(crossovers))
+    assert zones[-1].up_to_hz is None
+    assert all(-60.0 <= zone.threshold_db <= 0.0 for zone in zones)
+    values = regulator_controls(zones)
+    assert [values[f"ce_{band}"] for band in range(8)] == [1] * len(zones) + [0] * (8 - len(zones))
+
+
+def test_the_rog_ally_x_protection_merges_two_of_asus_bands_at_the_lower_threshold() -> None:
+    values = regulator_controls(ROG_ALLY_X)
+    assert values["sf_3"] == pytest.approx(392.2)
+    assert values["sf_4"] == pytest.approx(744.1)
+    assert values["al_3"] == pytest.approx(10 ** (-21.3125 / 20))
+
+
+@pytest.mark.parametrize("zones", [ROG_ALLY, ROG_ALLY_X, XBOX_ALLY, XBOX_ALLY_X20])
 def test_chain_config_links_only_its_own_nodes(zones: tuple[Zone, ...]) -> None:
     text = chain_config(zones, HDA_SINK, Sound())
     names = set(re.findall(r'name = "([a-z_0-9]+)"', text))
@@ -474,7 +494,7 @@ def test_removing_origami_stops_the_filter_and_removes_its_configuration(
 
 def test_nothing_runs_on_a_console_without_its_protection(tmp_path: Path) -> None:
     session = FakeSession()
-    block = make_block(tmp_path, session, [None], board="RC71L")
+    block = make_block(tmp_path, session, [None], board="GA403UV")
 
     async def scenario() -> None:
         await block.follow(Settings(sound=Sound()))

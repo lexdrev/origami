@@ -81,6 +81,27 @@ class Zone:
     threshold_db: float
 
 
+ROG_ALLY = (
+    Zone(277.0, 0.0),
+    Zone(554.7, -9.5),
+    Zone(744.1, -13.0),
+    Zone(932.8, -12.0),
+    Zone(None, 0.0),
+)
+"""ROG Ally: the middle from 280 to 930 Hz held."""
+ROG_ALLY_X = (
+    Zone(181.6, 0.0),
+    Zone(277.0, -21.0),
+    Zone(392.2, -24.0625),
+    Zone(744.1, -21.3125),
+    Zone(932.8, -13.0),
+    Zone(1163.5, -20.0),
+    Zone(1488.7, -15.125),
+    Zone(None, 0.0),
+)
+"""ROG Ally X: the deepest thresholds of all, from 180 Hz to 1.5 kHz. ASUS has nine bands there
+and the protection takes eight, so 390 to 740 Hz is one band at the lower of its two thresholds
+(-20 and -21.3 dB)."""
 XBOX_ALLY = (Zone(932.8, 0.0), Zone(1163.5, -15.0), Zone(None, 0.0))
 """ROG Xbox Ally X and ROG Xbox Ally: one tuning, the band around 1 kHz held 15 dB lower."""
 XBOX_ALLY_X20 = (
@@ -89,18 +110,22 @@ XBOX_ALLY_X20 = (
     Zone(277.0, -13.375),
     Zone(392.2, -6.0),
     Zone(554.7, -9.0),
-    Zone(932.8, -6.0),
+    Zone(932.8, -6.0625),
     Zone(1163.5, -15.0),
     Zone(None, 0.0),
 )
-"""ROG Xbox Ally X20: its speakers need the whole low and middle range held, up to 1.2 kHz."""
+"""ROG Xbox Ally X20: its speakers need the whole low and middle range held, up to 1.2 kHz.
+555 to 930 Hz is one band at the lower of ASUS's two thresholds there (-6 and -6.06 dB)."""
 SPEAKER_ZONES: Mapping[str, tuple[Zone, ...]] = {
+    "RC71L": ROG_ALLY,
+    "RC72LA": ROG_ALLY_X,
     "RC73XA": XBOX_ALLY,
     "RC73YA": XBOX_ALLY,
     "RC74XA": XBOX_ALLY_X20,
 }
-"""Consoles whose speakers ORIGAMI processes, by board. The ROG Ally and ROG Ally X have
-equalisers of their own in ASUS's tuning and wait for owners to check them."""
+"""Consoles whose speakers ORIGAMI processes, by board: every ROG Ally. ASUS's tuning of the ROG
+Ally and ROG Ally X also equalises their speakers; ORIGAMI leaves the timbre as the system has
+it."""
 
 LSP_BANDS = 8
 LSP_FLOOR_DB = -60.0
