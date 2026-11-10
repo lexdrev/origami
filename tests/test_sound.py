@@ -155,6 +155,8 @@ def test_the_xbox_ally_protection_holds_the_band_around_1_khz() -> None:
     assert values["cr_1"] == 100
     assert values["kn_1"] == pytest.approx(0.5956621435)
     assert values["sla_1"] == 1
+    # Each band goes by its louder channel, so a sound in one speaker is held like one in both.
+    assert values["scs_1"] == 5
 
 
 def test_the_x20_protection_has_eight_bands() -> None:
@@ -228,6 +230,34 @@ def test_the_speakers_of_a_soundwire_console_have_their_own_sink() -> None:
         },
     ]
     assert find_speakers(objects) == Speakers(X20_SINK, playing=True)
+
+
+def test_a_usb_speaker_is_not_the_speakers_of_the_console() -> None:
+    usb: list[JsonValue] = [
+        {
+            "id": 70,
+            "type": "PipeWire:Interface:Device",
+            "info": {
+                "params": {
+                    "EnumRoute": [{"direction": "Output", "name": "analog-output-speaker"}],
+                    "Route": [{"direction": "Output", "name": "analog-output-speaker"}],
+                }
+            },
+        },
+        {
+            "id": 71,
+            "type": "PipeWire:Interface:Node",
+            "info": {
+                "props": {
+                    "media.class": "Audio/Sink",
+                    "node.name": "alsa_output.usb-Generic_USB_Speaker-00.analog-stereo",
+                    "device.id": 70,
+                }
+            },
+        },
+    ]
+    assert find_speakers(usb) is None
+    assert find_speakers(usb + hda_dump()) == Speakers(HDA_SINK, playing=True)
 
 
 def test_no_speakers_without_a_speaker_sink() -> None:

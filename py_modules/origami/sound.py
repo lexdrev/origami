@@ -128,6 +128,9 @@ Ally and ROG Ally X also equalises their speakers; ORIGAMI leaves the timbre as 
 it."""
 
 LSP_BANDS = 8
+SIDECHAIN_LOUDER_CHANNEL = 5
+"""LSP's sidechain source Max: a band goes by its louder channel. The default, the middle
+(L + R) / 2, hears a sound in one speaker 6 dB low and one in opposite phase not at all."""
 LSP_FLOOR_DB = -60.0
 """The deepest threshold an LSP compressor band takes."""
 WIDTHS: Mapping[Width, tuple[float, float]] = {
@@ -192,6 +195,7 @@ def regulator_controls(zones: tuple[Zone, ...]) -> dict[str, float]:
             f"kn_{band}": _db(-4.5 if on else -6.0),
             f"mk_{band}": 1,
             f"scm_{band}": 0 if on else 1,
+            f"scs_{band}": SIDECHAIN_LOUDER_CHANNEL if on else 0,
             f"sla_{band}": 1 if on else 0,
             f"scp_{band}": 1,
             f"cm_{band}": 0,
@@ -474,6 +478,10 @@ class Speakers:
     """The speakers play now, not headphones on the same sink."""
 
 
+BUILT_IN_SINK = "alsa_output.pci-"
+"""Sinks of the console's own sound devices; a USB speaker or headset is alsa_output.usb-."""
+SOUNDWIRE_SPEAKER_SINK = "__Speaker__sink"
+"""How the sink of the UCM device Speaker ends."""
 HDA_SPEAKER_ROUTE = "analog-output-speaker"
 """The speaker port of an HDA codec's analog sink; its headphones are another port of that sink."""
 
@@ -499,10 +507,10 @@ def find_speakers(objects: list[JsonValue]) -> Speakers | None:
             devices[cast("int", item["id"])] = info
         elif kind.endswith(":Node") and props.get("media.class") == "Audio/Sink":
             name, device = props.get("node.name"), props.get("device.id")
-            if isinstance(name, str) and name.startswith("alsa_output."):
+            if isinstance(name, str) and name.startswith(BUILT_IN_SINK):
                 sinks.append((name, device if isinstance(device, int) else None))
     for name, _ in sinks:
-        if "Speaker" in name:
+        if name.endswith(SOUNDWIRE_SPEAKER_SINK):
             return Speakers(name, playing=True)
     for name, device in sinks:
         params = devices.get(device, {}).get("params") if device is not None else None
