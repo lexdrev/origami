@@ -31,6 +31,7 @@ import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
 import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon, SoundIcon } from "../ui/icons";
+import { scrollToMiddle } from "../ui/scrollTop";
 import { usePoll } from "../usePoll";
 import { useTelemetry } from "../useTelemetry";
 import { deviceName, systemName } from "./system";
@@ -116,12 +117,14 @@ export function MainScreen() {
       <DeviceHeader />
       {telemetry.status === "failed" && <Alert title={t.errors.backend}>{telemetry.error}</Alert>}
       {/* Steam moves focus up and down a screen by default; the tiles go every way. Coming in from
-          the quick access tabs, the focus lands on the Power tile beside them, not on the gear. */}
+          the quick access tabs, the focus lands on the Power tile beside them, not on the gear.
+          The panel keeps the row in focus in its middle. */}
       <Focusable
         className="og-tiles"
         flow-children="grid"
         preferredFocus
         navEntryPreferPosition={ENTER_PREFERRED_CHILD}
+        {...scrollToMiddle}
       >
         <Tile
           icon={<PowerIcon />}
