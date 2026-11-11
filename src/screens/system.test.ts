@@ -24,6 +24,7 @@ const info: Info = {
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   sound: true,
+  overlayMenu: true,
 };
 
 const steamos: Info = {
@@ -37,6 +38,7 @@ const steamos: Info = {
   },
   buttons: [],
   sound: true,
+  overlayMenu: true,
 };
 
 const noOs = { id: null, name: null, versionId: null, imageVersion: null, buildId: null };

@@ -346,6 +346,10 @@ export interface Messages {
     qamAssistOff: string;
     /** What QAM assist does, shown while it is on. */
     qamAssistOn: string;
+    /** The fix of the system's overlay menu, the problem while it is off, what it does while on. */
+    overlayFix: string;
+    overlayFixOff: string;
+    overlayFixOn: string;
     gyroFix: string;
     /** Under the switch while the fix is on: Steam's own fix in each layout would turn it back. */
     gyroFixOn: string;

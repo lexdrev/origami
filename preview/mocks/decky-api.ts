@@ -22,6 +22,7 @@ const info: Info = {
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   sound: true,
+  overlayMenu: true,
 };
 const query = new URLSearchParams(location.search);
 
@@ -33,6 +34,7 @@ let settings: Settings = {
   qamAssist: null,
   gyroFix: null,
   clockFix: null,
+  overlayFix: null,
   lighting: null,
   saturation: null,
   vibration: null,
@@ -96,6 +98,7 @@ function restoreAll(): Settings {
     qamAssist: null,
     gyroFix: null,
     clockFix: null,
+    overlayFix: null,
     lighting: null,
     saturation: null,
     vibration: null,

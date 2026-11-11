@@ -109,6 +109,18 @@ export function GamepadScreen() {
           onChange={(qamAssist) => void updateSettings({ qamAssist })}
         />
       )}
+      {/* Bazzite's own menu, on a long press of the quick access button, opens unseen after its
+          first time. */}
+      {plugin.status === "ready" && plugin.value.overlayMenu && (
+        <ToggleRow
+          title={t.gamepad.overlayFix}
+          subtitle={current.value.overlayFix ? t.gamepad.overlayFixOn : t.gamepad.overlayFixOff}
+          problem={unset(current.value.overlayFix)}
+          value={current.value.overlayFix ?? false}
+          action={t.actions.toggle}
+          onChange={(overlayFix) => void updateSettings({ overlayFix })}
+        />
+      )}
       <GyroFix fix={current.value.gyroFix} />
       {/* On the ROG Ally and the ROG Ally X the system opens the quick access menu with this button. */}
       {drives(buttons, "armoury_crate") && (

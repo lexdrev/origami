@@ -106,6 +106,7 @@ export function MainScreen() {
           gyro: axes.status === "ready" ? axes.value : null,
           triggers: motors.status === "ready" ? motors.value : null,
           buttons: plugin.status === "ready" ? plugin.value.buttons : null,
+          overlayMenu: plugin.status === "ready" ? plugin.value.overlayMenu : null,
           steamTdpSlider: slider,
           contested: held.status === "ready" && held.value.contested,
           clockCrackle: soundNow?.clockFix ?? null,

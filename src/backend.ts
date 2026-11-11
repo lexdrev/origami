@@ -35,6 +35,8 @@ export interface Info {
   buttons: ConsoleButton[];
   /** ORIGAMI processes this console's speakers: it has their protection. */
   sound: boolean;
+  /** The system has an overlay menu of its own that ORIGAMI can keep in sight. */
+  overlayMenu: boolean;
 }
 
 export interface BatteryTelemetry {
@@ -220,6 +222,8 @@ export interface Settings {
   gyroFix: boolean | null;
   /** ORIGAMI steps the clock after sleep where the hardware clock keeps local time; null until set. */
   clockFix: boolean | null;
+  /** ORIGAMI keeps the system's overlay menu in sight after its first time; null until set. */
+  overlayFix: boolean | null;
   /** Null until the user sets it; the controller keeps its own lighting until then. */
   lighting: Lighting | null;
   /** Screen saturation in percent (100 = sRGB); null until the user sets it. */

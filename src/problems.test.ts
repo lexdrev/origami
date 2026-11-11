@@ -15,6 +15,7 @@ const fresh: Settings = {
   qamAssist: null,
   gyroFix: null,
   clockFix: null,
+  overlayFix: null,
   lighting: null,
   saturation: null,
   vibration: null,
@@ -50,6 +51,7 @@ const sources = (changes: Partial<ProblemSources> = {}): ProblemSources => ({
   steamTdpSlider: false,
   contested: false,
   clockCrackle: null,
+  overlayMenu: null,
   ...changes,
 });
 
@@ -127,6 +129,16 @@ describe("problems of the buttons", () => {
     expect(tileProblems(sources({ buttons: [] })).gamepad).toBe(2);
     // Not known yet: neither counts.
     expect(tileProblems(sources({ buttons: null })).gamepad).toBe(2);
+  });
+
+  it("count the system's overlay menu where there is one, until the user decides", () => {
+    const before = tileProblems(sources()).gamepad;
+    expect(tileProblems(sources({ overlayMenu: false })).gamepad).toBe(before);
+    expect(tileProblems(sources({ overlayMenu: true })).gamepad).toBe(before + 1);
+    for (const overlayFix of [true, false]) {
+      const settings = { ...fresh, overlayFix };
+      expect(tileProblems(sources({ settings, overlayMenu: true })).gamepad).toBe(before);
+    }
   });
 });
 

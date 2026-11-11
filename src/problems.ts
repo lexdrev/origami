@@ -52,6 +52,8 @@ export interface ProblemSources {
   contested: boolean;
   /** The crackle after sleep happens here; null until read. */
   clockCrackle: boolean | null;
+  /** The system has an overlay menu ORIGAMI can keep in sight; null until known. */
+  overlayMenu: boolean | null;
 }
 
 export interface TileProblems {
@@ -86,6 +88,7 @@ export function tileProblems(sources: ProblemSources): TileProblems {
         ? triggers === "available" && unset(settings.triggerRumble)
         : separateTriggerOwner(conflicts) !== null,
       drives(buttons, "quick_access") && unset(settings.qamAssist),
+      sources.overlayMenu === true && unset(settings.overlayFix),
       gyro !== null && gyroProblem(gyro, settings.gyroFix),
       drives(buttons, "armoury_crate") && buttonUnset(settings.armouryCrate, settings.armouryCrateHold),
     ),
