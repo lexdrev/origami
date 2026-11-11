@@ -36,6 +36,8 @@ UNIT = "origami-sound"
 """The session user's transient service that runs the filter's pipewire process."""
 UNIT_NOT_LOADED = 5
 """systemctl's exit code for a unit that does not exist: a filter that is not running."""
+JOURNAL = ("sound", "filter")
+"""The filter in the journal of changes, while ORIGAMI processes the speakers."""
 CONFIG = "origami-sound.conf"
 """The filter's configuration, in the session user's runtime directory."""
 POLL_SECONDS = 2.0
@@ -88,6 +90,9 @@ class SoundBlock:
     in the user's PipeWire session and goes when that does. ORIGAMI looks every POLL_SECONDS while
     the sound is on: headphones on the speakers' sink stop the filter, and a PipeWire restart that
     took it away starts it again. A changed setting goes into the running filter through set-param.
+
+    The journal of changes holds the filter from its first start until the sound is switched
+    off or another plugin takes it: headphones only make it wait.
 
     A filter that does not stay up (PipeWire cannot load it) is started again after longer and
     longer waits, not every time ORIGAMI looks. A command that fails is logged and the watching
@@ -199,7 +204,10 @@ class SoundBlock:
         """
         user = self._user()
         if user is None:
+            # Without the user's session there is no filter in it either.
+            self._context.journal.forget(*JOURNAL)
             return
+        stopped = True
         try:
             run_blocking(
                 "systemctl",
@@ -211,10 +219,15 @@ class SoundBlock:
                 env=_session(user),
             )
         except TimeoutError as error:
+            stopped = False
             log.warning("Sound filter not stopped: %s", error)
         except CommandError as error:
             if error.returncode != UNIT_NOT_LOADED:
+                stopped = False
                 log.warning("Sound filter not stopped: %s", error)
+        if stopped:
+            # A filter that could not be stopped stays in the journal, for the screen to list.
+            self._context.journal.forget(*JOURNAL)
         try:
             (self._context.root / RUN_USER / str(user[0]) / CONFIG).unlink(missing_ok=True)
         except OSError as error:
@@ -263,6 +276,9 @@ class SoundBlock:
                 stopped = True
                 if node is not None or self._applied is not None:
                     stopped = await self._stop()
+                if stopped and (not wanted or owner is not None):
+                    # Headphones and missing speakers keep the entry: the filter comes back.
+                    await asyncio.to_thread(self._context.journal.forget, *JOURNAL)
                 self._clean = stopped
                 # Switched on again, the filter starts at once.
                 self._failures = 0
@@ -319,6 +335,8 @@ class SoundBlock:
         text = chain_config(SPEAKER_ZONES[board], speakers.sink, sound)
         await asyncio.to_thread(atomic_write_text, config, text)
         await self._stop()
+        # The speakers played as the system has them before ORIGAMI, not a value.
+        await asyncio.to_thread(self._context.journal.record, *JOURNAL, None)
         await self._user_run(
             "systemd-run",
             "--user",

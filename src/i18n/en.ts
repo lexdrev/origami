@@ -374,6 +374,7 @@ export const en: Messages = {
       "lighting.rings": "Stick lighting · controller",
       "gamepad.vibration": "Vibration strength · controller",
       "gamepad.gyro": "Gyroscope axes · file in\u00a0/etc",
+      "sound.filter": "Sound processing · PipeWire",
     },
     restore: "Restore everything",
     restoreAsk: "Restore everything?",

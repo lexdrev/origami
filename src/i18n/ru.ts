@@ -378,6 +378,7 @@ export const ru: Messages = {
       "lighting.rings": "Подсветка стиков · контроллер",
       "gamepad.vibration": "Сила вибрации · контроллер",
       "gamepad.gyro": "Оси гироскопа · файл в\u00a0/etc",
+      "sound.filter": "Обработка звука · PipeWire",
     },
     restore: "Вернуть всё как было",
     restoreAsk: "Вернуть всё как было?",

@@ -465,6 +465,13 @@ class FakeSession:
         return sum(call[0] == "systemd-run" for call in self.calls)
 
 
+def in_journal(tmp_path: Path) -> bool:
+    """Whether the journal on disk holds the filter, as the changes screen would list it."""
+    journal = ChangeJournal(tmp_path / "changes.json")
+    journal.load()
+    return journal.recorded("sound", "filter")
+
+
 def no_conflicts(sound: str | None = None) -> Conflicts:
     return Conflicts(
         lighting=None,
@@ -523,6 +530,7 @@ def test_the_filter_starts_changes_live_and_stops(
         assert HDA_SINK in config.read_text(encoding="utf-8")
         assert session.calls[-1][:3] == ("systemd-run", "--user", f"--unit={UNIT}")
         assert "--setenv=LV2_PATH=/plugin/bin/lv2" in session.calls[-1]
+        assert in_journal(tmp_path)
         # A change goes into the running filter, only what changed.
         await block.follow(Settings(sound=Sound(volume_db=6)))
         assert session.calls[-1] == (
@@ -536,15 +544,21 @@ def test_the_filter_starts_changes_live_and_stops(
         session.route = "analog-output-headphones"
         await block.follow(Settings(sound=Sound(volume_db=6)))
         assert session.calls[-1] == ("systemctl", "--user", "stop", UNIT)
+        # The filter only waits, so the journal keeps it.
+        assert in_journal(tmp_path)
         session.route = "analog-output-speaker"
         await block.follow(Settings(sound=Sound(volume_db=6)))
         assert session.calls[-1][0] == "systemd-run"
         # Switched off, it stops; another plugin's filter keeps it stopped.
         await block.follow(Settings(sound=Sound(enabled=False)))
         assert session.calls[-1] == ("systemctl", "--user", "stop", UNIT)
+        assert not in_journal(tmp_path)
+        await block.follow(Settings(sound=Sound()))
+        assert in_journal(tmp_path)
         owner[0] = "Sound Plugin"
         await block.follow(Settings(sound=Sound()))
         assert not session.running
+        assert not in_journal(tmp_path)
         block.stop()
         await asyncio.sleep(0)
 
@@ -745,12 +759,20 @@ def test_removing_origami_stops_the_filter_and_removes_its_configuration(
     monkeypatch.setattr(sound_block, "run_blocking", run_blocking)
     block = make_block(tmp_path, FakeSession(), [None])
     config = tmp_path / "run/user/1000" / CONFIG
-    config.write_text("context.properties = {}\n", encoding="utf-8")
+
+    async def started() -> None:
+        await block.follow(Settings(sound=Sound()))
+        block.stop()
+
+    asyncio.run(started())
+    assert config.exists()
+    assert in_journal(tmp_path)
 
     block.give_back()
 
     assert stopped == [("systemctl", "--user", "stop", UNIT)]
     assert not config.exists()
+    assert not in_journal(tmp_path)
 
 
 def test_nothing_runs_on_a_console_without_its_protection(tmp_path: Path) -> None:
