@@ -186,6 +186,22 @@ def test_calls_wait_for_start(ally_x: FakeRoot, tmp_path: Path) -> None:
     asyncio.run(scenario())
 
 
+def test_info_offers_the_overlay_menu_once_the_session_has_started_it(
+    ally_x: FakeRoot, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        # At boot Decky starts the plugin seconds before the session and its menu.
+        assert not (await app.info()).overlay_menu
+        ally_x.write("usr/bin/xwininfo", "")
+        ally_x.write("proc/4464/comm", "opengamepad-ui.")
+        assert (await app.info()).overlay_menu
+        app.stop()
+
+    asyncio.run(scenario())
+
+
 def test_failed_start_is_reported_to_callers(
     ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

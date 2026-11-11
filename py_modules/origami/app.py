@@ -7,7 +7,7 @@ import asyncio
 import logging
 from collections.abc import Mapping
 from contextlib import aclosing
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from origami.blocks import Context, Emit
@@ -15,6 +15,8 @@ from origami.blocks.buttons import ButtonsBlock
 from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
 from origami.blocks.gamepad import GamepadBlock
+from origami.blocks.overlay import OverlayBlock
+from origami.blocks.overlay import offered as overlay_offered
 from origami.blocks.power import PowerBlock, power_settings_changed
 from origami.blocks.sound import LV2_DIR, SoundBlock, SoundState
 from origami.buttons import Button, layout_for
@@ -68,6 +70,8 @@ class Info:
     """The buttons ORIGAMI may drive here; the system keeps the others (both on the ROG Ally)."""
     sound: bool
     """ORIGAMI processes this console's speakers: it has their protection."""
+    overlay_menu: bool
+    """The system has an overlay menu of its own that ORIGAMI can keep in sight (B18)."""
 
 
 class Origami:
@@ -113,6 +117,7 @@ class Origami:
             board=self._board,
         )
         self._buttons = ButtonsBlock(context, emit=emit, board=self._board_now)
+        self._overlay = OverlayBlock(context)
         self._sound = SoundBlock(
             context, lv2_dir=environment.plugin_dir / LV2_DIR, board=self._board_now
         )
@@ -130,6 +135,7 @@ class Origami:
                 versions=versions,
                 buttons=tuple(buttons),
                 sound=device.board in SPEAKER_ZONES,
+                overlay_menu=await asyncio.to_thread(overlay_offered, self._env.root),
             )
             log.info("ORIGAMI %s started, board %s", self._env.version, device.board)
         except Exception as error:
@@ -150,6 +156,10 @@ class Origami:
         await self._started()
         if self._info is None:
             raise RuntimeError("Startup did not produce device information")
+        if not self._info.overlay_menu:
+            # At boot the plugin starts before the session and its menu.
+            there = await asyncio.to_thread(overlay_offered, self._env.root)
+            self._info = replace(self._info, overlay_menu=there)
         return self._info
 
     async def telemetry(self) -> Telemetry:
@@ -363,6 +373,7 @@ class Origami:
         self._power.stop()
         self._gamepad.stop()
         self._buttons.stop()
+        self._overlay.stop()
         self._sound.stop()
         log.info("ORIGAMI stopped")
 
@@ -371,6 +382,7 @@ class Origami:
         await self._power.follow(settings)
         await self._fans.follow(settings)
         await self._buttons.follow(settings)
+        await self._overlay.follow(settings)
         await self._sound.follow(settings)
         # The controller forgets ORIGAMI's lighting and vibration in sleep, and may come back as
         # new devices without the rumble program; the saturation goes back to Steam's on resume,

@@ -55,6 +55,8 @@ class Settings:
     """ORIGAMI turns the gyroscope's yaw the right way for Steam (B08)."""
     clock_fix: bool | None = None
     """ORIGAMI steps the clock after sleep where the hardware clock keeps local time (B14)."""
+    overlay_fix: bool | None = None
+    """ORIGAMI keeps the system's overlay menu in sight after its first time (B18)."""
     lighting: Lighting | None = None
     """Lighting of the stick rings; None until the user sets it, so the controller keeps its own."""
     saturation: int | None = None
@@ -134,7 +136,7 @@ class Settings:
                     parsed[key] = Language(value)
                 case "qam_tab" | "battery_high_tdp" | "update_check":
                     parsed[key] = expect_bool(key, value)
-                case "qam_assist" | "gyro_fix" | "clock_fix" | "manage_tdp":
+                case "qam_assist" | "gyro_fix" | "clock_fix" | "overlay_fix" | "manage_tdp":
                     parsed[key] = None if value is None else expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
@@ -164,6 +166,7 @@ class Settings:
             "qam_assist": self.qam_assist,
             "gyro_fix": self.gyro_fix,
             "clock_fix": self.clock_fix,
+            "overlay_fix": self.overlay_fix,
             "lighting": None if self.lighting is None else self.lighting.to_json(),
             "saturation": self.saturation,
             "vibration": None if self.vibration is None else self.vibration.to_json(),

@@ -5,7 +5,7 @@ import asyncio
 import contextlib
 import os
 import subprocess
-from collections.abc import Mapping
+from collections.abc import AsyncGenerator, Mapping
 
 
 class CommandError(Exception):
@@ -68,6 +68,43 @@ async def run(
             f"{args[0]} exited with {process.returncode}: {message}", process.returncode
         )
     return stdout.decode(errors="replace")
+
+
+WITH_PARENT = ("setpriv", "--pdeathsig", "TERM")
+"""Runs a program so that the kernel ends it when the process that started it is gone."""
+
+
+async def follow(*args: str, user: tuple[int, int] | None = None) -> AsyncGenerator[str]:
+    """Run a program without a shell and yield the lines of its stdout as they come, until it ends.
+
+    For a program that reports for as long as it runs. Closing the generator kills it, and it
+    ends with the plugin's own process too, however that ends: Decky kills a plugin that is
+    slow to unload, and nothing then closes the generator. Raise CommandError when it cannot
+    start; `user` is as for run().
+    """
+    uid, gid = user if user is not None else (None, None)
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *WITH_PARENT,
+            *args,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+            env=system_environment(),
+            user=uid,
+            group=gid,
+            extra_groups=[] if user is not None else None,
+        )
+    except OSError as error:
+        raise CommandError(f"Cannot start {args[0]}: {error.strerror}") from error
+    try:
+        # The pipe asked for above is always there.
+        async for line in process.stdout or ():
+            yield line.decode(errors="replace").rstrip("\n")
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            process.kill()
+        await process.wait()
 
 
 def run_blocking(
