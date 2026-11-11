@@ -563,6 +563,55 @@ def _routes(value: JsonValue | None) -> set[str]:
     }
 
 
+FOREIGN_FILTERS: Mapping[str, str] = {
+    "effect_output.pdc_eq": "Panel de Control",
+    "effect_input.ally_dsp": "Ally DSP",
+    "easyeffects_sink": "EasyEffects",
+    "jamesdsp_sink": "JamesDSP",
+}
+"""Nodes other programs process the sound with, and what the screen calls each program."""
+
+
+def foreign_filter(objects: list[JsonValue], sink: str | None) -> str | None:
+    """Who else processes the speakers' sound now, by PipeWire's objects; None when nobody.
+
+    A program known by its node, or any smart filter but ORIGAMI's aimed at the speaker sink
+    `sink`. A Decky plugin with a filter is found here even if its name is new to ORIGAMI, and
+    an equaliser that is part of a bigger plugin only while it is switched on.
+    """
+    for item in objects:
+        if not isinstance(item, dict) or not str(item.get("type", "")).endswith(":Node"):
+            continue
+        info = item.get("info")
+        props = info.get("props") if isinstance(info, dict) else None
+        if not isinstance(props, dict):
+            continue
+        name = props.get("node.name")
+        if not isinstance(name, str):
+            continue
+        known = FOREIGN_FILTERS.get(name)
+        if known is not None:
+            return known
+        if (
+            sink is not None
+            and props.get("filter.smart") in (True, "true")
+            and props.get("filter.smart.name") != NODE
+            and _aims_at(props.get("filter.smart.target"), sink)
+        ):
+            described = props.get("node.description")
+            return described if isinstance(described, str) and described else name
+    return None
+
+
+def _aims_at(target: JsonValue | None, sink: str) -> bool:
+    """Whether a smart filter's target names the sink; pw-dump prints the target as text."""
+    if isinstance(target, str):
+        return f'"{sink}"' in target
+    if isinstance(target, dict):
+        return target.get("node.name") == sink
+    return False
+
+
 def filter_node(objects: list[JsonValue]) -> int | None:
     """The id of ORIGAMI's filter input node, while the filter runs."""
     for item in objects:

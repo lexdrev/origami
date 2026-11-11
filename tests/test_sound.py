@@ -35,6 +35,7 @@ from origami.sound import (
     controls,
     filter_node,
     find_speakers,
+    foreign_filter,
     regulator_controls,
     set_param_props,
 )
@@ -266,6 +267,46 @@ def test_no_speakers_without_a_speaker_sink() -> None:
     assert find_speakers(hda_dump()[1:]) is None
 
 
+def node(name: str, **props: JsonValue) -> JsonValue:
+    """A PipeWire node as pw-dump prints it, with these properties besides its name."""
+    return {
+        "id": 120,
+        "type": "PipeWire:Interface:Node",
+        "info": {"props": {"node.name": name, **props}},
+    }
+
+
+def smart_filter(name: str, sink: str, description: str = "") -> JsonValue:
+    """A smart filter aimed at `sink`; pw-dump prints the target as text."""
+    return node(
+        f"effect_input.{name}",
+        **{
+            "filter.smart": True,
+            "filter.smart.name": name,
+            "filter.smart.target": f'{{ node.name = "{sink}" }}',
+            "node.description": description,
+        },
+    )
+
+
+def test_other_programs_that_process_the_speakers_are_found_in_pipewire() -> None:
+    alone = [*hda_dump(), smart_filter(NODE, HDA_SINK, "ORIGAMI sound")]
+    assert foreign_filter(alone, HDA_SINK) is None
+    # A program known by its node: an equaliser inside a bigger plugin, an app outside Decky.
+    assert foreign_filter([*alone, node("effect_output.pdc_eq")], HDA_SINK) == "Panel de Control"
+    assert foreign_filter([*alone, node("easyeffects_sink")], HDA_SINK) == "EasyEffects"
+    # Any other smart filter aimed at the speakers, by its description or else its node.
+    other = smart_filter("someone", HDA_SINK, "Someone's equaliser")
+    assert foreign_filter([*alone, other], HDA_SINK) == "Someone's equaliser"
+    assert foreign_filter([smart_filter("someone", HDA_SINK)], HDA_SINK) == "effect_input.someone"
+    # One aimed at another sink, or seen while the speaker sink is unknown, does not count.
+    assert (
+        foreign_filter([*alone, smart_filter("someone", "alsa_output.usb-dock")], HDA_SINK) is None
+    )
+    assert foreign_filter([other], None) is None
+    assert foreign_filter([node("easyeffects_sink")], None) == "EasyEffects"
+
+
 def test_the_filter_node() -> None:
     assert filter_node(hda_dump()) is None
     assert filter_node(hda_dump(filter_running=True)) == 90
@@ -434,6 +475,8 @@ class FakeSession:
         """A started filter shows its node; False for one PipeWire cannot load."""
         self.failing: str | None = None
         """A command that fails."""
+        self.foreign: str | None = None
+        """The node of another program that processes the speakers."""
         self.dumps = 0
         self.calls: list[tuple[str, ...]] = []
         self.users: list[tuple[int, int] | None] = []
@@ -445,7 +488,10 @@ class FakeSession:
         self.users.append(user)
         if args[0] == "pw-dump":
             self.dumps += 1
-            return json.dumps(hda_dump(self.route, filter_running=self.running))
+            objects = hda_dump(self.route, filter_running=self.running)
+            if self.foreign is not None:
+                objects.append(node(self.foreign))
+            return json.dumps(objects)
         self.calls.append(args)
         if args[0] == self.failing:
             raise CommandError(f"{args[0]} exited with 1: no", 1)
@@ -608,6 +654,33 @@ def test_a_running_game_gets_its_own_sound(
     assert "Sound: the profile of game 7" in caplog.text
     assert caplog.text.count("Sound: general again") == 1
     assert "Sound: the profile of game 42" in caplog.text
+
+
+def test_another_program_s_filter_stops_origami_s_until_it_goes(tmp_path: Path) -> None:
+    session = FakeSession()
+    block = make_block(tmp_path, session, [None])
+    settings = Settings(sound=Sound())
+
+    async def scenario() -> None:
+        await block.follow(settings)
+        assert (await block.state()).owner is None
+        # The equaliser of a plugin Decky does not list as the sound's owner is switched on.
+        session.foreign = "effect_output.pdc_eq"
+        await block.follow(settings)
+        assert session.calls[-1] == ("systemctl", "--user", "stop", UNIT)
+        assert not in_journal(tmp_path)
+        state = await block.state()
+        assert (state.owner, state.running) == ("Panel de Control", False)
+        await block.follow(settings)
+        assert not session.active
+        # Switched off again, ORIGAMI's filter is back.
+        session.foreign = None
+        await block.follow(settings)
+        assert session.active
+        assert (await block.state()).owner is None
+        block.stop()
+
+    asyncio.run(scenario())
 
 
 def test_a_filter_that_does_not_come_up_is_tried_again_after_longer_waits(

@@ -25,6 +25,7 @@ from origami.sound import (
     controls,
     filter_node,
     find_speakers,
+    foreign_filter,
     parse_dump,
     set_param_props,
 )
@@ -75,6 +76,9 @@ class SoundState:
     """Headphones play on the speakers' sink, so the filter waits for the speakers."""
     running: bool
     """The filter runs in front of the speakers now."""
+    owner: str | None
+    """Another program whose filter processes the speakers now, found in PipeWire; None when
+    none. A Decky plugin known to own the sound is among the conflicts as well."""
     failed: bool
     """The filter did not stay up after its last start, and ORIGAMI waits to try again."""
     clock_fix: bool
@@ -168,6 +172,7 @@ class SoundBlock:
         return SoundState(
             speakers=speakers is not None,
             headphones=speakers is not None and not speakers.playing,
+            owner=None if objects is None else _foreign(objects, speakers),
             running=running,
             failed=not running and self._failures > 0,
             clock_fix=offered,
@@ -265,6 +270,8 @@ class SoundBlock:
                 return
             speakers = find_speakers(objects)
             node = filter_node(objects)
+            # A plugin known to own the sound, or whatever else stands in front of the speakers.
+            owner = owner or _foreign(objects, speakers)
             if (
                 sound is None
                 or not sound.enabled
@@ -276,6 +283,8 @@ class SoundBlock:
                 stopped = True
                 if node is not None or self._applied is not None:
                     stopped = await self._stop()
+                    if stopped and wanted and owner is not None:
+                        log.info("Sound is left to %s, which processes the speakers", owner)
                 if stopped and (not wanted or owner is not None):
                     # Headphones and missing speakers keep the entry: the filter comes back.
                     await asyncio.to_thread(self._context.journal.forget, *JOURNAL)
@@ -396,6 +405,10 @@ class SoundBlock:
             if owner.st_uid != 0:
                 return owner.st_uid, owner.st_gid
         return None
+
+
+def _foreign(objects: list[JsonValue], speakers: Speakers | None) -> str | None:
+    return foreign_filter(objects, None if speakers is None else speakers.sink)
 
 
 def _session(user: tuple[int, int]) -> dict[str, str]:
