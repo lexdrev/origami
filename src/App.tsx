@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, type ComponentType } from "react";
+import { useEffect, useRef, type ComponentType } from "react";
 
 import { missingBackend } from "./backendStart";
 import { I18nProvider, useMessages } from "./i18n";
@@ -23,6 +23,7 @@ import { useStore } from "./store";
 import { checkDaily } from "./updates";
 import { Alert } from "./ui/blocks";
 import { ScrollBar } from "./ui/scrollbar";
+import { useScreenPlace } from "./ui/screenPlace";
 import { styles } from "./ui/styles";
 
 const screens: Record<ScreenId, ComponentType> = {
@@ -47,6 +48,8 @@ export function App() {
   const CurrentScreen = screens[useCurrentScreen()];
   const current = useStore(settings);
   const daily = current.status === "ready" && current.value.updateCheck;
+  const root = useRef<HTMLDivElement>(null);
+  useScreenPlace(root);
   // The quick access menu mounts the view each time it opens: what failed then gets another try.
   useEffect(() => {
     void reloadFailed();
@@ -60,7 +63,7 @@ export function App() {
     <I18nProvider language={useLanguage()}>
       {/* The style element renders inside the quick access window, which is a separate document. */}
       <style>{styles}</style>
-      <div className="og-root">
+      <div className="og-root" ref={root}>
         <ScrollBar />
         <MissingBackend />
         <ActionError />

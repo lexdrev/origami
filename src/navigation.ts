@@ -27,6 +27,11 @@ export function useCurrentScreen(): ScreenId {
   return useStore(stack).at(-1) ?? "main";
 }
 
+/** How many screens are open one over another; the main screen alone is 1. */
+export function useScreenDepth(): number {
+  return useStore(stack).length;
+}
+
 // Screen changes play their sounds here, so the back button and B sound the same. Opening a
 // screen clicks like opening a plugin from the Decky list.
 
