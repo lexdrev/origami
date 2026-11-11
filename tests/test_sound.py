@@ -26,6 +26,7 @@ from origami.sound import (
     SPEAKER_ZONES,
     XBOX_ALLY,
     XBOX_ALLY_X20,
+    GameSound,
     Sound,
     Speakers,
     Width,
@@ -551,6 +552,48 @@ def test_the_filter_starts_changes_live_and_stops(
     assert set(session.users) == {(tmp_path.stat().st_uid, tmp_path.stat().st_gid)}
     # Stopping before the first start finds no service, which is no failure.
     assert "not stopped" not in caplog.text
+
+
+def test_a_running_game_gets_its_own_sound(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    session = FakeSession()
+    block = make_block(tmp_path, session, [None])
+    louder = GameSound(1920490, "The Outer Worlds", Sound(volume_db=6, voices=False))
+    silent = GameSound(7, "Other", Sound(enabled=False))
+    waiting = GameSound(42, "Waiting", Sound(volume_db=0), active=False)
+    settings = Settings(sound=Sound(), game_sound=(louder, silent, waiting))
+    caplog.set_level("INFO")
+
+    async def scenario() -> None:
+        await block.follow(settings)
+        await block.follow(settings)
+        started = session.started()
+        # Its own volume and voices go into the running filter.
+        await block.set_game(settings, 1920490)
+        assert session.calls[-1][:4] == ("pw-cli", "set-param", "90", "Props")
+        assert '"dc_g:Add" 1.99526231' in session.calls[-1][4]
+        assert '"dc_d:Add" 0' in session.calls[-1][4]
+        # A game whose own sound is off stops the filter; without a game the general one is back.
+        await block.set_game(settings, 7)
+        assert session.calls[-1] == ("systemctl", "--user", "stop", UNIT)
+        await block.set_game(settings, None)
+        assert session.started() == started + 1
+        # A profile that waits changes nothing, and neither does the same game told twice.
+        calls = len(session.calls)
+        await block.set_game(settings, 42)
+        await block.set_game(settings, 42)
+        assert [call for call in session.calls[calls:] if call[0] != "pw-dump"] == []
+        # Its switch going on while the game runs is told like a game starting.
+        chosen = GameSound(42, "Waiting", Sound(volume_db=0))
+        await block.follow(Settings(sound=Sound(), game_sound=(chosen,)))
+        block.stop()
+
+    asyncio.run(scenario())
+    assert "Sound: the profile of game 1920490" in caplog.text
+    assert "Sound: the profile of game 7" in caplog.text
+    assert caplog.text.count("Sound: general again") == 1
+    assert "Sound: the profile of game 42" in caplog.text
 
 
 def test_a_filter_that_does_not_come_up_is_tried_again_after_longer_waits(

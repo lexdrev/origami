@@ -19,6 +19,7 @@ from origami.settings import (
     SettingsStore,
     describe_changes,
 )
+from origami.sound import GameSound, Sound
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers
 from origami.vibration import Vibration
 
@@ -323,6 +324,60 @@ def test_bad_game_power_is_rejected() -> None:
         Settings().updated({"game_power": [{**game, "name": " "}]})
     with pytest.raises(ValueError, match="tdp"):
         Settings().updated({"game_power": [{**game, "power": {"tdp": 50}}]})
+
+
+def test_a_game_keeps_its_own_sound_and_restoring_leaves_it_waiting(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    game = {
+        "app_id": 1920490,
+        "name": "  The Outer Worlds  ",
+        "sound": {"volume_db": 6, "voices": False},
+    }
+    waiting = {"app_id": 7, "name": "Other", "sound": {"enabled": False}, "active": False}
+
+    store.save(Settings().updated({"sound": {"volume_db": 0}, "game_sound": [game, waiting]}))
+    loaded = store.load()
+
+    assert loaded.game_sound == (
+        GameSound(1920490, "The Outer Worlds", Sound(volume_db=6, voices=False)),
+        GameSound(7, "Other", Sound(enabled=False), active=False),
+    )
+    assert loaded.sound_for(1920490) == Sound(volume_db=6, voices=False)
+    # A game whose profile waits, a game without one and no game at all get the general sound.
+    assert (
+        loaded.sound_for(7) == loaded.sound_for(42) == loaded.sound_for(None) == Sound(volume_db=0)
+    )
+    # After "restore everything" no game switches the filter on by itself.
+    restored = loaded.restored()
+    assert [profile.active for profile in restored.game_sound] == [False, False]
+    assert restored.sound_for(1920490) is None
+
+
+def test_bad_game_sound_is_rejected() -> None:
+    game = {"app_id": 1, "name": "Game", "sound": {"volume_db": 4}}
+    with pytest.raises(ValueError, match="list"):
+        Settings().updated({"game_sound": game})
+    with pytest.raises(ValueError, match="only one sound"):
+        Settings().updated({"game_sound": [game, game]})
+    with pytest.raises(ValueError, match="name"):
+        Settings().updated({"game_sound": [{**game, "name": ""}]})
+    with pytest.raises(ValueError, match="volume_db"):
+        Settings().updated({"game_sound": [{**game, "sound": {"volume_db": 5}}]})
+    with pytest.raises(ValueError, match="sound must be an object"):
+        Settings().updated({"game_sound": [{"app_id": 1, "name": "Game"}]})
+
+
+def test_a_game_sound_is_told_by_itself() -> None:
+    kept = GameSound(1091500, "Cyberpunk 2077", Sound(volume_db=6))
+    gone = GameSound(1245620, "Elden Ring", Sound())
+    before = Settings(game_sound=(kept, gone))
+
+    after = Settings(game_sound=(kept, GameSound(7, "Other", Sound(enabled=False), active=False)))
+
+    assert describe_changes(before, after) == (
+        'game sound 7 {"app_id":7,"name":"Other","sound":{"enabled":false,"volume_db":4,'
+        '"width":"moderate","voices":true},"active":false}; game sound 1245620 removed'
+    )
 
 
 def test_the_fan_curve_stays_off_until_switched_on_and_keeps_its_points(tmp_path: Path) -> None:

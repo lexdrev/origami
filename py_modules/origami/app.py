@@ -261,10 +261,11 @@ class Origami:
             await self._power.set_steam_tdp_limit(self._settings, on=on)
 
     async def set_game(self, app_id: int | None) -> None:
-        """Steam runs this game now, or none: the power follows the game's own profile, if any."""
+        """Steam runs this game now, or none: the power and the sound follow its own profiles."""
         await self._started()
         async with self._settings_lock:
             await self._power.set_game(self._settings, app_id)
+            await self._sound.set_game(self._settings, app_id)
 
     async def game_started(self) -> None:
         """Steam started a game: it writes its own limits meanwhile, so ORIGAMI writes again."""

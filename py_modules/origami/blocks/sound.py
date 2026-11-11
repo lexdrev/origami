@@ -109,6 +109,10 @@ class SoundBlock:
         self._run = runner
         self._now = now
         self._sound: Sound | None = None
+        self._game: int | None = None
+        """The game Steam runs now, whose own sound applies while it has an active profile."""
+        self._own: int | None = None
+        """The game whose profile is the sound in use; None while the general one is."""
         self._applied: dict[str, float] | None = None
         """The controls the running filter has; None until ORIGAMI started it in this run."""
         self._sink: str | None = None
@@ -132,10 +136,23 @@ class SoundBlock:
 
     async def follow(self, settings: Settings) -> None:
         """Start, change or stop the filter for these settings, and keep watching while it is on."""
-        self._sound = settings.sound if self.supported() else None
+        supported = self.supported()
+        self._sound = settings.sound_for(self._game) if supported else None
+        # Told once each time the sound in use changes hands, by a game starting or by its switch.
+        own = self._game if supported and self._sound is not settings.sound else None
+        if own != self._own:
+            log.info("Sound: %s", "general again" if own is None else f"the profile of game {own}")
+            self._own = own
         on = self._sound is not None and self._sound.enabled
         await self._look()
         await self._watch.run_while(on=on)
+
+    async def set_game(self, settings: Settings, app_id: int | None) -> None:
+        """Steam runs this game now, or none: the sound follows the game's own profile, if any."""
+        if app_id == self._game:
+            return
+        self._game = app_id
+        await self.follow(settings)
 
     async def state(self) -> SoundState:
         root = self._context.root

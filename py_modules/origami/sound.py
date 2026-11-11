@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import cast
 
+from origami.games import parse_game
 from origami.jsonio import JsonValue, expect_bool
 
 NODE = "origami_sound"
@@ -69,6 +70,35 @@ class Sound:
             "volume_db": self.volume_db,
             "width": self.width.value,
             "voices": self.voices,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class GameSound:
+    """A game's own sound, made as a copy of the general one when it is first chosen."""
+
+    app_id: int
+    """Steam's app id; non-Steam shortcuts have one as well."""
+    name: str
+    """The game's name as Steam showed it, for the list while the game is not running."""
+    sound: Sound
+    active: bool = True
+    """The game runs with this sound; off, it runs with the general one and this waits."""
+
+    @classmethod
+    def from_json(cls, value: object) -> GameSound:
+        """Parse a game's sound sent by the frontend or saved; raise ValueError on bad input."""
+        data, app_id, name, active = parse_game(value, "sound")
+        return cls(
+            app_id=app_id, name=name, sound=Sound.from_json(data.get("sound")), active=active
+        )
+
+    def to_json(self) -> dict[str, JsonValue]:
+        return {
+            "app_id": self.app_id,
+            "name": self.name,
+            "sound": self.sound.to_json(),
+            "active": self.active,
         }
 
 

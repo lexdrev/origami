@@ -16,7 +16,7 @@ from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
 from origami.power import GamePower, Power
 from origami.saturation import MAX_PERCENT as MAX_SATURATION
-from origami.sound import Sound
+from origami.sound import GameSound, Sound
 from origami.triggers import TriggerRumble
 from origami.vibration import Vibration
 
@@ -83,6 +83,8 @@ class Settings:
     """ORIGAMI's curve for both fans (B07); None until switched on: the firmware's own."""
     sound: Sound | None = None
     """ORIGAMI's filter in front of the speakers; None until switched on: the system's sound."""
+    game_sound: tuple[GameSound, ...] = ()
+    """Games with a sound of their own, one profile each."""
 
     def power_for(self, game: int | None) -> Power:
         """The power a game runs with: its own profile while that is active, else the general."""
@@ -91,13 +93,21 @@ class Settings:
                 return profile.power
         return self.power
 
+    def sound_for(self, game: int | None) -> Sound | None:
+        """The sound a game runs with: its own profile while that is active, else the general."""
+        for profile in self.game_sound:
+            if profile.app_id == game and profile.active:
+                return profile.sound
+        return self.sound
+
     def restored(self) -> Settings:
         """These settings after "restore everything": nothing of the system is left to ORIGAMI.
 
         The fixes and all ORIGAMI drives are unset again, so the screens show the bugs as problems,
         and Steam sets the TDP, which is a problem too until the user decides. The interface and the
         daily update check stay, and so do the TDP and the games' profiles for the next time ORIGAMI
-        manages it, without their CPU boost: that flag is the system's again.
+        manages it, without their CPU boost: that flag is the system's again. The games' sounds
+        stay too, but waiting: none of them runs until its game's switch goes on again.
         """
         return Settings(
             language=self.language,
@@ -112,6 +122,7 @@ class Settings:
                 replace(profile, power=replace(profile.power, cpu_boost=None))
                 for profile in self.game_power
             ),
+            game_sound=tuple(replace(profile, active=False) for profile in self.game_sound),
         )
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
@@ -137,8 +148,8 @@ class Settings:
                     parsed[key] = None if value is None else _hold_action(value)
                 case "power":
                     parsed[key] = Power.from_json(value)
-                case "game_power":
-                    parsed[key] = _game_power(value)
+                case "game_power" | "game_sound":
+                    parsed[key] = _game_profiles(key, value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
         return replace(self, **parsed)
@@ -169,6 +180,7 @@ class Settings:
             "game_power": [profile.to_json() for profile in self.game_power],
             "fans": None if self.fans is None else self.fans.to_json(),
             "sound": None if self.sound is None else self.sound.to_json(),
+            "game_sound": [profile.to_json() for profile in self.game_sound],
         }
 
 
@@ -197,14 +209,23 @@ def _saturation(value: object) -> int | None:
     raise ValueError(f"Saturation must be a percentage from 0 to {MAX_SATURATION}")
 
 
-def _game_power(value: object) -> tuple[GamePower, ...]:
+_GAME_PROFILES: dict[str, type[GamePower | GameSound]] = {
+    "game_power": GamePower,
+    "game_sound": GameSound,
+}
+"""The games' own settings, and the parsers of their profiles."""
+
+
+def _game_profiles(key: str, value: object) -> tuple[GamePower | GameSound, ...]:
+    """The games' own power or sound: a list with one profile a game."""
+    kind, what = _GAME_PROFILES[key], key.removeprefix("game_")
     if not isinstance(value, list):
-        raise ValueError("game_power must be a list")
-    profiles = tuple(GamePower.from_json(item) for item in cast("list[object]", value))
+        raise ValueError(f"{key} must be a list")
+    profiles = tuple(kind.from_json(item) for item in cast("list[object]", value))
     if len(profiles) > MAX_GAME_PROFILES:
-        raise ValueError(f"At most {MAX_GAME_PROFILES} games can have their own power")
+        raise ValueError(f"At most {MAX_GAME_PROFILES} games can have their own {what}")
     if len({profile.app_id for profile in profiles}) != len(profiles):
-        raise ValueError("A game can have only one power profile")
+        raise ValueError(f"A game can have only one {what} profile")
     return profiles
 
 
@@ -229,17 +250,26 @@ def describe_changes(before: Settings, after: Settings) -> str:
     told = [
         f"{key} {_compact(value)}"
         for key, value in new.items()
-        if key != "game_power" and value != old.get(key)
+        if key not in ("game_power", "game_sound") and value != old.get(key)
     ]
-    was = {profile.app_id: profile for profile in before.game_power}
-    now = {profile.app_id for profile in after.game_power}
-    told.extend(
-        f"game {profile.app_id} {_compact(profile.to_json())}"
-        for profile in after.game_power
-        if was.get(profile.app_id) != profile
-    )
-    told.extend(f"game {app_id} removed" for app_id in was if app_id not in now)
+    told += _game_changes("game", before.game_power, after.game_power)
+    told += _game_changes("game sound", before.game_sound, after.game_sound)
     return "; ".join(told)
+
+
+def _game_changes(
+    what: str,
+    before: tuple[GamePower, ...] | tuple[GameSound, ...],
+    after: tuple[GamePower, ...] | tuple[GameSound, ...],
+) -> list[str]:
+    was = {profile.app_id: profile for profile in before}
+    now = {profile.app_id for profile in after}
+    told = [
+        f"{what} {profile.app_id} {_compact(profile.to_json())}"
+        for profile in after
+        if was.get(profile.app_id) != profile
+    ]
+    return told + [f"{what} {app_id} removed" for app_id in was if app_id not in now]
 
 
 def _compact(value: object) -> str:

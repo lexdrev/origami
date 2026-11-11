@@ -35,6 +35,7 @@ from origami.cpu import (
     renew_thermal_caps,
     write_boost,
 )
+from origami.games import parse_game
 from origami.jsonio import JsonValue, expect_bool
 from origami.tdp import (
     BATTERY_TDP,
@@ -140,10 +141,6 @@ class Power:
         return {"tdp": self.tdp, "headroom": self.headroom, "cpu_boost": self.cpu_boost}
 
 
-MAX_GAME_NAME = 200
-"""Characters of a game's name kept for the list of profiles."""
-
-
 @dataclass(frozen=True, slots=True)
 class GamePower:
     """A game's own power settings, made as a copy of the general ones when it is first chosen."""
@@ -159,20 +156,9 @@ class GamePower:
     @classmethod
     def from_json(cls, value: object) -> GamePower:
         """Parse a game's profile sent by the frontend or saved; raise ValueError on bad input."""
-        if not isinstance(value, dict):
-            raise ValueError("a game's power must be an object")
-        data = cast("dict[str, object]", value)
-        app_id = data.get("app_id")
-        if not isinstance(app_id, int) or isinstance(app_id, bool) or app_id <= 0:
-            raise ValueError("app_id must be a positive Steam app id")
-        name = data.get("name")
-        if not isinstance(name, str) or not name.strip():
-            raise ValueError("a game's power needs the game's name")
+        data, app_id, name, active = parse_game(value, "power")
         return cls(
-            app_id=app_id,
-            name=name.strip()[:MAX_GAME_NAME],
-            power=Power.from_json(data.get("power")),
-            active=expect_bool("active", data.get("active", True)),
+            app_id=app_id, name=name, power=Power.from_json(data.get("power")), active=active
         )
 
     def to_json(self) -> dict[str, JsonValue]:
