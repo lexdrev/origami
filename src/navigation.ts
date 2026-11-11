@@ -11,6 +11,8 @@ export type ScreenId =
   | "sound"
   | "gameProfiles"
   | "gameProfile"
+  | "gameSounds"
+  | "gameSound"
   | "display"
   | "customColour"
   | "gamepad"

@@ -4,6 +4,8 @@
 import { Focusable } from "@decky/ui";
 import { useEffect } from "react";
 
+import { soundFor } from "../gameProfiles";
+import { runningGame } from "../games";
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
 import { steamTdpSlider } from "../power";
@@ -48,6 +50,7 @@ export function MainScreen() {
   const plugin = useStore(info);
   const slider = useStore(steamTdpSlider) === true;
   const sound = useStore(soundState);
+  const running = useStore(runningGame);
   const speakers = plugin.status === "ready" && plugin.value.sound;
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.
@@ -72,7 +75,7 @@ export function MainScreen() {
       lighting: setting?.lighting && others?.lighting === null ? setting.lighting.enabled : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
       fanCurve: setting && others?.fans === null ? setting.fans : undefined,
-      sound: setting && others ? (others.sound === null ? setting.sound : undefined) : "unknown",
+      sound: setting && others ? (others.sound === null ? soundFor(setting, running) : undefined) : "unknown",
       soundState: sound.status === "ready" ? sound.value : null,
     },
     t,

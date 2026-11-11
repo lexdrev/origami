@@ -177,6 +177,17 @@ export interface Sound {
   voices: boolean;
 }
 
+/** A game's own sound, made as a copy of the general one (origami.sound.GameSound). */
+export interface GameSound {
+  /** Steam's app id; non-Steam shortcuts have one as well. */
+  appId: number;
+  /** The game's name as Steam showed it, for the list while the game is not running. */
+  name: string;
+  sound: Sound;
+  /** The game runs with this sound; off, it runs with the general one and this waits. */
+  active: boolean;
+}
+
 /** What the Sound screen shows besides the settings (origami.blocks.sound.SoundState). */
 export interface SoundState {
   /** There is a speaker sink: PipeWire runs and the console has its speakers. */
@@ -233,6 +244,7 @@ export interface Settings {
   fans: FanCurve | null;
   /** Null until the user switches it on; the speakers play as the system has them until then. */
   sound: Sound | null;
+  gameSound: GameSound[];
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */

@@ -235,6 +235,10 @@ export interface Messages {
     headphones: string;
     /** While PipeWire has no speaker sink. */
     noSpeakers: string;
+    /** The switch of the running game's own sound, and the list of such games. */
+    gameSound: string;
+    profilesTitleSub: string;
+    profilesHint: string;
     /** While the filter comes up, and when it did not. */
     starting: string;
     failed: string;

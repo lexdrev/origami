@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { GamePower, Power } from "./backend";
+import type { GamePower, GameSound, Power, Settings, Sound } from "./backend";
 import type { Messages } from "./i18n";
 import { withUnit } from "./i18n/format";
 
-// A game can have power settings of its own (ORIGAMI.md, game profiles). The first time the user
-// switches its profile on, the profile starts as a copy of the general settings; switched off, it
-// is kept, waiting, until it is switched on again or removed from the list.
+// A game can have power settings and a sound of its own (ORIGAMI.md, game profiles), each with its
+// own switch. The first time the user switches a profile on, it starts as a copy of the general
+// settings; switched off, it is kept, waiting, until it is switched on again or removed from the list.
 
 /** A game on the Power screen: the one Steam runs, or one picked from the list of profiles. */
 export interface Game {
@@ -15,7 +15,7 @@ export interface Game {
   name: string;
 }
 
-export function profileOf(profiles: readonly GamePower[], appId: number): GamePower | undefined {
+export function profileOf<T extends { appId: number }>(profiles: readonly T[], appId: number): T | undefined {
   return profiles.find((profile) => profile.appId === appId);
 }
 
@@ -31,7 +31,7 @@ export function withPower(profiles: readonly GamePower[], appId: number, power: 
   return profiles.map((profile) => (profile.appId === appId ? { ...profile, power } : profile));
 }
 
-export function without(profiles: readonly GamePower[], appId: number): GamePower[] {
+export function without<T extends { appId: number }>(profiles: readonly T[], appId: number): T[] {
   return profiles.filter((profile) => profile.appId !== appId);
 }
 
@@ -42,6 +42,32 @@ export function summary(power: Power, t: Messages): string {
     power.cpuBoost !== null && t.main.boost(power.cpuBoost),
     t.power.tdpBoost(power.headroom),
   ]
+    .filter((part) => part !== false)
+    .join(" · ");
+}
+
+/** The sounds after the game is set to run with its own sound or with the general one. */
+export function chooseOwnSound(profiles: readonly GameSound[], game: Game, general: Sound, own: boolean): GameSound[] {
+  if (profileOf(profiles, game.appId) === undefined) {
+    return own ? [...profiles, { appId: game.appId, name: game.name, sound: general, active: true }] : [...profiles];
+  }
+  return profiles.map((profile) => (profile.appId === game.appId ? { ...profile, active: own } : profile));
+}
+
+export function withSound(profiles: readonly GameSound[], appId: number, sound: Sound): GameSound[] {
+  return profiles.map((profile) => (profile.appId === appId ? { ...profile, sound } : profile));
+}
+
+/** The sound that applies now: the running game's own while it has an active profile, else the general. */
+export function soundFor(setting: Pick<Settings, "sound" | "gameSound">, running: Game | null): Sound | null {
+  const profile = running === null ? undefined : profileOf(setting.gameSound, running.appId);
+  return profile?.active === true ? profile.sound : setting.sound;
+}
+
+/** What the game's sound sets, in the words of the Sound tile. */
+export function soundSummary(sound: Sound, t: Messages): string {
+  if (!sound.enabled) return t.sound.off;
+  return [t.sound.volumes[sound.volumeDb], t.main.soundWidths[sound.width], sound.voices && t.main.soundVoices]
     .filter((part) => part !== false)
     .join(" · ");
 }

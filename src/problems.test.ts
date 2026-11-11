@@ -25,6 +25,7 @@ const fresh: Settings = {
   power: { tdp: 17, headroom: true, cpuBoost: null },
   batteryHighTdp: false,
   gamePower: [],
+  gameSound: [],
   fans: null,
   sound: null,
 };

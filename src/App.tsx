@@ -13,11 +13,11 @@ import { DisplayScreen } from "./screens/DisplayScreen";
 import { FansScreen } from "./screens/FansScreen";
 import { GamepadScreen } from "./screens/GamepadScreen";
 import { MainScreen } from "./screens/MainScreen";
-import { GameProfilesScreen } from "./screens/GameProfilesScreen";
+import { GameProfilesScreen, GameSoundsScreen } from "./screens/GameProfilesScreen";
 import { GameProfileScreen, PowerScreen } from "./screens/PowerScreen";
 import { QamTabScreen } from "./screens/QamTabScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
-import { SoundScreen } from "./screens/SoundScreen";
+import { GameSoundScreen, SoundScreen } from "./screens/SoundScreen";
 import { actionError, reloadFailed, settings, useLanguage } from "./state";
 import { useStore } from "./store";
 import { checkDaily } from "./updates";
@@ -32,6 +32,8 @@ const screens: Record<ScreenId, ComponentType> = {
   sound: SoundScreen,
   gameProfiles: GameProfilesScreen,
   gameProfile: GameProfileScreen,
+  gameSounds: GameSoundsScreen,
+  gameSound: GameSoundScreen,
   display: DisplayScreen,
   customColour: CustomColourScreen,
   gamepad: GamepadScreen,

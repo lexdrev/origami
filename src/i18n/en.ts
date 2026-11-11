@@ -192,6 +192,10 @@ export const en: Messages = {
     off: "Off · the system's sound",
     headphones: "Headphones plugged in · starts on\u00a0the\u00a0speakers",
     noSpeakers: "No speakers found · the system's sound",
+    gameSound: "Per-game sound",
+    profilesTitleSub: "Sound · per-game settings",
+    profilesHint:
+      "To add a game, start it and switch on Per-game sound at the top of the Sound screen. Its profile starts as a copy of the general one.",
     starting: "Starting…",
     failed: "Did not start · the system's sound",
     volume: "Volume",

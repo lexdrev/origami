@@ -9,6 +9,8 @@ export const SOUND_WIDTHS: readonly SoundWidth[] = ["off", "moderate", "strong"]
 
 /** What the sound starts with the first time it is switched on (origami.sound.Sound). */
 export const DEFAULT_SOUND: Sound = { enabled: true, volumeDb: 4, width: "moderate", voices: true };
+/** What the card shows, and a game's own sound starts from, until the sound is first switched on. */
+export const UNSET_SOUND: Sound = { ...DEFAULT_SOUND, enabled: false };
 
 /** What the filter does while the sound is switched on. */
 export type SoundStatus = "on" | "starting" | "headphones" | "noSpeakers" | "failed";

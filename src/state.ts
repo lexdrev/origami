@@ -194,6 +194,8 @@ export const setPower = liveSetting("power", refreshHeldPower);
 export const setFans = liveSetting("fans");
 /** Saves the speaker sound; the filter takes it at once. */
 export const setSound = liveSetting("sound", refreshSound);
+/** Saves the games' own sounds; the running game's goes into the filter at once. */
+export const setGameSound = liveSetting("gameSound", refreshSound);
 /** Saves the games' own power settings; the limits held follow them too. */
 export const setGamePower = liveSetting("gamePower", refreshHeldPower);
 /** Saves the stick lighting; the rings follow it, and its brightness slider follows a held D-pad. */

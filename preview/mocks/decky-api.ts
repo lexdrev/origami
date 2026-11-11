@@ -54,6 +54,20 @@ let settings: Settings = {
   ],
   fans: { enabled: true, points: [0, 10, 25, 40, 55, 75, 100] },
   sound: { enabled: true, volumeDb: 4, width: "moderate", voices: true },
+  gameSound: [
+    {
+      appId: 1920490,
+      name: "The Outer Worlds: Spacer's Choice Edition",
+      sound: { enabled: true, volumeDb: 6, width: "off", voices: true },
+      active: true,
+    },
+    {
+      appId: 990080,
+      name: "Hogwarts Legacy",
+      sound: { enabled: false, volumeDb: 4, width: "moderate", voices: true },
+      active: false,
+    },
+  ],
 };
 // Steam's value, as gamescope shows it on the console while nothing else sets it.
 const STEAM_SATURATION = 100;
@@ -93,6 +107,7 @@ function restoreAll(): Settings {
     gamePower: settings.gamePower.map((game) => ({ ...game, power: withoutBoost(game.power) })),
     fans: null,
     sound: null,
+    gameSound: settings.gameSound.map((game) => ({ ...game, active: false })),
   };
   changes.splice(0);
   return settings;

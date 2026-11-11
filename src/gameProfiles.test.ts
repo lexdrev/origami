@@ -3,8 +3,18 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { GamePower, Power } from "./backend";
-import { chooseOwn, profileOf, summary, withPower, without } from "./gameProfiles";
+import type { GamePower, GameSound, Power, Sound } from "./backend";
+import {
+  chooseOwn,
+  chooseOwnSound,
+  profileOf,
+  soundFor,
+  soundSummary,
+  summary,
+  withPower,
+  withSound,
+  without,
+} from "./gameProfiles";
 import { en } from "./i18n/en";
 import { ru } from "./i18n/ru";
 
@@ -42,5 +52,40 @@ describe("game profiles", () => {
     );
     // A CPU boost left as it is has nothing to say.
     expect(summary({ tdp: 25, headroom: false, cpuBoost: null }, en)).toBe(`TDP${NBSP}25${NBSP}W · TDP${NBSP}boost${NBSP}off`);
+  });
+});
+
+describe("a game's own sound", () => {
+  const generalSound: Sound = { enabled: true, volumeDb: 4, width: "moderate", voices: true };
+  const quiet: GameSound = { appId: 7, name: "Other", sound: { ...generalSound, enabled: false }, active: true };
+
+  it("starts as a copy of the general sound and waits with its values when switched off", () => {
+    const made = chooseOwnSound([quiet], game, generalSound, true);
+    expect(made).toEqual([quiet, { ...game, sound: generalSound, active: true }]);
+    expect(chooseOwnSound([quiet], game, generalSound, false)).toEqual([quiet]);
+
+    const louder = withSound(made, game.appId, { ...generalSound, volumeDb: 6 });
+    const waiting = chooseOwnSound(louder, game, generalSound, false);
+    expect(profileOf(waiting, game.appId)).toEqual({ ...game, sound: { ...generalSound, volumeDb: 6 }, active: false });
+    expect(without(waiting, 7)).toEqual([profileOf(waiting, game.appId)]);
+  });
+
+  it("applies while its game runs and its profile is active", () => {
+    const own = { ...game, sound: { ...generalSound, voices: false }, active: true };
+    const setting = { sound: generalSound, gameSound: [own, { ...quiet, active: false }] };
+
+    expect(soundFor(setting, game)).toEqual(own.sound);
+    expect(soundFor(setting, { appId: 7, name: "Other" })).toBe(generalSound);
+    expect(soundFor(setting, { appId: 42, name: "No profile" })).toBe(generalSound);
+    expect(soundFor(setting, null)).toBe(generalSound);
+    // A game can have its own sound while the general one was never switched on.
+    expect(soundFor({ sound: null, gameSound: [own] }, game)).toEqual(own.sound);
+    expect(soundFor({ sound: null, gameSound: [own] }, null)).toBeNull();
+  });
+
+  it("is told in a line as the tile tells it", () => {
+    expect(soundSummary(generalSound, ru)).toBe(`+4${NBSP}дБ · объём${NBSP}умеренно · голоса${NBSP}чётче`);
+    expect(soundSummary({ ...generalSound, volumeDb: 0, width: "off", voices: false }, en)).toBe(`Normal · width${NBSP}off`);
+    expect(soundSummary(quiet.sound, en)).toBe("Off · the system's sound");
   });
 });
