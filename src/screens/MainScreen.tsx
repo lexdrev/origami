@@ -4,7 +4,9 @@
 import { Focusable } from "@decky/ui";
 import { useEffect } from "react";
 
+import { runningPlugins } from "../deckyPlugins";
 import { soundFor } from "../gameProfiles";
+import { soundOwner } from "../sound";
 import { runningGame } from "../games";
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
@@ -64,7 +66,14 @@ export function MainScreen() {
   // here, for the Sound tile and its count; headphones come and go while the menu is open.
   usePoll(speakers ? refreshSound : nothing, SOUND_POLL_INTERVAL_MS);
   const setting = current.status === "ready" ? current.value : null;
-  const others = owners.status === "ready" ? owners.value : null;
+  const soundNow = sound.status === "ready" ? sound.value : null;
+  // The sound's owner is a plugin ORIGAMI knows or a program whose filter stands in PipeWire.
+  const soundTaken = soundOwner(
+    owners.status === "ready" ? owners.value.sound : null,
+    soundNow,
+    runningPlugins(),
+  );
+  const others = owners.status === "ready" ? { ...owners.value, sound: soundTaken?.name ?? null } : null;
   const ownTriggers = others?.triggers === null && motors.status === "ready" && motors.value === "available";
   const tiles = tileTexts(
     telemetry.status === "ready" ? telemetry.value : null,
@@ -75,8 +84,15 @@ export function MainScreen() {
       lighting: setting?.lighting && others?.lighting === null ? setting.lighting.enabled : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
       fanCurve: setting && others?.fans === null ? setting.fans : undefined,
-      sound: setting && others ? (others.sound === null ? soundFor(setting, running) : undefined) : "unknown",
-      soundState: sound.status === "ready" ? sound.value : null,
+      sound:
+        setting && others
+          ? soundTaken === null
+            ? soundFor(setting, running)
+            : soundTaken.inDecky
+              ? undefined
+              : "program"
+          : "unknown",
+      soundState: soundNow,
     },
     t,
   );
@@ -91,7 +107,7 @@ export function MainScreen() {
           buttons: plugin.status === "ready" ? plugin.value.buttons : null,
           steamTdpSlider: slider,
           contested: held.status === "ready" && held.value.contested,
-          clockCrackle: sound.status === "ready" ? sound.value.clockFix : null,
+          clockCrackle: soundNow?.clockFix ?? null,
         })
       : null;
 

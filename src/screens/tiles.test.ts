@@ -58,7 +58,14 @@ describe("tile texts", () => {
 
   it("say why a switched-on filter is not at work", () => {
     const sound: Sound = { enabled: true, volumeDb: 4, width: "moderate", voices: true };
-    const playing = { speakers: true, headphones: false, running: true, failed: false, clockFix: false };
+    const playing = {
+      speakers: true,
+      headphones: false,
+      running: true,
+      owner: null,
+      failed: false,
+      clockFix: false,
+    };
     const text = (state: Partial<typeof playing>, own: Partial<Sound> = {}) =>
       tileTexts(allyX, { ...none, sound: { ...sound, ...own }, soundState: { ...playing, ...state } }, ru).sound;
 
@@ -74,6 +81,10 @@ describe("tile texts", () => {
   it("say another plugin has the sound only once that is known", () => {
     expect(tileTexts(allyX, none, en).sound).toEqual({ value: "—", subtitle: "Another plugin" });
     expect(tileTexts(allyX, { ...none, sound: "unknown" }, en).sound).toEqual({ value: "—", subtitle: "" });
+    expect(tileTexts(allyX, { ...none, sound: "program" }, ru).sound).toEqual({
+      value: "—",
+      subtitle: "Другая программа",
+    });
   });
 
   it("show how the triggers rumble", () => {

@@ -23,3 +23,27 @@ export function soundStatus(state: SoundState | null): SoundStatus {
   if (state.running) return "on";
   return state.failed ? "failed" : "starting";
 }
+
+/** Who else processes the speakers, so ORIGAMI leaves them alone. */
+export interface SoundOwner {
+  name: string;
+  /** A plugin whose whole job is the sound: switching it off in Decky gives the sound back. */
+  plugin: boolean;
+  /** One of Decky's plugins, so Decky's list is the way to it; else a program outside Decky. */
+  inDecky: boolean;
+}
+
+/**
+ * The plugin ORIGAMI knows as the sound's owner, else the program whose filter stands in PipeWire:
+ * an equaliser inside a bigger plugin Decky runs (`running`), or an app outside Decky. Null when
+ * neither.
+ */
+export function soundOwner(
+  plugin: string | null,
+  state: SoundState | null,
+  running: readonly string[] | null,
+): SoundOwner | null {
+  if (plugin !== null) return { name: plugin, plugin: true, inDecky: true };
+  if (state?.owner == null) return null;
+  return { name: state.owner, plugin: false, inDecky: running?.includes(state.owner) ?? false };
+}

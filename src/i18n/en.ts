@@ -35,6 +35,7 @@ export const en: Messages = {
     soundOff: "Off",
     soundOffSub: "Speakers as the system has them",
     soundOther: "Another plugin",
+    soundOtherProgram: "Another program",
     soundPaused: "Paused",
     soundHeadphones: "Headphones plugged in",
     soundFailed: "Did not start",
@@ -192,6 +193,8 @@ export const en: Messages = {
     off: "Off · the system's sound",
     headphones: "Headphones plugged in · starts on\u00a0the\u00a0speakers",
     noSpeakers: "No speakers found · the system's sound",
+    filterOwnedText: (program) =>
+      `${program} already processes the speakers' sound, and processing it twice spoils the sound, so ORIGAMI leaves them alone. Switch the sound processing off in ${program}, and the settings appear here.`,
     gameSound: "Per-game sound",
     profilesTitleSub: "Sound · per-game settings",
     profilesHint:

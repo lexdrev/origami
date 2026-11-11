@@ -43,9 +43,10 @@ export interface OwnValues {
   fanCurve: FanCurve | null | undefined;
   /**
    * ORIGAMI's speaker sound, null until switched on; undefined while another plugin processes it,
-   * "unknown" until the settings and the other plugins are read.
+   * "program" while a program outside Decky does, "unknown" until the settings and the other
+   * plugins are read.
    */
-  sound: Sound | null | undefined | "unknown";
+  sound: Sound | null | undefined | "unknown" | "program";
   /** Whether the speakers play and the filter runs; null until read. */
   soundState: SoundState | null;
 }
@@ -100,6 +101,7 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
 function soundText(sound: OwnValues["sound"], state: SoundState | null, t: Messages): TileText {
   if (sound === "unknown") return { value: t.unknown, subtitle: "" };
   if (sound === undefined) return { value: t.unknown, subtitle: t.main.soundOther };
+  if (sound === "program") return { value: t.unknown, subtitle: t.main.soundOtherProgram };
   if (!sound?.enabled) return { value: t.main.soundOff, subtitle: t.main.soundOffSub };
   // A filter still coming up shows as one at work: it takes a second or two.
   const status = soundStatus(state);

@@ -16,26 +16,30 @@ interface OwnedByProps {
   section?: string;
   title: string;
   text: string;
+  /** The owner is one of Decky's plugins, so the way to Decky's list is offered; true unless said. */
+  decky?: boolean;
 }
 
 /** A section another plugin drives: why ORIGAMI stays out, and the way to that plugin. */
-export function OwnedBy({ section, title, text }: OwnedByProps) {
+export function OwnedBy({ section, title, text, decky = true }: OwnedByProps) {
   const t = useMessages();
   return (
     <>
       {section !== undefined && <SectionLabel>{section}</SectionLabel>}
       <Alert title={title}>{text}</Alert>
-      <Pressable
-        className="og-button"
-        action={t.actions.open}
-        sound={UISound.Press}
-        onPress={() => {
-          Navigation.Navigate(DECKY_PLUGINS_ROUTE);
-          Navigation.CloseSideMenus();
-        }}
-      >
-        {t.openDeckyPlugins}
-      </Pressable>
+      {decky && (
+        <Pressable
+          className="og-button"
+          action={t.actions.open}
+          sound={UISound.Press}
+          onPress={() => {
+            Navigation.Navigate(DECKY_PLUGINS_ROUTE);
+            Navigation.CloseSideMenus();
+          }}
+        >
+          {t.openDeckyPlugins}
+        </Pressable>
+      )}
     </>
   );
 }

@@ -62,8 +62,9 @@ export interface Messages {
     /** The Sound tile while the filter is off, and under it. */
     soundOff: string;
     soundOffSub: string;
-    /** Under the Sound tile while another plugin processes the speakers. */
+    /** Under the Sound tile while another plugin, or a program outside Decky, processes the speakers. */
     soundOther: string;
+    soundOtherProgram: string;
     /** The Sound tile while headphones play, and under it. */
     soundPaused: string;
     soundHeadphones: string;
@@ -235,6 +236,8 @@ export interface Messages {
     headphones: string;
     /** While PipeWire has no speaker sink. */
     noSpeakers: string;
+    /** Under the alert while a program outside Decky's plugins processes the speakers. */
+    filterOwnedText(program: string): string;
     /** The switch of the running game's own sound, and the list of such games. */
     gameSound: string;
     profilesTitleSub: string;

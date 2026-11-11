@@ -35,6 +35,7 @@ export const ru: Messages = {
     soundOff: "Выкл",
     soundOffSub: "Динамики как в\u00a0системе",
     soundOther: "Другой плагин",
+    soundOtherProgram: "Другая программа",
     soundPaused: "Пауза",
     soundHeadphones: "Наушники подключены",
     soundFailed: "Не\u00a0запустилась",
@@ -196,6 +197,8 @@ export const ru: Messages = {
     off: "Выключена · звук как в\u00a0системе",
     headphones: "Наушники подключены · включится на\u00a0динамиках",
     noSpeakers: "Динамики не\u00a0найдены · звук как в\u00a0системе",
+    filterOwnedText: (program) =>
+      `${program} уже обрабатывает звук динамиков, а\u00a0двойная обработка портит звук, поэтому ORIGAMI их не\u00a0трогает. Выключите обработку звука в\u00a0${program}\u00a0— настройки появятся здесь.`,
     gameSound: "Свой звук для игры",
     profilesTitleSub: "Звук · свои настройки для\u00a0игр",
     profilesHint:

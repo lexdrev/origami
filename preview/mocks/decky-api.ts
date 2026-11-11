@@ -162,14 +162,23 @@ function heldPower(): HeldPower {
 
 // "?headphones" puts headphones on the speakers' sink, "?localclock" a hardware clock in local time;
 // "?nospeakers" takes the speaker sink away, "?soundfailed" is a filter that did not stay up and
-// "?soundstarting" one that still comes up.
+// "?soundstarting" one that still comes up; "?soundfilter" is a program outside Decky that processes
+// the speakers.
 function soundState(): SoundState {
   const speakers = !query.has("nospeakers");
   const headphones = speakers && query.has("headphones");
   const failed = query.has("soundfailed");
   const wanted = settings.sound?.enabled === true && conflicts.sound === null && speakers && !headphones;
   const running = wanted && !failed && !query.has("soundstarting");
-  return { speakers, headphones, running, failed: wanted && failed, clockFix: query.has("localclock") };
+  const owner = query.has("soundfilter") ? "EasyEffects" : null;
+  return {
+    speakers,
+    headphones,
+    running: running && owner === null,
+    owner,
+    failed: wanted && failed,
+    clockFix: query.has("localclock"),
+  };
 }
 
 // "?nobackend" in the address stands for a backend that never answers, as on a Decky Loader too old for it.

@@ -4,12 +4,13 @@
 import { useEffect } from "react";
 
 import type { Settings, Sound, SoundState } from "../backend";
+import { runningPlugins } from "../deckyPlugins";
 import { chooseOwnSound, profileOf, withSound, type Game } from "../gameProfiles";
 import { openedProfile, runningGame } from "../games";
 import { useMessages } from "../i18n";
 import { back, navigate } from "../navigation";
 import { unset } from "../problems";
-import { SOUND_VOLUMES, SOUND_WIDTHS, UNSET_SOUND, soundStatus } from "../sound";
+import { SOUND_VOLUMES, SOUND_WIDTHS, UNSET_SOUND, soundOwner, soundStatus } from "../sound";
 import {
   conflicts,
   refreshConflicts,
@@ -70,8 +71,8 @@ function SoundView({ title, subtitle, game }: SoundViewProps) {
   // Headphones come and go while the screen is open.
   usePoll(refreshSound, POLL_INTERVAL_MS);
 
-  const owner = owners.status === "ready" ? owners.value.sound : null;
   const sound = state.status === "ready" ? state.value : null;
+  const owner = owners.status === "ready" ? soundOwner(owners.value.sound, sound, runningPlugins()) : null;
   // The clock fix is the console's, not a game's: a profile opened from the list leaves it out.
   const elsewhere = game !== null && running?.appId !== game.appId;
   return (
@@ -81,7 +82,11 @@ function SoundView({ title, subtitle, game }: SoundViewProps) {
       {current.status === "ready" &&
         owners.status === "ready" &&
         (owner !== null ? (
-          <OwnedBy title={t.sound.ownedBy(owner)} text={t.sound.ownedText(owner)} />
+          <OwnedBy
+            title={t.sound.ownedBy(owner.name)}
+            text={owner.plugin ? t.sound.ownedText(owner.name) : t.sound.filterOwnedText(owner.name)}
+            decky={owner.inDecky}
+          />
         ) : (
           <OwnSound setting={current.value} game={game} running={running} state={sound} />
         ))}

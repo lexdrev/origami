@@ -195,6 +195,8 @@ export interface SoundState {
   /** Headphones play on the speakers' sink, so the filter waits for the speakers. */
   headphones: boolean;
   running: boolean;
+  /** Another program whose filter processes the speakers now, found in PipeWire; null when none. */
+  owner: string | null;
   /** The filter did not stay up after its last start, and ORIGAMI waits to try again. */
   failed: boolean;
   /** The crackle after sleep happens here, so the screen offers its fix. */
