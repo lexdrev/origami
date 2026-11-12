@@ -15,8 +15,8 @@
 <p align="center"><b>English</b> · <a href="README.ru.md">Русский</a></p>
 
 ORIGAMI is a [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) plugin for the ROG Xbox Ally X on
-Bazzite and the ROG Ally on SteamOS. It puts power, fans, display, stick lighting and gamepad settings in one place
-and fixes the problems these consoles have on Linux today.
+Bazzite and the ROG Ally on SteamOS. It puts power, fans, display, stick lighting, gamepad and speaker sound
+settings in one place and fixes the problems these consoles have on Linux today.
 
 > ORIGAMI is an independent project, not affiliated with ASUS, Microsoft, Valve or the Bazzite team.
 
@@ -42,8 +42,11 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
   least at 50%, at 100 °C always at 100%.
 - **Display & Light:** screen saturation from 0 to 200% for games and Steam; stick lighting with colours,
   breathing, rainbow and spiral, brightness and a colour of your own.
-- **Gamepad:** handle vibration strength, trigger vibration from games, the gyro fix, QAM assist and actions for
-  the Armoury Crate button, on a short and a long press.
+- **Gamepad:** handle vibration strength, trigger vibration from games, the gyro fix, QAM assist, the fix of
+  Bazzite's own menu and actions for the Armoury Crate button, on a short and a long press.
+- **Sound:** louder speakers without crackle, at +4 or +6 dB, with the speaker protection ASUS tuned for each
+  model; wider stereo and clearer voices in dialogue. A game can have a sound of its own. It works on the
+  built-in speakers and pauses while headphones are plugged in.
 - **Quick access tab:** the fox in Steam's quick access column at the place you choose, or ORIGAMI only inside the
   Decky tab.
 - **Updates:** a newer release from GitHub on a press or once a day, what it brings in What's new, and the update
@@ -62,23 +65,29 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
 | The factory fan curve stops at 78% even at 94 °C | Your own curve, with the safe minimum above |
 | The system lights the sticks only in blue, and they go dark after sleep | Any colour and effect, back after sleep and reboot |
 | In games, Steam misses up to half of the Library button presses | QAM assist opens the menu on every press |
+| Bazzite's own menu, on a long press of Library, opens unseen after its first time: it sounds and takes the buttons | Keeps the menu in sight every time |
 | The Armoury Crate button does nothing | Actions on a short and a long press: ORIGAMI, screenshot, keyboard, magnifier, close the game and more |
 | Paste on Steam's on-screen keyboard types a "v" | Pastes the text; works by itself, there is nothing to switch on |
+| The speakers sound flat next to Windows, where ASUS's Dolby driver processes them | Sound processing: louder without crackle, wider stereo, clearer voices |
+| After sleep the sound may crackle until a restart where the console's clock keeps local time, as Windows sets it | Sets the clock right after sleep, and the sound stays clean |
 
 Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or off yourself, it turns grey.
 
 ## Tested on
 
-- **ROG Xbox Ally X** (board RC73XA): Bazzite 45.20261105, kernel 7.2.15-ogc1.1, InputPlumber 0.83.1,
+- **ROG Xbox Ally X** (board RC73XA): Bazzite 45.20261111, kernel 7.3.3-ogc1.1, InputPlumber 0.84.0,
   Decky Loader 3.3.1
 - **ROG Ally** (board RC71L): SteamOS 3.9.5, kernel 7.2.7-valve2, InputPlumber 0.78.0, Decky Loader 3.3.1
 
 On the ROG Ally, the system keeps both buttons, so there are no button settings there; saturation goes up to
 100%, because SteamOS already shows the richest colours; the TDP scale ends where the firmware does, at 25 W on
-battery and 30 W on the charger.
+battery and 30 W on the charger. The fix of Bazzite's menu shows only where the system has that menu.
 
 ORIGAMI also knows the ROG Ally X (RC72LA), the ROG Xbox Ally (RC73YA) and the ROG Xbox Ally X20 (RC74XA), but it
 has not been tried on them yet.
+
+The Sound tile is on all five models, each with the speaker protection ASUS tuned for it, but the sound has been
+listened to only on the ROG Xbox Ally X.
 
 ## Install
 
@@ -102,14 +111,15 @@ stops for a moment and the system gets its own settings back, so update outside 
 ## Undo everything
 
 **Settings → System changes** lists what ORIGAMI has changed. **Restore everything** brings back the factory
-values, removes ORIGAMI's files and switches its fixes off; Steam sets the TDP again. Removing the plugin in Decky
-does the same first.
+values, removes ORIGAMI's files and switches its fixes and the sound processing off; Steam sets the TDP again.
+Removing the plugin in Decky does the same first.
 
 While the gyro fix is on, ORIGAMI keeps one file outside its folders:
 `/etc/inputplumber/devices.d/50-rog_xbox_ally.yaml`.
 
-If another plugin already controls the power, the fans, the lighting, the saturation or the vibration, ORIGAMI
-leaves that part alone and shows which plugin has it.
+If another plugin already controls the power, the fans, the lighting, the saturation, the vibration or the sound,
+ORIGAMI leaves that part alone and shows which plugin has it. The same goes for any other program that processes
+the speakers.
 
 ## Privacy
 
@@ -127,9 +137,10 @@ shows them in **Settings → System changes**), what you did and the latest log 
 - The [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) team, for the plugin platform
 - [Bazzite](https://bazzite.gg), for the system
 - [Open Gaming Collective](https://github.com/OpenGamingCollective), for the kernel fixes for the Ally X
+- [Linux Studio Plugins](https://lsp-plug.in), for the compressor and the limiter of the speaker filter
 
 ## License
 
 ORIGAMI © 2026 Alexander Derevyanko (lexdrev), [GPL-3.0-or-later](LICENSE). The HID-BPF program in `bpf/`, which
-runs in the kernel, is GPL-2.0-or-later. The fonts and the library built into the plugin are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+runs in the kernel, is GPL-2.0-or-later. The fonts and the library built into the plugin, and the LSP plugins that
+come with it, are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
