@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import os
 import re
 import time
 from collections.abc import Callable, Mapping
@@ -462,6 +463,12 @@ def test_a_wake_steps_the_clock_only_with_the_fix_on(
     assert chrony.stepped
 
 
+RUNTIME = Path("run/user") / str(os.getuid())
+"""The session user's runtime folder in the fake root. The block takes the user from the owner of
+the PipeWire socket there, and the test's socket belongs to whoever runs the tests: 1000 on the
+console and in WSL, another user on GitHub's runners."""
+
+
 class FakeSession:
     """The session user's commands: PipeWire's objects, and the filter's service."""
 
@@ -538,7 +545,7 @@ def make_block(
     board: str = "RC73XA",
     now: Callable[[], float] = time.monotonic,
 ) -> SoundBlock:
-    socket = tmp_path / "run/user/1000/pipewire-0"
+    socket = tmp_path / RUNTIME / "pipewire-0"
     socket.parent.mkdir(parents=True)
     socket.touch()
 
@@ -571,7 +578,7 @@ def test_the_filter_starts_changes_live_and_stops(
 
     async def scenario() -> None:
         await block.follow(Settings(sound=Sound()))
-        config = tmp_path / "run/user/1000" / CONFIG
+        config = tmp_path / RUNTIME / CONFIG
         assert config.exists()
         assert HDA_SINK in config.read_text(encoding="utf-8")
         assert session.calls[-1][:3] == ("systemd-run", "--user", f"--unit={UNIT}")
@@ -831,7 +838,7 @@ def test_removing_origami_stops_the_filter_and_removes_its_configuration(
 
     monkeypatch.setattr(sound_block, "run_blocking", run_blocking)
     block = make_block(tmp_path, FakeSession(), [None])
-    config = tmp_path / "run/user/1000" / CONFIG
+    config = tmp_path / RUNTIME / CONFIG
 
     async def started() -> None:
         await block.follow(Settings(sound=Sound()))
