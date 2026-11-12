@@ -12,6 +12,10 @@ import { scrollingBox } from "./scrollbar";
 // all in view and the panel is not at its top, the screen scrolls the panel up itself.
 // Steam also keeps the element its scroll padding (48 px) away from the panel's bottom, so that the
 // next row shows: an element only fits clear of it, otherwise Steam scrolls as it always does.
+// The same at the other end: what a screen shows under its last element that takes the focus, the
+// battery under the Power screen, is reached by no focus, and whatever of it is lower than the
+// scroll padding stays cut by the panel's edge. On that last element the screen brings the panel
+// to its end, with a scroll margin down to it for Steam's own scroll.
 
 /** The part of Steam's navigation node (CNavigationTreeNode) the screen reads. */
 interface NavNode {
@@ -28,30 +32,53 @@ interface ScrollHandler {
   fnScrollIntoViewHandler: (focused: NavNode, previous?: NavNode, group?: NavNode) => boolean;
 }
 
-export const scrollToTop: ScrollHandler = {
+export const scrollToEnds: ScrollHandler = {
   scrollIntoViewWhenChildFocused: true,
-  fnScrollIntoViewHandler: ({ Element: element }) => {
+  fnScrollIntoViewHandler: ({ Element: element }, _previous, group) => {
     // The panel lives in the quick access window, with its own HTMLElement.
     const view = element?.ownerDocument.defaultView;
     if (element && view && element instanceof view.HTMLElement) {
       const box = scrollingBox(element);
       if (box) {
+        const style = view.getComputedStyle(box);
         // "auto" is no padding.
-        const padding = Number.parseFloat(view.getComputedStyle(box).scrollPaddingBottom) || 0;
-        const margin = topMargin(element, box, padding);
-        element.style.scrollMarginTop = margin;
-        if (margin !== "" && box.scrollTop > 0) box.scrollTo({ top: 0, behavior: "smooth" });
+        const end = isLastStop(element, group?.Element)
+          ? endMargin(element, box, Number.parseFloat(style.scrollPaddingTop) || 0)
+          : "";
+        const top = end === "" ? topMargin(element, box, Number.parseFloat(style.scrollPaddingBottom) || 0) : "";
+        element.style.scrollMarginTop = top;
+        element.style.scrollMarginBottom = end;
+        const last = box.scrollHeight - box.clientHeight;
+        if (end !== "" && box.scrollTop < last) box.scrollTo({ top: last, behavior: "smooth" });
+        else if (top !== "" && box.scrollTop > 0) box.scrollTo({ top: 0, behavior: "smooth" });
       }
     }
     return true;
   },
 };
 
+/** Whether no element after this one in the group takes the focus; Steam marks those "Focusable". */
+function isLastStop(element: HTMLElement, group: Element | undefined): boolean {
+  const stops = group?.querySelectorAll(".Focusable");
+  return stops !== undefined && stops.length > 0 && stops[stops.length - 1] === element;
+}
+
 /** Up to the box's top while the element fits above its bottom padding with all above it, else none. */
 export function topMargin(element: HTMLElement, box: HTMLElement, paddingBottom: number): string {
   const rect = element.getBoundingClientRect();
   const top = rect.top - box.getBoundingClientRect().top + box.scrollTop;
   return top + rect.height <= box.clientHeight - paddingBottom ? `${Math.ceil(top)}px` : "";
+}
+
+/**
+ * Down to the end of the box's content while the box scrolls and, scrolled to its end, still shows
+ * the element clear of its top padding; else none.
+ */
+export function endMargin(element: HTMLElement, box: HTMLElement, paddingTop: number): string {
+  const rect = element.getBoundingClientRect();
+  const top = rect.top - box.getBoundingClientRect().top + box.scrollTop;
+  const last = box.scrollHeight - box.clientHeight;
+  return last > 0 && top - last >= paddingTop ? `${Math.ceil(box.scrollHeight - top - rect.height)}px` : "";
 }
 
 // Rows of tiles longer than the panel: Steam scrolls only as far as the row in focus needs, so on a
