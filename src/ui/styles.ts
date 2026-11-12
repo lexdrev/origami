@@ -35,6 +35,8 @@ ${fontFaces}
 }
 
 .og-root *, .og-root *::before, .og-root *::after { box-sizing: border-box; }
+/* Steam gives every b its own font; a value keeps the font of the line it stands in. */
+.og-root b { font-family: inherit; }
 
 /* The panel's scrollbar (ui/scrollbar.tsx): placed over the panel's right edge, it takes no space. */
 .og-scrollbar-anchor { display: none; }
