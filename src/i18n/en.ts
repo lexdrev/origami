@@ -212,7 +212,7 @@ export const en: Messages = {
     ownedBy: (plugin) => `${plugin} processes the sound`,
     ownedText: (plugin) =>
       `${plugin} already processes the speakers, and processing them twice spoils the sound, so ORIGAMI leaves them alone. Switch off or remove ${plugin} in\u00a0Decky, and the sound settings appear here.`,
-    clockFix: "Crackle after sleep",
+    clockFix: "Sound crackle after sleep",
     clockFixOn: "After sleep ORIGAMI sets the clock right away, and\u00a0the\u00a0sound stays clean",
     clockFixOff: "After sleep the sound may crackle until a\u00a0restart",
     clockFixWhy: "The console's clock keeps local time, as Windows does",
