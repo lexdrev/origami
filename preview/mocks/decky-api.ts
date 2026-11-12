@@ -116,8 +116,10 @@ function restoreAll(): Settings {
   return settings;
 }
 
+// "?battery" takes the charger away: the battery tells how long it lasts.
 function telemetry(): Telemetry {
   const wobble = Math.sin(Date.now() / 4000);
+  const onBattery = query.has("battery");
   return {
     power: {
       tdpLimitW: settings.power.tdp,
@@ -125,8 +127,10 @@ function telemetry(): Telemetry {
       batteryTdpTopW: 35,
       packagePowerW: settings.power.tdp - 0.1 + wobble * 0.3,
       cpuBoost: settings.power.cpuBoost ?? false,
-      onBattery: false,
-      battery: { percent: 68, charging: true, minutesLeft: null, capacityPct: 93 },
+      onBattery,
+      battery: onBattery
+        ? { percent: 54, charging: false, minutesLeft: 95, untilPct: 10, drainW: 29.4 + wobble * 0.2, capacityPct: 93 }
+        : { percent: 68, charging: true, minutesLeft: null, untilPct: null, drainW: null, capacityPct: 93 },
     },
     fans: { speedsRpm: [4600 + Math.round(wobble * 80), 4700], cpuTempC: 63.4, gpuTempC: 61 },
     gamepad: { vibrationPct: [100, 100] },

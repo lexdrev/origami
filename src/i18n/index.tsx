@@ -167,6 +167,8 @@ export interface Messages {
     battery: string;
     charging: string;
     timeLeft(hours: number, minutes: number): string;
+    until(percent: number): string;
+    drain: string;
     capacity: string;
     steamSlider: string;
     steamSliderText: string;

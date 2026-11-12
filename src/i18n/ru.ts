@@ -128,6 +128,8 @@ export const ru: Messages = {
     battery: "Батарея",
     charging: "Заряжается",
     timeLeft: (hours, minutes) => (hours > 0 ? `~${hours}\u00a0ч\u00a0${minutes}\u00a0мин` : `~${minutes}\u00a0мин`),
+    until: (percent) => `до\u00a0${percent}%`,
+    drain: "Расход",
     capacity: "Ёмкость",
     steamSliderIdle: "Ползунок Steam не\u00a0действует",
     steamSlider: "Ползунок TDP в\u00a0Steam включён",

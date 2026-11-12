@@ -124,6 +124,8 @@ export const en: Messages = {
     battery: "Battery",
     charging: "Charging",
     timeLeft: (hours, minutes) => (hours > 0 ? `~${hours}\u00a0h\u00a0${minutes}\u00a0min` : `~${minutes}\u00a0min`),
+    until: (percent) => `to\u00a0${percent}%`,
+    drain: "Drain",
     capacity: "Capacity",
     steamSliderIdle: "Steam's slider does nothing",
     steamSlider: "Steam's TDP slider is on",

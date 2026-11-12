@@ -413,19 +413,34 @@ function SteamSliderPlate() {
   );
 }
 
+/** The charge and the capacity; on the battery, a second line: how long it lasts and what it loses. */
 function BatteryLine({ battery }: { battery: BatteryTelemetry }) {
   const t = useMessages();
   const texts = batteryTexts(battery, t);
   return (
     <div className="og-battery">
-      <span>
-        {t.power.battery} <b>{texts.percent}</b>
-        {texts.state !== null && ` · ${texts.state}`}
-      </span>
-      {texts.capacity !== null && (
+      <div className="og-battery__row">
         <span>
-          {t.power.capacity} <b>{texts.capacity}</b>
+          {t.power.battery} <b>{texts.percent}</b>
+          {texts.charging && ` · ${t.power.charging}`}
         </span>
+        {texts.capacity !== null && (
+          <span>
+            {t.power.capacity} <b>{texts.capacity}</b>
+          </span>
+        )}
+      </div>
+      {texts.left !== null && (
+        <div className="og-battery__row">
+          <span>
+            <b>{texts.left.time}</b> {texts.left.until}
+          </span>
+          {texts.drain !== null && (
+            <span>
+              {t.power.drain} <b>{texts.drain}</b>
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

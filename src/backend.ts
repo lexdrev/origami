@@ -42,8 +42,12 @@ export interface Info {
 export interface BatteryTelemetry {
   percent: number | null;
   charging: boolean;
-  /** Until empty at the power drawn now; null on the charger or while nothing is drawn. */
+  /** Until the charge is down to `untilPct`; null on the charger or while nothing tells. */
   minutesLeft: number | null;
+  /** The charge the minutes count down to: a tenth, or zero once the charge is under it. */
+  untilPct: number | null;
+  /** What the console draws from the battery, as the minutes were counted. */
+  drainW: number | null;
   /** Full charge now against the design's: the battery's wear. */
   capacityPct: number | null;
 }

@@ -430,14 +430,15 @@ ${fontFaces}
 
 .og-battery {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 5px;
   padding: 8px 2px 0;
   border-top: 1px solid var(--og-divider);
   color: var(--og-muted);
   font: 500 10px var(--og-mono);
   text-transform: uppercase;
 }
+.og-battery__row { display: flex; justify-content: space-between; gap: 8px; }
 .og-battery b { color: var(--og-text); }
 
 .og-colour-value { display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--og-border); }

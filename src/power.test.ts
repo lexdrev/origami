@@ -60,16 +60,32 @@ describe("power", () => {
     expect(limitsFor({ tdp: 10, headroom: false, cpuBoost: null })).toEqual({ spl: 10, sppt: 13, fppt: 19 });
   });
 
-  it("tells the charge, what the battery does and its capacity", () => {
-    const battery = { percent: 54, charging: false, minutesLeft: 110, capacityPct: 93 };
+  it("tells the charge and the capacity, and on the battery how long it lasts and what it loses", () => {
+    const battery = { percent: 54, charging: false, minutesLeft: 110, untilPct: 10, drainW: 29.44, capacityPct: 93 };
 
-    expect(batteryTexts(battery, ru)).toEqual({ percent: "54%", state: `~1${NBSP}ч${NBSP}50${NBSP}мин`, capacity: "93%" });
-    expect(batteryTexts({ ...battery, minutesLeft: 45 }, en).state).toBe(`~45${NBSP}min`);
-    expect(batteryTexts({ ...battery, charging: true, minutesLeft: null }, en).state).toBe("Charging");
-    expect(batteryTexts({ percent: null, charging: false, minutesLeft: null, capacityPct: null }, en)).toEqual({
+    expect(batteryTexts(battery, ru)).toEqual({
+      percent: "54%",
+      charging: false,
+      capacity: "93%",
+      left: { time: `~1${NBSP}ч${NBSP}50${NBSP}мин`, until: `до${NBSP}10%` },
+      drain: `29,4${NBSP}Вт`,
+    });
+    expect(batteryTexts({ ...battery, minutesLeft: 12, untilPct: 0 }, en).left).toEqual({
+      time: `~12${NBSP}min`,
+      until: `to${NBSP}0%`,
+    });
+  });
+
+  it("tells no time on the charger, or while the backend has none", () => {
+    const charging = { percent: 68, charging: true, minutesLeft: null, untilPct: null, drainW: null, capacityPct: 93 };
+
+    expect(batteryTexts(charging, en)).toEqual({ percent: "68%", charging: true, capacity: "93%", left: null, drain: null });
+    expect(batteryTexts({ ...charging, percent: null, charging: false, capacityPct: null }, en)).toEqual({
       percent: "—",
-      state: null,
+      charging: false,
       capacity: null,
+      left: null,
+      drain: null,
     });
   });
 });

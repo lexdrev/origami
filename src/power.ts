@@ -75,22 +75,26 @@ export function limitsFor({ tdp, headroom }: Power): Limits {
 
 export interface BatteryTexts {
   percent: string;
-  /** Charging, or the time left; null when neither is known. */
-  state: string | null;
+  charging: boolean;
   capacity: string | null;
+  /** The time left and the charge it is counted down to; null on the charger or while nothing tells. */
+  left: { time: string; until: string } | null;
+  /** What the console draws from the battery; null with no time left to tell. */
+  drain: string | null;
 }
 
-/** The line under the screen: the charge and what it does, then the battery's capacity. */
+/** The lines under the screen: the charge and the battery's capacity, then how long it lasts. */
 export function batteryTexts(battery: BatteryTelemetry, t: Messages): BatteryTexts {
-  const state = battery.charging
-    ? t.power.charging
-    : battery.minutesLeft !== null
-      ? t.power.timeLeft(Math.floor(battery.minutesLeft / 60), battery.minutesLeft % 60)
-      : null;
+  const { minutesLeft, untilPct, drainW } = battery;
+  const lasts = !battery.charging && minutesLeft !== null && untilPct !== null;
   return {
     percent: battery.percent === null ? t.unknown : `${battery.percent}%`,
-    state,
+    charging: battery.charging,
     capacity: battery.capacityPct === null ? null : `${battery.capacityPct}%`,
+    left: lasts
+      ? { time: t.power.timeLeft(Math.floor(minutesLeft / 60), minutesLeft % 60), until: t.power.until(untilPct) }
+      : null,
+    drain: lasts && drainW !== null ? formatWatts(drainW, t) : null,
   };
 }
 
