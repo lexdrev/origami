@@ -42,11 +42,11 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
   least at 50%, at 100 °C always at 100%.
 - **Display & Light:** screen saturation from 0 to 200% for games and Steam; stick lighting with colours,
   breathing, rainbow and spiral, brightness and a colour of your own.
-- **Gamepad:** handle vibration strength, trigger vibration from games, the gyro fix, QAM assist, the fix of
-  Bazzite's own menu and actions for the Armoury Crate button, on a short and a long press.
-- **Sound:** louder speakers without crackle, at +4 or +6 dB, with the speaker protection ASUS tuned for each
-  model; wider stereo and clearer voices in dialogue. A game can have a sound of its own. It works on the
-  built-in speakers and pauses while headphones are plugged in.
+- **Gamepad:** handle vibration strength, trigger vibration from games, the gyro fix, QAM assist, the Bazzite
+  menu fix and actions for the Armoury Crate button, on a short and a long press.
+- **Sound:** louder speakers with no crackle, at +4 or +6 dB, protected by the limits ASUS set for each model;
+  wider stereo and clearer dialogue. Each game can have its own sound settings. It works on the built-in
+  speakers and pauses while headphones are plugged in.
 - **Quick access tab:** the fox in Steam's quick access column at the place you choose, or ORIGAMI only inside the
   Decky tab.
 - **Updates:** a newer release from GitHub on a press or once a day, what it brings in What's new, and the update
@@ -65,11 +65,11 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
 | The factory fan curve stops at 78% even at 94 °C | Your own curve, with the safe minimum above |
 | The system lights the sticks only in blue, and they go dark after sleep | Any colour and effect, back after sleep and reboot |
 | In games, Steam misses up to half of the Library button presses | QAM assist opens the menu on every press |
-| Bazzite's own menu, on a long press of Library, opens unseen after its first time: it sounds and takes the buttons | Keeps the menu in sight every time |
+| Bazzite's own menu, opened by holding Library, turns invisible after its first use: you hear it and it takes over the controls | Makes the menu show up every time |
 | The Armoury Crate button does nothing | Actions on a short and a long press: ORIGAMI, screenshot, keyboard, magnifier, close the game and more |
 | Paste on Steam's on-screen keyboard types a "v" | Pastes the text; works by itself, there is nothing to switch on |
-| The speakers sound flat next to Windows, where ASUS's Dolby driver processes them | Sound processing: louder without crackle, wider stereo, clearer voices |
-| After sleep the sound may crackle until a restart where the console's clock keeps local time, as Windows sets it | Sets the clock right after sleep, and the sound stays clean |
+| The speakers sound flat compared with Windows, where ASUS's Dolby driver processes them | Sound processing: louder with no crackle, wider stereo, clearer voices |
+| The sound may crackle after sleep until a restart if the console's clock is set to local time, as Windows does | Corrects the clock as soon as the console wakes, so the sound stays clean |
 
 Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or off yourself, it turns grey.
 
@@ -81,13 +81,13 @@ Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or 
 
 On the ROG Ally, the system keeps both buttons, so there are no button settings there; saturation goes up to
 100%, because SteamOS already shows the richest colours; the TDP scale ends where the firmware does, at 25 W on
-battery and 30 W on the charger. The fix of Bazzite's menu shows only where the system has that menu.
+battery and 30 W on the charger. The Bazzite menu fix only appears on systems that have that menu.
 
 ORIGAMI also knows the ROG Ally X (RC72LA), the ROG Xbox Ally (RC73YA) and the ROG Xbox Ally X20 (RC74XA), but it
 has not been tried on them yet.
 
-The Sound tile is on all five models, each with the speaker protection ASUS tuned for it, but the sound has been
-listened to only on the ROG Xbox Ally X.
+The Sound tile is available on all five models, each with the speaker protection ASUS tuned for it, but so far
+the sound has only been listened to on the ROG Xbox Ally X.
 
 ## Install
 
@@ -118,8 +118,8 @@ While the gyro fix is on, ORIGAMI keeps one file outside its folders:
 `/etc/inputplumber/devices.d/50-rog_xbox_ally.yaml`.
 
 If another plugin already controls the power, the fans, the lighting, the saturation, the vibration or the sound,
-ORIGAMI leaves that part alone and shows which plugin has it. The same goes for any other program that processes
-the speakers.
+ORIGAMI leaves that part alone and shows which plugin has it. The same goes for any other app that processes the
+speakers' sound.
 
 ## Privacy
 
