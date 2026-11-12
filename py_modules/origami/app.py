@@ -11,6 +11,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from origami.blocks import Context, Emit
+from origami.blocks.battery import BatteryBlock
 from origami.blocks.buttons import ButtonsBlock
 from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
@@ -105,6 +106,7 @@ class Origami:
             "origami-saturation-again", self._saturation_retries
         )
         self._power = PowerBlock(context)
+        self._battery = BatteryBlock(context, environment.data_dir / "battery.json")
         self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
         self._display = DisplayBlock(
             context, self._controller_lock, saturation_top=self._saturation_top
@@ -145,6 +147,7 @@ class Origami:
             return
         finally:
             self._ready.set()
+        await self._battery.start()
         # Frontend calls may come in as soon as the settings are loaded: they wait for these.
         async with self._settings_lock:
             self._owners = await self.conflicts()
@@ -163,7 +166,7 @@ class Origami:
         return self._info
 
     async def telemetry(self) -> Telemetry:
-        return await asyncio.to_thread(read_telemetry, self._env.root)
+        return await asyncio.to_thread(read_telemetry, self._env.root, self._battery.forecast())
 
     async def settings(self) -> Settings:
         await self._started()
@@ -273,6 +276,7 @@ class Origami:
     async def set_game(self, app_id: int | None) -> None:
         """Steam runs this game now, or none: the power and the sound follow its own profiles."""
         await self._started()
+        self._battery.set_game(app_id)
         async with self._settings_lock:
             await self._power.set_game(self._settings, app_id)
             await self._sound.set_game(self._settings, app_id)
@@ -371,6 +375,7 @@ class Origami:
         self._saturation_again.cancel()
         self._fans.stop()
         self._power.stop()
+        self._battery.stop()
         self._gamepad.stop()
         self._buttons.stop()
         self._overlay.stop()

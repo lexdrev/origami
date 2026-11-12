@@ -3,6 +3,7 @@
 
 import pytest
 
+from origami.battery import Forecast
 from origami.telemetry import (
     BatteryTelemetry,
     FanTelemetry,
@@ -16,7 +17,7 @@ from fakes import FakeRoot
 
 
 def test_ally_x(ally_x: FakeRoot) -> None:
-    assert read_telemetry(ally_x.path) == Telemetry(
+    assert read_telemetry(ally_x.path, None) == Telemetry(
         power=PowerTelemetry(
             tdp_limit_w=17,
             tdp_top_w=None,
@@ -32,7 +33,7 @@ def test_ally_x(ally_x: FakeRoot) -> None:
 
 
 def test_other_hardware_reads_as_unknown(fake_root: FakeRoot) -> None:
-    assert read_telemetry(fake_root.path) == Telemetry(
+    assert read_telemetry(fake_root.path, None) == Telemetry(
         power=PowerTelemetry(
             tdp_limit_w=None,
             tdp_top_w=None,
@@ -50,7 +51,7 @@ def test_other_hardware_reads_as_unknown(fake_root: FakeRoot) -> None:
 def test_unreadable_fan_is_skipped(ally_x: FakeRoot) -> None:
     ally_x.write("sys/class/hwmon/hwmon6/fan2_input", "")
 
-    assert read_telemetry(ally_x.path).fans.speeds_rpm == [4600]
+    assert read_telemetry(ally_x.path, None).fans.speeds_rpm == [4600]
 
 
 @pytest.mark.parametrize("value", ["50", "a b", "50 50 50", ""])
@@ -60,11 +61,11 @@ def test_unexpected_vibration_value(ally_x: FakeRoot, value: str) -> None:
         value,
     )
 
-    assert read_telemetry(ally_x.path).gamepad.vibration_pct is None
+    assert read_telemetry(ally_x.path, None).gamepad.vibration_pct is None
 
 
 def test_the_tdp_top_is_the_firmwares(powered: FakeRoot) -> None:
-    power = read_telemetry(powered.path).power
+    power = read_telemetry(powered.path, None).power
 
     assert (power.tdp_top_w, power.battery_tdp_top_w) == (35, 35)
 
@@ -75,18 +76,28 @@ def test_the_rog_ally_takes_no_more_than_25_w_from_the_battery(powered: FakeRoot
     powered.write("sys/class/firmware-attributes/asus-armoury/attributes/ppt_pl1_spl/max_value", 30)
     powered.write("sys/class/power_supply/AC0/online", 1)
 
-    power = read_telemetry(powered.path).power
+    power = read_telemetry(powered.path, None).power
 
     assert (power.tdp_top_w, power.battery_tdp_top_w) == (30, 25)
 
 
 def test_the_battery(powered: FakeRoot) -> None:
-    power = read_telemetry(powered.path).power
+    forecast = Forecast(minutes_left=98, until_pct=10, drain_w=20.0)
+
+    power = read_telemetry(powered.path, forecast).power
 
     assert power.on_battery is True
-    # 40 Wh at 20 W lasts two hours; 74.3 Wh of the design's 80 is 93% of its capacity.
+    # 74.3 Wh of the design's 80 is 93% of its capacity.
     assert power.battery == BatteryTelemetry(
-        percent=54, charging=False, minutes_left=120, capacity_pct=93
+        percent=54, charging=False, minutes_left=98, until_pct=10, drain_w=20.0, capacity_pct=93
+    )
+
+
+def test_the_battery_before_its_first_forecast(powered: FakeRoot) -> None:
+    battery = read_telemetry(powered.path, None).power.battery
+
+    assert battery == BatteryTelemetry(
+        percent=54, charging=False, minutes_left=None, until_pct=None, drain_w=None, capacity_pct=93
     )
 
 
@@ -94,8 +105,12 @@ def test_a_charging_battery_has_no_time_left(powered: FakeRoot) -> None:
     powered.write("sys/class/power_supply/AC0/online", 1)
     powered.write("sys/class/power_supply/BAT0/status", "Charging")
 
-    power = read_telemetry(powered.path).power
+    # The forecast of a look before the charger was plugged in.
+    stale = Forecast(minutes_left=98, until_pct=10, drain_w=20.0)
+
+    power = read_telemetry(powered.path, stale).power
 
     assert power.on_battery is False
     assert power.battery is not None
     assert (power.battery.charging, power.battery.minutes_left) == (True, None)
+    assert (power.battery.until_pct, power.battery.drain_w) == (None, None)

@@ -6,9 +6,10 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from origami.battery import Forecast, find_battery
 from origami.device import DMI
 from origami.sysfs import find_hwmon, read_int, read_text
-from origami.tdp import POWER_SUPPLIES, battery_tdp_top, on_mains, read_tdp_top
+from origami.tdp import battery_tdp_top, on_mains, read_tdp_top
 from origami.vibration import read_driver_strength
 
 ARMOURY = Path("sys/class/firmware-attributes/asus-armoury/attributes")
@@ -20,7 +21,10 @@ class BatteryTelemetry:
     percent: int | None
     charging: bool
     minutes_left: int | None
-    """Until empty at the power drawn now; None on the charger or while nothing is drawn."""
+    """Until the charge is down to `until_pct`; None on the charger or while nothing tells."""
+    until_pct: int | None
+    drain_w: float | None
+    """What the console draws from the battery, as the minutes were counted."""
     capacity_pct: int | None
     """Full charge now against the design's, the battery's wear."""
 
@@ -59,7 +63,8 @@ class Telemetry:
     gamepad: GamepadTelemetry
 
 
-def read_telemetry(root: Path) -> Telemetry:
+def read_telemetry(root: Path, forecast: Forecast | None) -> Telemetry:
+    """The readings now; `forecast` is the battery's, as its block told it last."""
     amdgpu = find_hwmon(root, "amdgpu")
     return Telemetry(
         power=PowerTelemetry(
@@ -69,7 +74,7 @@ def read_telemetry(root: Path) -> Telemetry:
             package_power_w=_scaled(amdgpu, "power1_average", 1_000_000),
             cpu_boost=_flag(root / CPU_BOOST),
             on_battery=not on_mains(root),
-            battery=_read_battery(root),
+            battery=_read_battery(root, forecast),
         ),
         fans=_read_fans(root, amdgpu),
         gamepad=GamepadTelemetry(vibration_pct=read_driver_strength(root)),
@@ -89,28 +94,20 @@ def _read_fans(root: Path, amdgpu: Path | None) -> FanTelemetry:
     )
 
 
-def _find_battery(root: Path) -> Path | None:
-    for supply in sorted((root / POWER_SUPPLIES).glob("*")):
-        # A gamepad's battery is a supply of its device, not the console's.
-        if read_text(supply / "type") == "Battery" and read_text(supply / "scope") != "Device":
-            return supply
-    return None
-
-
-def _read_battery(root: Path) -> BatteryTelemetry | None:
-    battery = _find_battery(root)
+def _read_battery(root: Path, forecast: Forecast | None) -> BatteryTelemetry | None:
+    battery = find_battery(root)
     if battery is None:
         return None
     status = read_text(battery / "status")
-    energy, full = read_int(battery / "energy_now"), read_int(battery / "energy_full")
-    design, power = read_int(battery / "energy_full_design"), read_int(battery / "power_now")
-    minutes = None
-    if status == "Discharging" and energy is not None and power:
-        minutes = round(energy / power * 60)
+    full, design = read_int(battery / "energy_full"), read_int(battery / "energy_full_design")
+    # The forecast is some seconds old: on a charger plugged in meanwhile it tells nothing.
+    told = forecast if status == "Discharging" else None
     return BatteryTelemetry(
         percent=read_int(battery / "capacity"),
         charging=status == "Charging",
-        minutes_left=minutes,
+        minutes_left=None if told is None else told.minutes_left,
+        until_pct=None if told is None else told.until_pct,
+        drain_w=None if told is None else told.drain_w,
         capacity_pct=round(full / design * 100) if full is not None and design else None,
     )
 
