@@ -166,7 +166,9 @@ class Origami:
         return self._info
 
     async def telemetry(self) -> Telemetry:
-        return await asyncio.to_thread(read_telemetry, self._env.root, self._battery.forecast())
+        return await asyncio.to_thread(
+            read_telemetry, self._env.root, self._battery.forecast(), self._fans.held()
+        )
 
     async def settings(self) -> Settings:
         await self._started()

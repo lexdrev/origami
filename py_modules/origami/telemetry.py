@@ -8,6 +8,7 @@ from pathlib import Path
 
 from origami.battery import Forecast, find_battery
 from origami.device import DMI
+from origami.fans import Curve
 from origami.sysfs import find_hwmon, read_int, read_text
 from origami.tdp import battery_tdp_top, on_mains, read_tdp_top
 from origami.vibration import read_driver_strength
@@ -48,6 +49,8 @@ class FanTelemetry:
     speeds_rpm: list[int]
     cpu_temp_c: float | None
     gpu_temp_c: float | None
+    hold_curve: Curve | None
+    """The curve in the firmware while ORIGAMI holds a temperature with it; None otherwise."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,8 +66,8 @@ class Telemetry:
     gamepad: GamepadTelemetry
 
 
-def read_telemetry(root: Path, forecast: Forecast | None) -> Telemetry:
-    """The readings now; `forecast` is the battery's, as its block told it last."""
+def read_telemetry(root: Path, forecast: Forecast | None, hold_curve: Curve | None) -> Telemetry:
+    """The readings now; the battery's forecast and the fans' curve as their blocks told last."""
     amdgpu = find_hwmon(root, "amdgpu")
     return Telemetry(
         power=PowerTelemetry(
@@ -76,12 +79,12 @@ def read_telemetry(root: Path, forecast: Forecast | None) -> Telemetry:
             on_battery=not on_mains(root),
             battery=_read_battery(root, forecast),
         ),
-        fans=_read_fans(root, amdgpu),
+        fans=_read_fans(root, amdgpu, hold_curve),
         gamepad=GamepadTelemetry(vibration_pct=read_driver_strength(root)),
     )
 
 
-def _read_fans(root: Path, amdgpu: Path | None) -> FanTelemetry:
+def _read_fans(root: Path, amdgpu: Path | None, hold_curve: Curve | None) -> FanTelemetry:
     asus = find_hwmon(root, "asus")
     speeds: list[int] = []
     if asus is not None:
@@ -91,6 +94,7 @@ def _read_fans(root: Path, amdgpu: Path | None) -> FanTelemetry:
         speeds_rpm=speeds,
         cpu_temp_c=_scaled(find_hwmon(root, "k10temp"), "temp1_input", 1000),
         gpu_temp_c=_scaled(amdgpu, "temp1_input", 1000),
+        hold_curve=hold_curve,
     )
 
 

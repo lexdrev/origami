@@ -17,7 +17,7 @@ from fakes import FakeRoot
 
 
 def test_ally_x(ally_x: FakeRoot) -> None:
-    assert read_telemetry(ally_x.path, None) == Telemetry(
+    assert read_telemetry(ally_x.path, None, None) == Telemetry(
         power=PowerTelemetry(
             tdp_limit_w=17,
             tdp_top_w=None,
@@ -27,13 +27,15 @@ def test_ally_x(ally_x: FakeRoot) -> None:
             on_battery=False,
             battery=None,
         ),
-        fans=FanTelemetry(speeds_rpm=[4600, 4700], cpu_temp_c=61.625, gpu_temp_c=61.0),
+        fans=FanTelemetry(
+            speeds_rpm=[4600, 4700], cpu_temp_c=61.625, gpu_temp_c=61.0, hold_curve=None
+        ),
         gamepad=GamepadTelemetry(vibration_pct=(50, 50)),
     )
 
 
 def test_other_hardware_reads_as_unknown(fake_root: FakeRoot) -> None:
-    assert read_telemetry(fake_root.path, None) == Telemetry(
+    assert read_telemetry(fake_root.path, None, None) == Telemetry(
         power=PowerTelemetry(
             tdp_limit_w=None,
             tdp_top_w=None,
@@ -43,7 +45,7 @@ def test_other_hardware_reads_as_unknown(fake_root: FakeRoot) -> None:
             on_battery=False,
             battery=None,
         ),
-        fans=FanTelemetry(speeds_rpm=[], cpu_temp_c=None, gpu_temp_c=None),
+        fans=FanTelemetry(speeds_rpm=[], cpu_temp_c=None, gpu_temp_c=None, hold_curve=None),
         gamepad=GamepadTelemetry(vibration_pct=None),
     )
 
@@ -51,7 +53,7 @@ def test_other_hardware_reads_as_unknown(fake_root: FakeRoot) -> None:
 def test_unreadable_fan_is_skipped(ally_x: FakeRoot) -> None:
     ally_x.write("sys/class/hwmon/hwmon6/fan2_input", "")
 
-    assert read_telemetry(ally_x.path, None).fans.speeds_rpm == [4600]
+    assert read_telemetry(ally_x.path, None, None).fans.speeds_rpm == [4600]
 
 
 @pytest.mark.parametrize("value", ["50", "a b", "50 50 50", ""])
@@ -61,11 +63,11 @@ def test_unexpected_vibration_value(ally_x: FakeRoot, value: str) -> None:
         value,
     )
 
-    assert read_telemetry(ally_x.path, None).gamepad.vibration_pct is None
+    assert read_telemetry(ally_x.path, None, None).gamepad.vibration_pct is None
 
 
 def test_the_tdp_top_is_the_firmwares(powered: FakeRoot) -> None:
-    power = read_telemetry(powered.path, None).power
+    power = read_telemetry(powered.path, None, None).power
 
     assert (power.tdp_top_w, power.battery_tdp_top_w) == (35, 35)
 
@@ -76,7 +78,7 @@ def test_the_rog_ally_takes_no_more_than_25_w_from_the_battery(powered: FakeRoot
     powered.write("sys/class/firmware-attributes/asus-armoury/attributes/ppt_pl1_spl/max_value", 30)
     powered.write("sys/class/power_supply/AC0/online", 1)
 
-    power = read_telemetry(powered.path, None).power
+    power = read_telemetry(powered.path, None, None).power
 
     assert (power.tdp_top_w, power.battery_tdp_top_w) == (30, 25)
 
@@ -84,7 +86,7 @@ def test_the_rog_ally_takes_no_more_than_25_w_from_the_battery(powered: FakeRoot
 def test_the_battery(powered: FakeRoot) -> None:
     forecast = Forecast(minutes_left=98, until_pct=10, drain_w=20.0)
 
-    power = read_telemetry(powered.path, forecast).power
+    power = read_telemetry(powered.path, forecast, None).power
 
     assert power.on_battery is True
     # 74.3 Wh of the design's 80 is 93% of its capacity.
@@ -94,7 +96,7 @@ def test_the_battery(powered: FakeRoot) -> None:
 
 
 def test_the_battery_before_its_first_forecast(powered: FakeRoot) -> None:
-    battery = read_telemetry(powered.path, None).power.battery
+    battery = read_telemetry(powered.path, None, None).power.battery
 
     assert battery == BatteryTelemetry(
         percent=54, charging=False, minutes_left=None, until_pct=None, drain_w=None, capacity_pct=93
@@ -108,7 +110,7 @@ def test_a_charging_battery_has_no_time_left(powered: FakeRoot) -> None:
     # The forecast of a look before the charger was plugged in.
     stale = Forecast(minutes_left=98, until_pct=10, drain_w=20.0)
 
-    power = read_telemetry(powered.path, stale).power
+    power = read_telemetry(powered.path, stale, None).power
 
     assert power.on_battery is False
     assert power.battery is not None

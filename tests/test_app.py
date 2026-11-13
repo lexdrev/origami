@@ -31,6 +31,7 @@ from origami.decky_plugins import (
     TRIGGER_OWNERS,
     VIBRATION_OWNERS,
 )
+from origami.fans import HOLD_SLOWEST, Curve, hold_curve
 from origami.gyro import GyroState
 from origami.inputplumber import PASTE, Chord, NoKeyboardError
 from origami.journal import Change
@@ -1704,6 +1705,63 @@ def test_origami_holds_its_fan_curve_and_gives_the_fans_back(
         )
         assert fan_mode(fan_curves) == [2, 2]
         assert Change("fans", "curve", None) not in await app.changes()
+        await asyncio.sleep(0.05)
+        assert fan_mode(fan_curves) == [2, 2]
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.usefixtures("quick_power")
+def test_origami_holds_a_temperature_with_the_fans(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(powered, tmp_path)
+
+        async def held_is(wanted: Curve) -> None:
+            for _ in range(500):
+                if (await app.telemetry()).fans.hold_curve == wanted:
+                    return
+                await asyncio.sleep(0.01)
+            pytest.fail(f"the fans stayed at {(await app.telemetry()).fans.hold_curve}")
+
+        await app.start()
+        assert (await app.telemetry()).fans.hold_curve is None
+
+        # The SoC at 61.6 °C is warmer than asked: the slope goes up as far as it can.
+        await app.update_settings({"fans": {"enabled": True, "hold": True, "target": 55}})
+        assert fan_mode(fan_curves) == [1, 1]
+        await held_is(hold_curve(55, 100))
+
+        # A cool SoC lets the fans down to their slowest.
+        powered.write("sys/class/hwmon/hwmon7/temp1_input", 40000)
+        powered.write("sys/class/hwmon/hwmon5/temp1_input", 39000)
+        await held_is(hold_curve(55, HOLD_SLOWEST))
+
+        # A platform profile written switches the slope off; ORIGAMI switches it on again.
+        powered.write(f"sys/class/hwmon/{fan_curves.name}/pwm2_enable", 2)
+        for _ in range(500):
+            if fan_mode(fan_curves) == [1, 1]:
+                break
+            await asyncio.sleep(0.01)
+        assert fan_mode(fan_curves) == [1, 1]
+
+        # Another target moves the slope with the level found.
+        await app.update_settings({"fans": {"enabled": True, "hold": True, "target": 60}})
+        assert (await app.telemetry()).fans.hold_curve == hold_curve(60, HOLD_SLOWEST)
+        assert fan_speeds(fan_curves, 2) == [20, 89, 128, 166, 204, 230, 255, 255]
+
+        await app.update_settings({"fans": {"enabled": True, "hold": False}})
+        assert fan_speeds(fan_curves) == [0, 26, 64, 102, 140, 191, 255, 255]
+        assert (await app.telemetry()).fans.hold_curve is None
+
+        # A hold switched on again starts afresh, not from the level the last one was left at.
+        powered.write("sys/class/hwmon/hwmon7/temp1_input", 45000)
+        await app.update_settings({"fans": {"enabled": True, "hold": True, "target": 45}})
+        await held_is(hold_curve(45, 40))
+        await app.update_settings({"fans": {"enabled": False, "hold": True, "target": 45}})
+        assert fan_mode(fan_curves) == [2, 2]
         await asyncio.sleep(0.05)
         assert fan_mode(fan_curves) == [2, 2]
         app.stop()
