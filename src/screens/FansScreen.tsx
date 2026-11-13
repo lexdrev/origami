@@ -20,8 +20,8 @@ import { OwnedBy } from "./OwnedBy";
 
 type FanReadings = Telemetry["fans"];
 
-/** Top of the speed gauges; the fans' real top is not measured. */
-const GAUGE_RPM = 7000;
+/** Top of the speed gauges: the fans' full speed on the Ally X, 8000 and 8200 rpm as measured. */
+const GAUGE_RPM = 8000;
 const GAUGE_TICKS = 25;
 const GAUGE_DEGREES = 240;
 /** The picked point when the screen opens: 60 °C, where games spend most of the time. */
