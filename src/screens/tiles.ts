@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { FanCurve, Sound, SoundState, Telemetry, TriggerRumble, Vibration } from "../backend";
-import { curveName } from "../fans";
+import { curveName, heldTarget } from "../fans";
 import type { Messages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
 import { soundStatus } from "../sound";
@@ -69,6 +69,7 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
   const temperatures = [fans?.cpuTempC, fans?.gpuTempC].filter((value) => value != null);
   const hottest = temperatures.length > 0 ? Math.max(...temperatures) : null;
   const fastestFan = fans && fans.speedsRpm.length > 0 ? Math.max(...fans.speedsRpm) : null;
+  const fanTarget = heldTarget(own.fanCurve ?? null);
 
   return {
     power: {
@@ -83,7 +84,10 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
       subtitle: line(
         t.units.rpm,
         hottest !== null && withUnit(number(hottest), t.units.celsius),
-        own.fanCurve !== undefined && t.main.curve(curveName(own.fanCurve, t)),
+        own.fanCurve !== undefined &&
+          (fanTarget !== null
+            ? t.main.target(withUnit(String(fanTarget), t.units.celsius))
+            : t.main.curve(curveName(own.fanCurve, t))),
       ),
     },
     display: {

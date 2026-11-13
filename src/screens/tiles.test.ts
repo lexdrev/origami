@@ -30,7 +30,7 @@ const allyX: Telemetry = {
     onBattery: false,
     battery: null,
   },
-  fans: { speedsRpm: [4600, 4700], cpuTempC: 61.6, gpuTempC: 63.2 },
+  fans: { speedsRpm: [4600, 4700], cpuTempC: 61.6, gpuTempC: 63.2, holdCurve: null },
   gamepad: { vibrationPct: [50, 50] },
 };
 
@@ -45,6 +45,16 @@ describe("tile texts", () => {
       gamepad: { value: "50%", subtitle: `Вибрация ручек · триггеры${NBSP}выкл` },
       sound: { value: "Выкл", subtitle: `Динамики как в${NBSP}системе` },
     });
+  });
+
+  it("name the curve the fans follow, or the temperature they hold", () => {
+    const curve = { enabled: true, points: [0, 10, 25, 40, 55, 75, 100], hold: false, target: 60 };
+    const text = (fanCurve: typeof curve) => tileTexts(allyX, { ...none, fanCurve }, ru).fans.subtitle;
+
+    expect(text(curve)).toBe(`об/мин · 63${NBSP}°C · кривая${NBSP}·${NBSP}Баланс`);
+    expect(text({ ...curve, hold: true })).toBe(`об/мин · 63${NBSP}°C · цель${NBSP}·${NBSP}60${NBSP}°C`);
+    // Switched off, the firmware's own curve runs the fans whatever was asked.
+    expect(text({ ...curve, hold: true, enabled: false })).toBe(`об/мин · 63${NBSP}°C · кривая${NBSP}·${NBSP}Дефолт`);
   });
 
   it("show the volume step and what else the sound does", () => {
@@ -134,7 +144,7 @@ describe("tile texts", () => {
         onBattery: false,
         battery: null,
       },
-      fans: { speedsRpm: [], cpuTempC: null, gpuTempC: null },
+      fans: { speedsRpm: [], cpuTempC: null, gpuTempC: null, holdCurve: null },
       gamepad: { vibrationPct: null },
     };
 

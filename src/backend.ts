@@ -65,7 +65,13 @@ export interface Telemetry {
     onBattery: boolean;
     battery: BatteryTelemetry | null;
   };
-  fans: { speedsRpm: number[]; cpuTempC: number | null; gpuTempC: number | null };
+  fans: {
+    speedsRpm: number[];
+    cpuTempC: number | null;
+    gpuTempC: number | null;
+    /** The curve in the firmware while ORIGAMI holds a temperature with it: °C and percent. */
+    holdCurve: [number, number][] | null;
+  };
   gamepad: { vibrationPct: [number, number] | null };
 }
 
@@ -88,9 +94,12 @@ export interface Lighting {
 
 /** ORIGAMI's curve for both fans (origami.fans.FanCurve); speeds in percent at 30–90 °C. */
 export interface FanCurve {
-  /** Off gives the fans back to the firmware; the points wait for the next time it is on. */
+  /** Off gives the fans back to the firmware; the rest waits for the next time it is on. */
   enabled: boolean;
   points: number[];
+  /** Hold the chip at `target` °C instead of following the points. */
+  hold: boolean;
+  target: number;
 }
 
 /** Handle vibration (origami.vibration.Vibration); strengths in percent. */

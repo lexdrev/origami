@@ -378,6 +378,7 @@ ${fontFaces}
 .og-curve__point { fill: var(--og-accent); stroke: var(--og-surface); stroke-width: 2; transition: y 0.2s ease; }
 .og-curve__point--picked { stroke: var(--og-text); }
 .og-curve__dot { fill: var(--og-surface); stroke: var(--og-text); stroke-width: 2; }
+.og-curve__target { stroke: var(--og-accent); stroke-width: 1; stroke-dasharray: 2 3; }
 
 /* The Power screen's dial: a tick a watt from 7 to 35 W on a 240° arc, every fifth one longer. */
 .og-dial {

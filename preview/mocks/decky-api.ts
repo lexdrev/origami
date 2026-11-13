@@ -54,7 +54,8 @@ let settings: Settings = {
     { appId: 1091500, name: "Cyberpunk 2077", power: { tdp: 25, headroom: true, cpuBoost: null }, active: true },
     { appId: 990080, name: "Hogwarts Legacy", power: { tdp: 20, headroom: false, cpuBoost: false }, active: false },
   ],
-  fans: { enabled: true, points: [0, 10, 25, 40, 55, 75, 100] },
+  // "?hold" starts with the fans holding a temperature.
+  fans: { enabled: true, points: [0, 10, 25, 40, 55, 75, 100], hold: query.has("hold"), target: 60 },
   sound: { enabled: true, volumeDb: 4, width: "moderate", voices: true },
   gameSound: [
     {
@@ -116,6 +117,12 @@ function restoreAll(): Settings {
   return settings;
 }
 
+// The curve the backend keeps in the firmware (origami.fans.hold_curve), at the level it starts from.
+function holdCurve(target: number): [number, number][] {
+  const net = [35, 50, 65, 80, 90].map((least, step): [number, number] => [target + 4 + step, Math.max(40, least)]);
+  return [[30, 40], ...net, [target + 10, 100], [100, 100]];
+}
+
 // "?battery" takes the charger away: the battery tells how long it lasts.
 function telemetry(): Telemetry {
   const wobble = Math.sin(Date.now() / 4000);
@@ -132,7 +139,12 @@ function telemetry(): Telemetry {
         ? { percent: 54, charging: false, minutesLeft: 95, untilPct: 10, drainW: 29.4 + wobble * 0.2, capacityPct: 93 }
         : { percent: 68, charging: true, minutesLeft: null, untilPct: null, drainW: null, capacityPct: 93 },
     },
-    fans: { speedsRpm: [4600 + Math.round(wobble * 80), 4700], cpuTempC: 63.4, gpuTempC: 61 },
+    fans: {
+      speedsRpm: [5200 + Math.round(wobble * 80), 5300],
+      cpuTempC: 63.4,
+      gpuTempC: 61,
+      holdCurve: settings.fans?.enabled && settings.fans.hold ? holdCurve(settings.fans.target) : null,
+    },
     gamepad: { vibrationPct: [100, 100] },
   };
 }

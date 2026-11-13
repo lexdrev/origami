@@ -13,7 +13,7 @@ import type {
   TriggerLevel,
   Triggers,
 } from "../backend";
-import type { FanPreset } from "../fans";
+import type { FanPreset, HoldState } from "../fans";
 import type { LightLevel, PaletteColour } from "../lighting";
 import type { TriggerPattern } from "../triggers";
 import type { TdpPreset } from "../power";
@@ -57,6 +57,8 @@ export interface Messages {
     triggers: { off: string; steady: string; taps: string };
     /** The fan curve on the Fans tile. */
     curve(name: string): string;
+    /** The temperature the fans hold, in its place. */
+    target(temp: string): string;
     /** Under the system in the header, once the daily check has found a newer release. */
     updateAvailable(version: string): string;
     /** The Sound tile while the filter is off, and under it. */
@@ -216,8 +218,12 @@ export interface Messages {
     history(fan: string): string;
     temperatures: readonly [string, string];
     curve(name: string): string;
+    /** The card's head while the fans hold a temperature. */
+    holds(temp: string): string;
     /** Under the curve's name while it is on: what the preset gives and what it costs. */
     curveSubs: Record<FanPreset["id"] | "custom", string>;
+    /** Under the target while it is held: how the fans stand to it. */
+    holdSubs: Record<HoldState, string>;
     curveOff: string;
     presets: Record<FanPreset["id"] | "default" | "custom", string>;
     speedNow(temp: string, speed: string): string;
@@ -226,6 +232,12 @@ export interface Messages {
     point: string;
     speedAt(temp: string): string;
     safety: string;
+    mode: string;
+    modes: { curve: string; hold: string };
+    target: string;
+    holdNote: string;
+    /** In place of the note while the fans run at full speed and the chip is warmer than asked. */
+    holdFull: string;
     ownedBy(plugin: string): string;
     ownedText(plugin: string): string;
   };

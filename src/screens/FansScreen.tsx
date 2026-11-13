@@ -5,7 +5,22 @@ import { useEffect, useState } from "react";
 
 import type { FanCurve, Telemetry } from "../backend";
 import { fanHistory } from "../fanHistory";
-import { curveName, DEFAULT_FAN_CURVE, FAN_PRESETS, FAN_STEP, FAN_TEMPS, movePoint, presetOf, speedAt } from "../fans";
+import {
+  curveName,
+  curveSteps,
+  DEFAULT_FAN_CURVE,
+  FAN_PRESETS,
+  FAN_STEP,
+  FAN_TEMPS,
+  heldTarget,
+  HOLD_TARGETS,
+  holdState,
+  movePoint,
+  ownCurve,
+  presetOf,
+  speedNow,
+  type CurvePoint,
+} from "../fans";
 import { useMessages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
 import { back } from "../navigation";
@@ -50,7 +65,7 @@ export function FansScreen() {
         (owner !== null ? (
           <OwnedBy title={t.fans.ownedBy(owner)} text={t.fans.ownedText(owner)} />
         ) : (
-          <CurveCard curve={current.value.fans} hottest={hottestOf(fans)} />
+          <CurveCard curve={current.value.fans} fans={fans} />
         ))}
     </Screen>
   );
@@ -159,37 +174,86 @@ function Temperatures({ fans }: { fans: FanReadings | null }) {
   );
 }
 
+const percent = (value: number) => `${value}%`;
+
 /**
- * ORIGAMI's curve for both fans: the switch in the head, and while it is on the curve with the
- * temperature now, the presets with the custom curve last, and the point picked with its speed.
+ * What runs both fans: the switch in the head, and while it is on the choice between the curve and
+ * a temperature to hold, each with the curve the firmware follows and the temperature now on it.
  */
-function CurveCard({ curve, hottest }: { curve: FanCurve | null; hottest: number | null }) {
+function CurveCard({ curve, fans }: { curve: FanCurve | null; fans: FanReadings | null }) {
   const t = useMessages();
-  const [point, setPoint] = useState(FIRST_POINT);
+  const current = curve ?? DEFAULT_FAN_CURVE;
   const on = curve?.enabled ?? false;
-  const points = curve?.points ?? DEFAULT_FAN_CURVE.points;
-  const preset = presetOf(points);
-  const percent = (value: number) => `${value}%`;
-  const speed = points[point] ?? 0;
-  const temp = (value: number) => withUnit(String(value), t.units.celsius);
+  const hottest = hottestOf(fans);
+  const rpm = fans?.speedsRpm[0] ?? null;
+  const held = fans?.holdCurve ?? null;
+  const state = held !== null && hottest !== null ? holdState(held, current.target, hottest) : "holding";
+  const target = heldTarget(curve);
+  const subtitle = current.hold
+    ? t.fans.holdSubs[state]
+    : t.fans.curveSubs[presetOf(current.points)?.id ?? "custom"];
   return (
     <Card
-      title={t.fans.curve(curveName(curve, t))}
-      subtitle={on ? t.fans.curveSubs[preset?.id ?? "custom"] : t.fans.curveOff}
+      title={
+        target !== null
+          ? t.fans.holds(withUnit(String(target), t.units.celsius))
+          : t.fans.curve(curveName(curve, t))
+      }
+      subtitle={on ? subtitle : t.fans.curveOff}
       toggle={{
         value: on,
         action: t.actions.toggle,
         onChange: (enabled) => {
-          setFans({ enabled, points: [...points] });
+          setFans({ ...current, enabled });
         },
       }}
     >
-      {hottest !== null && (
+      <span className="og-card__label">{t.fans.mode}</span>
+      <ChoiceGroup
+        label={t.fans.mode}
+        choices={[
+          { value: "curve", label: t.fans.modes.curve },
+          { value: "hold", label: t.fans.modes.hold },
+        ]}
+        value={current.hold ? "hold" : "curve"}
+        action={t.actions.select}
+        onChange={(mode) => {
+          setFans({ ...current, enabled: true, hold: mode === "hold" });
+        }}
+      />
+      {current.hold ? (
+        <HoldSettings curve={current} held={held} hottest={hottest} rpm={rpm} full={state === "full"} />
+      ) : (
+        <CurveSettings curve={current} hottest={hottest} rpm={rpm} />
+      )}
+    </Card>
+  );
+}
+
+/** The user's own curve: the presets with the custom curve last, and the point picked with its speed. */
+interface CurveSettingsProps {
+  curve: FanCurve;
+  hottest: number | null;
+  /** Fan 1 now: it tells the step the fans are on. */
+  rpm: number | null;
+}
+
+function CurveSettings({ curve, hottest, rpm }: CurveSettingsProps) {
+  const t = useMessages();
+  const [point, setPoint] = useState(FIRST_POINT);
+  const { points } = curve;
+  const preset = presetOf(points);
+  const speed = points[point] ?? 0;
+  const now = hottest === null ? null : speedNow(ownCurve(points), hottest, rpm);
+  const temp = (value: number) => withUnit(String(value), t.units.celsius);
+  return (
+    <>
+      {hottest !== null && now !== null && (
         <span className="og-card__label">
-          {t.fans.speedNow(temp(Math.round(hottest)), percent(speedAt(points, hottest)))}
+          {t.fans.speedNow(temp(Math.round(hottest)), percent(now))}
         </span>
       )}
-      <CurveChart points={points} picked={point} hottest={hottest} />
+      <CurveChart curve={ownCurve(points)} picked={point} hottest={hottest} speed={now} />
       <span className="og-card__label">{t.fans.preset}</span>
       <ChoiceGroup
         label={t.fans.preset}
@@ -198,7 +262,7 @@ function CurveCard({ curve, hottest }: { curve: FanCurve | null; hottest: number
         action={t.actions.select}
         onChange={(id) => {
           const choice = FAN_PRESETS.find((candidate) => candidate.id === id);
-          if (choice !== undefined) setFans({ enabled: true, points: [...choice.points] });
+          if (choice !== undefined) setFans({ ...curve, enabled: true, points: [...choice.points] });
         }}
         custom={{ label: t.fans.presets.custom, selected: preset === undefined }}
       />
@@ -231,11 +295,57 @@ function CurveCard({ curve, hottest }: { curve: FanCurve | null; hottest: number
         lessLabel={t.actions.less}
         moreLabel={t.actions.more}
         onChange={(value) => {
-          setFans({ enabled: true, points: movePoint(points, point, value) });
+          setFans({ ...curve, enabled: true, points: movePoint(points, point, value) });
         }}
       />
       <span className="og-choices__note">{t.fans.safety}</span>
-    </Card>
+    </>
+  );
+}
+
+interface HoldSettingsProps {
+  curve: FanCurve;
+  /** The curve the backend keeps in the firmware; null until the readings bring it. */
+  held: readonly CurvePoint[] | null;
+  hottest: number | null;
+  rpm: number | null;
+  /** The fans run at full speed and the chip is still warmer than asked. */
+  full: boolean;
+}
+
+/** A temperature to hold: the curve the firmware follows now, and the target on a slider. */
+function HoldSettings({ curve, held, hottest, rpm, full }: HoldSettingsProps) {
+  const t = useMessages();
+  const now = held === null || hottest === null ? null : speedNow(held, hottest, rpm);
+  const temp = (value: number) => withUnit(String(value), t.units.celsius);
+  return (
+    <>
+      {hottest !== null && (
+        <span className="og-card__label">
+          {t.fans.speedNow(temp(Math.round(hottest)), now === null ? t.unknown : percent(now))}
+        </span>
+      )}
+      <CurveChart curve={held ?? []} picked={null} hottest={hottest} speed={now} target={curve.target} />
+      <div className="og-card__head">
+        <span className="og-card__label">{t.fans.target}</span>
+        <span className="og-card__value">{temp(curve.target)}</span>
+      </div>
+      <Slider
+        label={t.fans.target}
+        value={curve.target}
+        min={HOLD_TARGETS.min}
+        max={HOLD_TARGETS.max}
+        step={1}
+        track={filledTrack(curve.target, HOLD_TARGETS.min, HOLD_TARGETS.max)}
+        thumb="var(--og-accent)"
+        lessLabel={t.actions.less}
+        moreLabel={t.actions.more}
+        onChange={(target) => {
+          setFans({ ...curve, enabled: true, target });
+        }}
+      />
+      <span className="og-choices__note">{full ? t.fans.holdFull : t.fans.holdNote}</span>
+    </>
   );
 }
 
@@ -247,13 +357,33 @@ const SPEED_LINES = [100, 75, 50, 25, 0] as const;
 const chartX = (temp: number) =>
   CHART.left + ((temp - CHART_TEMPS.low) * (CHART.right - CHART.left)) / (CHART_TEMPS.high - CHART_TEMPS.low);
 const chartY = (speed: number) => CHART.bottom - (speed * (CHART.bottom - CHART.top)) / 100;
+const chartPoints = (curve: readonly CurvePoint[]) =>
+  curve.map(([temp, speed]) => `${chartX(temp).toFixed(1)},${chartY(speed).toFixed(1)}`).join(" ");
 
-/** The curve with its seven points, the picked one marked, and where the temperature is now. */
-function CurveChart({ points, picked, hottest }: { points: readonly number[]; picked: number; hottest: number | null }) {
+interface CurveChartProps {
+  /** The eight points the firmware follows; none draws the empty frame. */
+  curve: readonly CurvePoint[];
+  /** The user's point picked for the slider; null for a curve that has no points to set. */
+  picked: number | null;
+  hottest: number | null;
+  /** The speed the fans run at now, in percent: the dot's height. */
+  speed: number | null;
+  /** The temperature held, marked on the chart. */
+  target?: number;
+}
+
+/**
+ * The curve the firmware follows, in the steps it takes, and where the temperature and the fans are
+ * now: the dot stands off the line while the fans still keep the step above.
+ * The user's curve shows its seven points with the picked one marked, and the step to full speed at
+ * 100 °C dashed as not theirs; a curve that holds a temperature is one line with the target marked.
+ */
+function CurveChart({ curve, picked, hottest, speed, target }: CurveChartProps) {
   const t = useMessages();
-  const line = FAN_TEMPS.map((temp, index) => `${chartX(temp).toFixed(1)},${chartY(points[index] ?? 0).toFixed(1)}`);
-  const last = points[points.length - 1] ?? 0;
-  const tail = `${chartX(90).toFixed(1)},${chartY(last).toFixed(1)} ${chartX(100).toFixed(1)},${chartY(100).toFixed(1)}`;
+  const own = picked !== null;
+  const steps = curveSteps(curve);
+  // The last point's two steps are the firmware's own: up to 100 °C, and full speed there.
+  const line = own ? steps.slice(0, -2) : steps;
   const now = hottest === null ? null : Math.min(CHART_TEMPS.high, Math.max(CHART_TEMPS.low, hottest));
   return (
     <svg className="og-curve" viewBox={`0 0 ${CHART.width} ${CHART.height}`} role="img" aria-label={t.fans.chart}>
@@ -279,25 +409,31 @@ function CurveChart({ points, picked, hottest }: { points: readonly number[]; pi
           </text>
         </g>
       ))}
+      {target !== undefined && (
+        <line className="og-curve__target" x1={chartX(target)} y1={CHART.top} x2={chartX(target)} y2={CHART.bottom} />
+      )}
       {now !== null && (
         <line className="og-curve__now" x1={chartX(now)} y1={CHART.top} x2={chartX(now)} y2={CHART.bottom} />
       )}
-      <polyline className="og-curve__line" points={line.join(" ")} />
-      <polyline className="og-curve__tail" points={tail} />
-      {FAN_TEMPS.map((temp, index) => {
-        const size = index === picked ? 12 : 9;
-        return (
-          <rect
-            key={temp}
-            className={index === picked ? "og-curve__point og-curve__point--picked" : "og-curve__point"}
-            x={chartX(temp) - size / 2}
-            y={chartY(points[index] ?? 0) - size / 2}
-            width={size}
-            height={size}
-          />
-        );
-      })}
-      {now !== null && <circle className="og-curve__dot" cx={chartX(now)} cy={chartY(speedAt(points, now))} r="5" />}
+      <polyline className="og-curve__line" points={chartPoints(line)} />
+      {own && <polyline className="og-curve__tail" points={chartPoints(steps.slice(-3))} />}
+      {own &&
+        curve.slice(0, FAN_TEMPS.length).map(([temp, speed], index) => {
+          const size = index === picked ? 12 : 9;
+          return (
+            <rect
+              key={temp}
+              className={index === picked ? "og-curve__point og-curve__point--picked" : "og-curve__point"}
+              x={chartX(temp) - size / 2}
+              y={chartY(speed) - size / 2}
+              width={size}
+              height={size}
+            />
+          );
+        })}
+      {now !== null && speed !== null && (
+        <circle className="og-curve__dot" cx={chartX(now)} cy={chartY(speed)} r="5" />
+      )}
     </svg>
   );
 }
