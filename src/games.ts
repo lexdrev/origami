@@ -12,6 +12,9 @@ import { createStore } from "./store";
 
 const LOOK_MS = 1000;
 
+/** What Steam calls starting a game, among the actions it tells of. */
+const LAUNCH = "LaunchApp";
+
 /** The game Steam runs now; null while none runs. */
 export const runningGame = createStore<Game | null>(null);
 
@@ -52,5 +55,52 @@ export function watchRunningGame(): () => void {
   const timer = setInterval(look, LOOK_MS);
   return () => {
     clearInterval(timer);
+  };
+}
+
+/** How long Steam may take to answer with a game's details; it answers at once. */
+const DETAILS_WAIT_MS = 300;
+
+/** The game's launch options as Steam has them now; null when Steam does not answer in time. */
+export function launchOptions(appId: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const asked: { answered?: true; registration?: { unregister: () => void } } = {};
+    const answer = (options: string | null) => {
+      if (asked.answered) return;
+      asked.answered = true;
+      clearTimeout(timer);
+      asked.registration?.unregister();
+      resolve(options);
+    };
+    const timer = setTimeout(() => {
+      answer(null);
+    }, DETAILS_WAIT_MS);
+    const registration = window.SteamClient.Apps.RegisterForAppDetails(appId, (details) => {
+      answer(details.strLaunchOptions);
+    });
+    // Steam may answer before the registration is returned.
+    if (asked.answered) registration.unregister();
+    else asked.registration = registration;
+  });
+}
+
+/**
+ * Starts telling the backend of every game Steam launches, before the game's process is there:
+ * the sharpness is ready by the time the game loads its Vulkan layers. Returns the function that
+ * stops it.
+ */
+export function watchGameLaunches(): () => void {
+  const registration = window.SteamClient.Apps.RegisterForGameActionStart((_actionId, appId, action) => {
+    const id = Number(appId);
+    if (action !== LAUNCH || !Number.isSafeInteger(id) || id <= 0) return;
+    // Launch options that set the sharpening layer themselves keep it, so the backend reads them.
+    launchOptions(id)
+      .then((options) => backend.gameStarting(id, options))
+      .catch((error: unknown) => {
+        console.warn("ORIGAMI: cannot tell the backend that a game is launched", error);
+      });
+  });
+  return () => {
+    registration.unregister();
   };
 }

@@ -23,7 +23,14 @@ export const ru: Messages = {
   units: { watts: "Вт", rpm: "об/мин", celsius: "°C" },
   main: {
     settings: "Настройки",
-    tiles: { power: "Питание", fans: "Вентиляторы", display: "Дисплей и свет", gamepad: "Геймпад", sound: "Звук" },
+    tiles: {
+      power: "Питание",
+      fans: "Вентиляторы",
+      display: "Дисплей и свет",
+      gamepad: "Геймпад",
+      sound: "Звук",
+      service: "Сервис",
+    },
     powerNow: (watts) => `сейчас\u00a0${watts}`,
     boost: (on) => (on ? "CPU\u00a0буст\u00a0вкл" : "CPU\u00a0буст\u00a0выкл"),
     displaySub: "Насыщенность",
@@ -43,6 +50,9 @@ export const ru: Messages = {
     soundNoSpeakers: "Динамики не\u00a0найдены",
     soundWidths: { off: "объём\u00a0выкл", moderate: "объём\u00a0умеренно", strong: "объём\u00a0сильно" },
     soundVoices: "голоса\u00a0чётче",
+    sharpnessSub: "Резкость в\u00a0играх",
+    sharpnessOff: "Выкл",
+    sharpnessOther: "Другой плагин",
   },
   settings: {
     title: "Настройки",
@@ -235,6 +245,47 @@ export const ru: Messages = {
     clockFixOff: "После сна звук может хрипеть до\u00a0перезагрузки",
     clockFixWhy: "Часы консоли хранят местное время — так делает Windows",
   },
+  service: {
+    title: "Сервис",
+    sharpness: "Резкость",
+    status: {
+      off: "Выключена · игры как есть",
+      ready: "Включена · сработает при\u00a0запуске игры",
+      working: "Работает в\u00a0этой игре",
+      turning_on: "Включится после перезапуска игры",
+      turning_off: "Выключится после перезапуска игры",
+      new_strength: "Новая сила\u00a0— после перезапуска игры",
+      missing: "Не\u00a0загрузилась · игра ещё запускается или рисует не\u00a0через Vulkan",
+    },
+    sharpnessNote: "Делает картинку игры чётче · как Radeon Image Sharpening на\u00a0Windows",
+    launchNote: "Игра берёт резкость при запуске: уже запущенную нужно перезапустить",
+    strength: "Сила",
+    strengthNote: "Средне подходит большинству игр · слишком сильная даёт ореолы у\u00a0контуров",
+    presets: { soft: "Мягко", medium: "Средне", strong: "Сильно", custom: "Своя" },
+    gameSharpness: "Своя резкость для игры",
+    profiles: "Профили резкости",
+    profilesSub: "Игра не\u00a0запущена · действует общая",
+    profilesTitleSub: "Резкость · свои настройки для\u00a0игр",
+    profilesHint:
+      "Чтобы добавить игру, запустите её и\u00a0включите «Своя резкость для\u00a0игры» вверху экрана «Сервис». Профиль создастся копией общей. Игра берёт резкость при\u00a0запуске.",
+    summary: (strength) => `Сила\u00a0${strength}%`,
+    ownedBy: (plugin) => `Резкостью управляет ${plugin}`,
+    ownedText: (plugin) =>
+      `${plugin} сам пишет настройки слоя резкости, поэтому ORIGAMI их не\u00a0трогает. Выключите или удалите ${plugin} в\u00a0Decky\u00a0— настройки резкости появятся здесь.`,
+    launcherOwnedBy: (plugin) => `В\u00a0этой игре резкостью управляет ${plugin}`,
+    launcherText: (game) =>
+      `${game} запускается через этот плагин: он сам собирает графические слои игры, и\u00a0резкость ORIGAMI в\u00a0неё не\u00a0попадает.`,
+    launcherSharpening: {
+      shaders: "Резкость для этой игры включается в\u00a0нём, на\u00a0вкладке «Шейдеры».",
+    },
+    launcherOwn: "Резкость для этой игры включается в\u00a0нём.",
+    launcherAdvice: (companion) =>
+      `Чтобы работала резкость ORIGAMI, отключите этот плагин для игры. Генерацию кадров тогда можно включить в\u00a0${companion}: с\u00a0ним резкость ORIGAMI работает.`,
+    launchOwned: "В\u00a0этой игре резкостью управляют её параметры запуска",
+    launchText: (game) =>
+      `В\u00a0параметрах запуска ${game} заданы переменные vkBasalt, поэтому ORIGAMI резкость в\u00a0неё не\u00a0добавляет. Уберите их из\u00a0параметров запуска\u00a0— настройки резкости появятся здесь.`,
+    companionText: (plugin) => `С\u00a0генерацией кадров ${plugin} резкость ORIGAMI работает.`,
+  },
   display: {
     title: "Дисплей и свет",
     saturation: "Насыщенность",
@@ -399,6 +450,7 @@ export const ru: Messages = {
       "gamepad.vibration": "Сила вибрации · контроллер",
       "gamepad.gyro": "Оси гироскопа · файл в\u00a0/etc",
       "sound.filter": "Обработка звука · PipeWire",
+      "sharpness.layer": "Резкость в играх · слой Vulkan",
     },
     restore: "Вернуть всё как было",
     restoreAsk: "Вернуть всё как было?",

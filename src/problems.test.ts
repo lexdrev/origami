@@ -29,6 +29,8 @@ const fresh: Settings = {
   gameSound: [],
   fans: null,
   sound: null,
+  sharpness: null,
+  gameSharpness: [],
 };
 
 const alone: Conflicts = {
@@ -40,6 +42,7 @@ const alone: Conflicts = {
   boost: null,
   fans: null,
   sound: null,
+  sharpness: null,
 };
 
 const sources = (changes: Partial<ProblemSources> = {}): ProblemSources => ({
@@ -52,10 +55,11 @@ const sources = (changes: Partial<ProblemSources> = {}): ProblemSources => ({
   contested: false,
   clockCrackle: null,
   overlayMenu: null,
+  sharpnessNotice: false,
   ...changes,
 });
 
-const clear = { power: 0, fans: 0, display: 0, gamepad: 0, sound: 0 };
+const clear = { power: 0, fans: 0, display: 0, gamepad: 0, sound: 0, service: 0 };
 
 describe("problems on the tiles", () => {
   it("are the four fixes on the Gamepad tile of a clean system", () => {
@@ -89,9 +93,17 @@ describe("problems on the tiles", () => {
       boost: "Power Plugin",
       fans: "Power Plugin",
       sound: "Sound Plugin",
+      sharpness: "Sharpness Plugin",
     };
 
-    expect(tileProblems(sources({ conflicts }))).toEqual({ power: 1, fans: 1, display: 2, gamepad: 4, sound: 1 });
+    expect(tileProblems(sources({ conflicts }))).toEqual({
+      power: 1,
+      fans: 1,
+      display: 2,
+      gamepad: 4,
+      sound: 1,
+      service: 1,
+    });
     expect(tileProblems(sources({ conflicts: { ...alone, triggers: "Rumble Plugin" } })).gamepad).toBe(4);
   });
 
@@ -154,5 +166,14 @@ describe("red fixes", () => {
     expect(buttonUnset(null, null)).toBe(true);
     expect(buttonUnset("none", null)).toBe(false);
     expect(buttonUnset(null, "origami")).toBe(false);
+  });
+
+  it("count a game whose launch options keep the sharpness until its screen has said so", () => {
+    expect(tileProblems(sources({ sharpnessNotice: true })).service).toBe(1);
+    expect(tileProblems(sources({ sharpnessNotice: false })).service).toBe(0);
+    // A plugin that owns the sharpness everywhere is counted once, and for as long as it is enabled.
+    const owned = { ...alone, sharpness: "Sharpness Plugin" };
+    expect(tileProblems(sources({ sharpnessNotice: true, conflicts: owned })).service).toBe(1);
+    expect(tileProblems(sources({ sharpnessNotice: false, conflicts: owned })).service).toBe(1);
   });
 });

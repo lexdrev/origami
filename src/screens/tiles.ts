@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { FanCurve, Sound, SoundState, Telemetry, TriggerRumble, Vibration } from "../backend";
+import type { FanCurve, Sharpness, Sound, SoundState, Telemetry, TriggerRumble, Vibration } from "../backend";
 import { curveName, heldTarget } from "../fans";
 import type { Messages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
@@ -19,6 +19,7 @@ export interface TileTexts {
   display: TileText;
   gamepad: TileText;
   sound: TileText;
+  service: TileText;
 }
 
 /** What ORIGAMI sets itself and reads apart from the telemetry. */
@@ -49,6 +50,11 @@ export interface OwnValues {
   sound: Sound | null | undefined | "unknown" | "program";
   /** Whether the speakers play and the filter runs; null until read. */
   soundState: SoundState | null;
+  /**
+   * The sharpness the next game starts with, null until switched on; undefined while another
+   * plugin sets it, "unknown" until the settings and the other plugins are read.
+   */
+  sharpness: Sharpness | null | undefined | "unknown";
 }
 
 const SEPARATOR = " · ";
@@ -99,6 +105,17 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
       subtitle: line(t.main.gamepadSub, own.triggers !== undefined && t.main.triggers[triggerLine(own.triggers)]),
     },
     sound: soundText(own.sound, own.soundState, t),
+    service: serviceText(own.sharpness, t),
+  };
+}
+
+/** The Service tile shows the sharpness, the one setting of its screen that has a value. */
+function serviceText(sharpness: OwnValues["sharpness"], t: Messages): TileText {
+  if (sharpness === "unknown") return { value: t.unknown, subtitle: "" };
+  if (sharpness === undefined) return { value: t.unknown, subtitle: t.main.sharpnessOther };
+  return {
+    value: sharpness?.enabled ? `${sharpness.strength}%` : t.main.sharpnessOff,
+    subtitle: t.main.sharpnessSub,
   };
 }
 

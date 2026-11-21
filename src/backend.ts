@@ -39,6 +39,8 @@ export interface Info {
   fanHold: boolean;
   /** The system has an overlay menu of its own that ORIGAMI can keep in sight. */
   overlayMenu: boolean;
+  /** The system has the layer ORIGAMI sharpens the games with. */
+  sharpness: boolean;
 }
 
 export interface BatteryTelemetry {
@@ -220,6 +222,46 @@ export interface SoundState {
   clockFix: boolean;
 }
 
+/** Sharpening of the games' picture (origami.sharpness.Sharpness). */
+export interface Sharpness {
+  enabled: boolean;
+  /** Percent of the sharpening's range, 0-100. */
+  strength: number;
+}
+
+/** A game's own sharpness, made as a copy of the general one (origami.sharpness.GameSharpness). */
+export interface GameSharpness {
+  /** Steam's app id; non-Steam shortcuts have one as well. */
+  appId: number;
+  /** The game's name as Steam showed it, for the list while the game is not running. */
+  name: string;
+  sharpness: Sharpness;
+  /** The game starts with this sharpness; off, it starts with the general one and this waits. */
+  active: boolean;
+}
+
+/** How the sharpness stands in the game that runs now (origami.sharpness.GameState). */
+export type SharpnessGameState =
+  | "no_game"
+  | "working"
+  | "off"
+  | "turning_on"
+  | "turning_off"
+  | "new_strength"
+  | "missing"
+  | "managed";
+
+/** What the Service screen shows of the sharpness besides the settings (origami.blocks.sharpness.SharpnessState). */
+export interface SharpnessState {
+  game: SharpnessGameState;
+  /** The plugin whose launch wrapper keeps the sharpness in the running game; null where the launch options do it themselves. */
+  owner: string | null;
+  /** Where that plugin has a sharpening of its own: a key of the texts. */
+  sharpening: string | null;
+  /** An enabled frame generation plugin in whose games ORIGAMI's sharpness works. */
+  companion: string | null;
+}
+
 /** What the gyroscope's axes need here (origami.gyro.GyroState). */
 export type GyroState = "unavailable" | "fixed_in_system" | "foreign" | "wrong" | "fixed" | "outdated";
 
@@ -266,6 +308,9 @@ export interface Settings {
   /** Null until the user switches it on; the speakers play as the system has them until then. */
   sound: Sound | null;
   gameSound: GameSound[];
+  /** Null until the user switches it on; the games show as they draw until then. */
+  sharpness: Sharpness | null;
+  gameSharpness: GameSharpness[];
 }
 
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
@@ -280,6 +325,8 @@ export interface Conflicts {
   fans: string | null;
   /** A plugin with a filter of its own in front of the speakers. */
   sound: string | null;
+  /** A plugin that writes the sharpening layer's configuration itself. */
+  sharpness: string | null;
 }
 
 export interface Change {
@@ -308,5 +355,7 @@ export const backend = {
   getSound: callable<[], SoundState>("get_sound"),
   gameStarted: callable("game_started"),
   setGame: callable<[appId: number | null]>("set_game"),
+  gameStarting: callable<[appId: number, launchOptions: string | null]>("game_starting"),
+  getSharpness: callable<[], SharpnessState>("get_sharpness"),
   setSteamTdpLimit: callable<[on: boolean]>("set_steam_tdp_limit"),
 };

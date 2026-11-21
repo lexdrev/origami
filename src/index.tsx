@@ -11,8 +11,9 @@ import { watchButtonActions } from "./buttonActions";
 import { watchDeckyPlugins } from "./deckyPlugins";
 import { PluginTitle } from "./PluginTitle";
 import { recordFanHistory } from "./fanHistory";
-import { watchRunningGame } from "./games";
+import { watchGameLaunches, watchRunningGame } from "./games";
 import { fixKeyboardPaste } from "./keyboardPaste";
+import { restoreNotices } from "./notices";
 import { watchGameStarts, watchSteamTdpLimit } from "./power";
 import { watchQuickAccessButton } from "./qamAssist";
 import { createOwnTab } from "./qamTab";
@@ -28,6 +29,8 @@ export default definePlugin(() => {
   const stopBackendStart = watchBackendStart();
   // A newer release the update check found before Steam restarted is offered again, without asking.
   restoreLastCheck();
+  // What a screen has said once stays said after Steam restarts.
+  restoreNotices();
   // gamescope forgets ORIGAMI's saturation when it restarts and Steam sets its own as it starts;
   // the plugin loads again after that, so this is the moment to bring ORIGAMI's back.
   backend.restoreSaturation().catch((error: unknown) => {
@@ -43,6 +46,8 @@ export default definePlugin(() => {
   const stopGameStarts = watchGameStarts();
   // A game with power settings of its own runs with them.
   const stopRunningGame = watchRunningGame();
+  // A game is sharpened from its start, so the backend hears of the launch itself.
+  const stopGameLaunches = watchGameLaunches();
   const stopFanHistory = recordFanHistory();
   // The paste key of Steam's on-screen keyboard types a "v" in gamescope without this.
   const stopKeyboardPaste = fixKeyboardPaste(backend.paste);
@@ -68,6 +73,7 @@ export default definePlugin(() => {
       stopSteamTdpLimit();
       stopGameStarts();
       stopRunningGame();
+      stopGameLaunches();
       stopFanHistory();
       stopKeyboardPaste();
       stopDeckyPlugins();

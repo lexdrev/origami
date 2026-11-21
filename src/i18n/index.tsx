@@ -18,6 +18,7 @@ import type { LightLevel, PaletteColour } from "../lighting";
 import type { TriggerPattern } from "../triggers";
 import type { TdpPreset } from "../power";
 import type { SaturationPreset } from "../saturation";
+import type { SharpnessPreset, SharpnessStatus } from "../sharpness";
 import type { VibrationPreset } from "../vibration";
 import { en } from "./en";
 import { ru } from "./ru";
@@ -48,7 +49,7 @@ export interface Messages {
   units: { watts: string; rpm: string; celsius: string };
   main: {
     settings: string;
-    tiles: { power: string; fans: string; display: string; gamepad: string; sound: string };
+    tiles: { power: string; fans: string; display: string; gamepad: string; sound: string; service: string };
     powerNow(watts: string): string;
     boost(on: boolean): string;
     displaySub: string;
@@ -75,6 +76,10 @@ export interface Messages {
     soundNoSpeakers: string;
     soundWidths: Record<SoundWidth, string>;
     soundVoices: string;
+    /** Under the Service tile; its value while the sharpness is off, and while another plugin sets it. */
+    sharpnessSub: string;
+    sharpnessOff: string;
+    sharpnessOther: string;
   };
   settings: {
     title: string;
@@ -273,6 +278,41 @@ export interface Messages {
     clockFixOn: string;
     clockFixOff: string;
     clockFixWhy: string;
+  };
+  service: {
+    title: string;
+    sharpness: string;
+    /** Under the card's title: by its switch, and by the running game. */
+    status: Record<SharpnessStatus, string>;
+    /** What the sharpening is, and when a game takes it. */
+    sharpnessNote: string;
+    launchNote: string;
+    strength: string;
+    strengthNote: string;
+    presets: Record<SharpnessPreset["id"] | "custom", string>;
+    /** The switch of the running game's own sharpness, and the list of such games. */
+    gameSharpness: string;
+    profiles: string;
+    profilesSub: string;
+    profilesTitleSub: string;
+    profilesHint: string;
+    /** A game's sharpness in a line of the list. */
+    summary(strength: number): string;
+    ownedBy(plugin: string): string;
+    ownedText(plugin: string): string;
+    /** In a game started through a plugin's own wrapper: whose the sharpness is, and why. */
+    launcherOwnedBy(plugin: string): string;
+    launcherText(game: string): string;
+    /** Where that plugin has its own sharpening, by the key the backend names; else the plain sentence. */
+    launcherSharpening: Partial<Record<string, string>>;
+    launcherOwn: string;
+    /** How to have ORIGAMI's sharpness in that game, and the frame generation it works with. */
+    launcherAdvice(companion: string): string;
+    /** In a game whose launch options set the sharpening layer by themselves. */
+    launchOwned: string;
+    launchText(game: string): string;
+    /** Under that: a frame generation plugin in whose games ORIGAMI's sharpness does work. */
+    companionText(plugin: string): string;
   };
   display: {
     title: string;

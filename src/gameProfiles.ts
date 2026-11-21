@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { GamePower, GameSound, Power, Settings, Sound } from "./backend";
+import type { GamePower, GameSharpness, GameSound, Power, Settings, Sharpness, Sound } from "./backend";
 import type { Messages } from "./i18n";
 import { withUnit } from "./i18n/format";
 
-// A game can have power settings and a sound of its own (ORIGAMI.md, game profiles), each with its
-// own switch. The first time the user switches a profile on, it starts as a copy of the general
+// A game can have power settings, a sound and a sharpness of its own (ORIGAMI.md, game profiles),
+// each with its own switch. The first time the user switches a profile on, it starts as a copy of the general
 // settings; switched off, it is kept, waiting, until it is switched on again or removed from the list.
 
 /** A game on the Power screen: the one Steam runs, or one picked from the list of profiles. */
@@ -70,4 +70,37 @@ export function soundSummary(sound: Sound, t: Messages): string {
   return [t.sound.volumes[sound.volumeDb], t.main.soundWidths[sound.width], sound.voices && t.main.soundVoices]
     .filter((part) => part !== false)
     .join(" · ");
+}
+
+/** The profiles after the game is set to start with its own sharpness or with the general one. */
+export function chooseOwnSharpness(
+  profiles: readonly GameSharpness[],
+  game: Game,
+  general: Sharpness,
+  own: boolean,
+): GameSharpness[] {
+  if (profileOf(profiles, game.appId) === undefined) {
+    return own
+      ? [...profiles, { appId: game.appId, name: game.name, sharpness: general, active: true }]
+      : [...profiles];
+  }
+  return profiles.map((profile) => (profile.appId === game.appId ? { ...profile, active: own } : profile));
+}
+
+export function withSharpness(profiles: readonly GameSharpness[], appId: number, sharpness: Sharpness): GameSharpness[] {
+  return profiles.map((profile) => (profile.appId === appId ? { ...profile, sharpness } : profile));
+}
+
+/** The sharpness a game starts with: its own while it has an active profile, else the general. */
+export function sharpnessFor(
+  setting: Pick<Settings, "sharpness" | "gameSharpness">,
+  game: Game | null,
+): Sharpness | null {
+  const profile = game === null ? undefined : profileOf(setting.gameSharpness, game.appId);
+  return profile?.active === true ? profile.sharpness : setting.sharpness;
+}
+
+/** What the game's sharpness sets, in a line of the list. */
+export function sharpnessSummary(sharpness: Sharpness, t: Messages): string {
+  return sharpness.enabled ? t.service.summary(sharpness.strength) : t.service.status.off;
 }

@@ -26,6 +26,7 @@ const info: Info = {
   sound: true,
   fanHold: true,
   overlayMenu: true,
+  sharpness: true,
 };
 
 const steamos: Info = {
@@ -41,6 +42,7 @@ const steamos: Info = {
   sound: true,
   fanHold: false,
   overlayMenu: true,
+  sharpness: true,
 };
 
 const noOs = { id: null, name: null, versionId: null, imageVersion: null, buildId: null };

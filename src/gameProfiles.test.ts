@@ -3,15 +3,19 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { GamePower, GameSound, Power, Sound } from "./backend";
+import type { GamePower, GameSharpness, GameSound, Power, Sharpness, Sound } from "./backend";
 import {
   chooseOwn,
+  chooseOwnSharpness,
   chooseOwnSound,
   profileOf,
+  sharpnessFor,
+  sharpnessSummary,
   soundFor,
   soundSummary,
   summary,
   withPower,
+  withSharpness,
   withSound,
   without,
 } from "./gameProfiles";
@@ -87,5 +91,35 @@ describe("a game's own sound", () => {
     expect(soundSummary(generalSound, ru)).toBe(`+4${NBSP}дБ · объём${NBSP}умеренно · голоса${NBSP}чётче`);
     expect(soundSummary({ ...generalSound, volumeDb: 0, width: "off", voices: false }, en)).toBe(`Normal · width${NBSP}off`);
     expect(soundSummary(quiet.sound, en)).toBe("Off · the system's sound");
+  });
+});
+
+describe("a game's own sharpness", () => {
+  const general: Sharpness = { enabled: true, strength: 40 };
+  const plain: GameSharpness = { appId: 7, name: "Other", sharpness: { ...general, enabled: false }, active: true };
+
+  it("starts as a copy of the general one and waits with its values when switched off", () => {
+    const made = chooseOwnSharpness([plain], game, general, true);
+    expect(made).toEqual([plain, { ...game, sharpness: general, active: true }]);
+    expect(chooseOwnSharpness([plain], game, general, false)).toEqual([plain]);
+
+    const stronger = withSharpness(made, game.appId, { ...general, strength: 70 });
+    const waiting = chooseOwnSharpness(stronger, game, general, false);
+    expect(profileOf(waiting, game.appId)).toEqual({ ...game, sharpness: { ...general, strength: 70 }, active: false });
+  });
+
+  it("decides for its game while it is active", () => {
+    const own = { ...game, sharpness: { ...general, strength: 20 }, active: true };
+    const setting = { sharpness: general, gameSharpness: [own, { ...plain, active: false }] };
+
+    expect(sharpnessFor(setting, game)).toEqual(own.sharpness);
+    expect(sharpnessFor(setting, { appId: 7, name: "Other" })).toBe(general);
+    expect(sharpnessFor(setting, null)).toBe(general);
+    expect(sharpnessFor({ sharpness: null, gameSharpness: [own] }, null)).toBeNull();
+  });
+
+  it("is told in a line of the list", () => {
+    expect(sharpnessSummary(general, ru)).toBe(`Сила${NBSP}40%`);
+    expect(sharpnessSummary(plain.sharpness, en)).toBe("Off · games as they are");
   });
 });

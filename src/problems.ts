@@ -7,6 +7,7 @@ import { separateTriggerOwner } from "./triggers";
 // What the screens show red, and so what a tile on the main screen counts: a fix of a system bug the
 // user has not set yet, something that fights ORIGAMI right now, and another plugin that owns a
 // feature. A fix the user switched off is their choice and stays grey, as anything on by default.
+// What a screen only has to say once (notices.ts) is counted until that screen has shown it.
 
 /** Whether ORIGAMI may drive this button here; while not known yet, it is not counted. */
 export function drives(buttons: readonly ConsoleButton[] | null, button: ConsoleButton): boolean {
@@ -54,6 +55,8 @@ export interface ProblemSources {
   clockCrackle: boolean | null;
   /** The system has an overlay menu ORIGAMI can keep in sight; null until known. */
   overlayMenu: boolean | null;
+  /** The running game's launch options keep the sharpness, and its screen has not shown yet whose it is. */
+  sharpnessNotice: boolean;
 }
 
 export interface TileProblems {
@@ -62,6 +65,7 @@ export interface TileProblems {
   display: number;
   gamepad: number;
   sound: number;
+  service: number;
 }
 
 const count = (...red: boolean[]) => red.filter(Boolean).length;
@@ -93,5 +97,6 @@ export function tileProblems(sources: ProblemSources): TileProblems {
       drives(buttons, "armoury_crate") && buttonUnset(settings.armouryCrate, settings.armouryCrateHold),
     ),
     sound: count(conflicts.sound !== null, sources.clockCrackle === true && unset(settings.clockFix)),
+    service: count(conflicts.sharpness !== null || sources.sharpnessNotice),
   };
 }

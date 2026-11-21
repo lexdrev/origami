@@ -9,6 +9,7 @@ import { watchBackendStart } from "../src/backendStart";
 import { recordFanHistory } from "../src/fanHistory";
 import { watchRunningGame } from "../src/games";
 import { I18nProvider, type Language } from "../src/i18n";
+import { readNotices } from "../src/notices";
 import { ArmouryCrateScreen } from "../src/screens/ArmouryCrateScreen";
 import { ChangesScreen } from "../src/screens/ChangesScreen";
 import { DisplayScreen } from "../src/screens/DisplayScreen";
@@ -16,9 +17,11 @@ import { GamepadScreen } from "../src/screens/GamepadScreen";
 import { MainScreen } from "../src/screens/MainScreen";
 import { PowerScreen } from "../src/screens/PowerScreen";
 import { QamTabScreen } from "../src/screens/QamTabScreen";
+import { ServiceScreen } from "../src/screens/ServiceScreen";
 import { SettingsScreen } from "../src/screens/SettingsScreen";
 import { SoundScreen } from "../src/screens/SoundScreen";
 import { PluginTitle } from "../src/PluginTitle";
+import { takenNotice } from "../src/sharpness";
 import { loadAll } from "../src/state";
 import { quickAccessColumn } from "../src/tabPosition";
 import { styles } from "../src/ui/styles";
@@ -28,7 +31,13 @@ import { styles } from "../src/ui/styles";
 // reports its version as 3.3.1, or as "?decky=v3.2.10" says.
 const params = new URLSearchParams(location.search);
 Object.assign(window, {
-  SteamClient: { Settings: { GetCurrentLanguage: () => Promise.resolve(params.get("lang") ?? "russian") } },
+  SteamClient: {
+    Settings: { GetCurrentLanguage: () => Promise.resolve(params.get("lang") ?? "russian") },
+    Apps: {
+      RegisterForGameActionStart: () => ({ unregister: () => undefined }),
+      RegisterForAppDetails: () => ({ unregister: () => undefined }),
+    },
+  },
   SteamUIStore: { GamepadUIAudio: { PlayNavSound: () => undefined } },
   DeckyBackend: { call: () => Promise.resolve({ current: params.get("decky") ?? "v3.3.1" }) },
 });
@@ -48,6 +57,10 @@ if (release !== null) {
           }),
         );
 }
+
+// "?sharpread" is the Service screen's notice read before: with "?sharpblocked" or "?sharplaunch"
+// the Service tile counts nothing.
+if (params.has("sharpread")) readNotices.set([takenNotice("Frame Plugin"), takenNotice(null)]);
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -121,6 +134,16 @@ function Stand() {
         <Frame title="Sound · EN">
           <Static language="en">
             <SoundScreen />
+          </Static>
+        </Frame>
+        <Frame title="Service · RU">
+          <Static language="ru">
+            <ServiceScreen />
+          </Static>
+        </Frame>
+        <Frame title="Service · EN">
+          <Static language="en">
+            <ServiceScreen />
           </Static>
         </Frame>
         <Frame title="Armoury Crate · RU">

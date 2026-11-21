@@ -13,9 +13,10 @@ import { DisplayScreen } from "./screens/DisplayScreen";
 import { FansScreen } from "./screens/FansScreen";
 import { GamepadScreen } from "./screens/GamepadScreen";
 import { MainScreen } from "./screens/MainScreen";
-import { GameProfilesScreen, GameSoundsScreen } from "./screens/GameProfilesScreen";
+import { GameProfilesScreen, GameSoundsScreen, SharpnessProfilesScreen } from "./screens/GameProfilesScreen";
 import { GameProfileScreen, PowerScreen } from "./screens/PowerScreen";
 import { QamTabScreen } from "./screens/QamTabScreen";
+import { ServiceScreen, SharpnessProfileScreen } from "./screens/ServiceScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GameSoundScreen, SoundScreen } from "./screens/SoundScreen";
 import { actionError, reloadFailed, settings, useLanguage } from "./state";
@@ -35,6 +36,9 @@ const screens: Record<ScreenId, ComponentType> = {
   gameProfile: GameProfileScreen,
   gameSounds: GameSoundsScreen,
   gameSound: GameSoundScreen,
+  service: ServiceScreen,
+  sharpnessProfiles: SharpnessProfilesScreen,
+  sharpnessProfile: SharpnessProfileScreen,
   display: DisplayScreen,
   customColour: CustomColourScreen,
   gamepad: GamepadScreen,

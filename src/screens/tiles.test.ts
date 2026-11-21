@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { Sound, Telemetry, TriggerRumble } from "../backend";
 import { en } from "../i18n/en";
 import { ru } from "../i18n/ru";
-import { tileTexts } from "./tiles";
+import { tileTexts, type OwnValues } from "./tiles";
 
 const NBSP = "\u00a0";
 const none = {
@@ -18,6 +18,7 @@ const none = {
   fanCurve: undefined,
   sound: undefined,
   soundState: null,
+  sharpness: undefined,
 };
 
 const allyX: Telemetry = {
@@ -36,7 +37,16 @@ const allyX: Telemetry = {
 
 describe("tile texts", () => {
   it("show live values in Russian", () => {
-    const own = { ...none, saturation: 150, tdp: 17, lighting: true, triggers: null, fanCurve: null, sound: null };
+    const own = {
+      ...none,
+      saturation: 150,
+      tdp: 17,
+      lighting: true,
+      triggers: null,
+      fanCurve: null,
+      sound: null,
+      sharpness: null,
+    };
 
     expect(tileTexts(allyX, own, ru)).toEqual({
       power: { value: `17${NBSP}Вт`, subtitle: `сейчас${NBSP}16,9${NBSP}Вт · CPU${NBSP}буст${NBSP}выкл` },
@@ -44,6 +54,7 @@ describe("tile texts", () => {
       display: { value: "150%", subtitle: `Насыщенность · подсветка${NBSP}вкл` },
       gamepad: { value: "50%", subtitle: `Вибрация ручек · триггеры${NBSP}выкл` },
       sound: { value: "Выкл", subtitle: `Динамики как в${NBSP}системе` },
+      service: { value: "Выкл", subtitle: `Резкость в${NBSP}играх` },
     });
   });
 
@@ -154,5 +165,16 @@ describe("tile texts", () => {
       expect(texts.fans).toEqual({ value: "—", subtitle: "rpm" });
       expect(texts.gamepad.value).toBe("—");
     }
+  });
+
+  it("show the strength the next game is sharpened with", () => {
+    const service = (sharpness: OwnValues["sharpness"]) => tileTexts(null, { ...none, sharpness }, en).service;
+
+    expect(service({ enabled: true, strength: 70 })).toEqual({ value: "70%", subtitle: `Sharpness in${NBSP}games` });
+    expect(service({ enabled: false, strength: 70 }).value).toBe("Off");
+    expect(service(null).value).toBe("Off");
+    // Another plugin sets it, and before anything is read.
+    expect(service(undefined)).toEqual({ value: "—", subtitle: "Another plugin" });
+    expect(service("unknown")).toEqual({ value: "—", subtitle: "" });
   });
 });

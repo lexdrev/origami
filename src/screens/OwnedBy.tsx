@@ -16,17 +16,22 @@ interface OwnedByProps {
   section?: string;
   title: string;
   text: string;
+  /** What to do to have ORIGAMI's own, in a paragraph of its own under the text. */
+  advice?: string | undefined;
   /** The owner is one of Decky's plugins, so the way to Decky's list is offered; true unless said. */
   decky?: boolean;
 }
 
 /** A section another plugin drives: why ORIGAMI stays out, and the way to that plugin. */
-export function OwnedBy({ section, title, text, decky = true }: OwnedByProps) {
+export function OwnedBy({ section, title, text, advice, decky = true }: OwnedByProps) {
   const t = useMessages();
   return (
     <>
       {section !== undefined && <SectionLabel>{section}</SectionLabel>}
-      <Alert title={title}>{text}</Alert>
+      <Alert title={title}>
+        {text}
+        {advice !== undefined && <span className="og-alert__advice">{advice}</span>}
+      </Alert>
       {decky && (
         <Pressable
           className="og-button"

@@ -23,7 +23,14 @@ export const en: Messages = {
   units: { watts: "W", rpm: "rpm", celsius: "°C" },
   main: {
     settings: "Settings",
-    tiles: { power: "Power", fans: "Fans", display: "Display & Light", gamepad: "Gamepad", sound: "Sound" },
+    tiles: {
+      power: "Power",
+      fans: "Fans",
+      display: "Display & Light",
+      gamepad: "Gamepad",
+      sound: "Sound",
+      service: "Service",
+    },
     powerNow: (watts) => `now\u00a0${watts}`,
     boost: (on) => (on ? "CPU\u00a0boost\u00a0on" : "CPU\u00a0boost\u00a0off"),
     displaySub: "Saturation",
@@ -43,6 +50,9 @@ export const en: Messages = {
     soundNoSpeakers: "No speakers found",
     soundWidths: { off: "width\u00a0off", moderate: "width\u00a0moderate", strong: "width\u00a0strong" },
     soundVoices: "clearer\u00a0voices",
+    sharpnessSub: "Sharpness in\u00a0games",
+    sharpnessOff: "Off",
+    sharpnessOther: "Another plugin",
   },
   settings: {
     title: "Settings",
@@ -231,6 +241,47 @@ export const en: Messages = {
     clockFixOff: "After sleep the sound may crackle until a\u00a0restart",
     clockFixWhy: "The console's clock keeps local time, as Windows does",
   },
+  service: {
+    title: "Service",
+    sharpness: "Sharpness",
+    status: {
+      off: "Off · games as they are",
+      ready: "On · takes effect as a game starts",
+      working: "At work in this game",
+      turning_on: "Comes on when the game starts next",
+      turning_off: "Goes off when the game starts next",
+      new_strength: "New strength when the game starts next",
+      missing: "Not loaded · the game still starts or does not draw through Vulkan",
+    },
+    sharpnessNote: "Makes a game's picture sharper · as Radeon Image Sharpening on\u00a0Windows",
+    launchNote: "A game takes the sharpness as it starts: restart a game that is already running",
+    strength: "Strength",
+    strengthNote: "Medium suits most games · too strong, it draws halos along edges",
+    presets: { soft: "Soft", medium: "Medium", strong: "Strong", custom: "Custom" },
+    gameSharpness: "Per-game sharpness",
+    profiles: "Sharpness profiles",
+    profilesSub: "No game is running · the general one applies",
+    profilesTitleSub: "Sharpness · per-game settings",
+    profilesHint:
+      "To add a game, start it and switch on Per-game sharpness at the top of the Service screen. Its profile starts as a copy of the general one. A game takes the sharpness as it starts.",
+    summary: (strength) => `Strength\u00a0${strength}%`,
+    ownedBy: (plugin) => `${plugin} controls the sharpness`,
+    ownedText: (plugin) =>
+      `${plugin} writes the sharpening layer's settings itself, so ORIGAMI leaves them alone. Switch off or remove ${plugin} in\u00a0Decky, and the sharpness settings appear here.`,
+    launcherOwnedBy: (plugin) => `${plugin} controls the sharpness in this game`,
+    launcherText: (game) =>
+      `${game} starts through this plugin, which builds the game's graphics layers itself, so ORIGAMI's sharpness does not reach it.`,
+    launcherSharpening: {
+      shaders: "The sharpening for this game is switched on in\u00a0it, on its Shaders tab.",
+    },
+    launcherOwn: "The sharpening for this game is switched on in\u00a0it.",
+    launcherAdvice: (companion) =>
+      `For ORIGAMI's sharpness to work, switch this plugin off for the game. Frame generation can then be switched on in\u00a0${companion}: ORIGAMI's sharpness works with\u00a0it.`,
+    launchOwned: "This game's launch options control the sharpness",
+    launchText: (game) =>
+      `The launch options of ${game} set vkBasalt's variables, so ORIGAMI adds no sharpness to it. Remove them from the launch options, and the sharpness settings appear here.`,
+    companionText: (plugin) => `With the frame generation of ${plugin}, ORIGAMI's sharpness works.`,
+  },
   display: {
     title: "Display & Light",
     saturation: "Saturation",
@@ -395,6 +446,7 @@ export const en: Messages = {
       "gamepad.vibration": "Vibration strength · controller",
       "gamepad.gyro": "Gyroscope axes · file in\u00a0/etc",
       "sound.filter": "Sound processing · PipeWire",
+      "sharpness.layer": "Sharpness in games · Vulkan layer",
     },
     restore: "Restore everything",
     restoreAsk: "Restore everything?",

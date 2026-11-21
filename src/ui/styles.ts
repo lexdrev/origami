@@ -574,6 +574,7 @@ ${fontFaces}
 .og-alert__title { color: var(--og-danger-text); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .og-alert__text { color: var(--og-text-soft); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
 /* The same block for a state the user chose: grey, not a problem. */
+.og-alert__advice { display: block; margin-top: 8px; color: var(--og-text); }
 .og-alert--chosen { border-color: var(--og-border); background: var(--og-surface); }
 .og-alert--chosen .og-alert__icon { color: var(--og-muted); }
 .og-alert--chosen .og-alert__title { color: var(--og-text); }

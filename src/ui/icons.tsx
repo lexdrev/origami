@@ -125,6 +125,19 @@ export function GamepadIcon() {
   );
 }
 
+/** A toolbox: the handle, the box with its lid folded down, and the latch on the lid's edge. */
+export function ServiceIcon() {
+  return (
+    <TileIcon>
+      <path d="M8.5 9V5.3H15.5V9" {...open} />
+      <polygon points="3,9 21,9 21,20 3,20" {...open} />
+      <polygon points="3,9 21,9 21,13.2 3,13.2" {...face} />
+      {/* The latch covers the lid's edge: filled with the background colour, it interrupts the line. */}
+      <polygon points="10.2,11.4 13.8,11.4 13.8,15 10.2,15" style={{ fill: "var(--og-surface)" }} />
+    </TileIcon>
+  );
+}
+
 export function GearIcon({ size = 20 }: IconProps) {
   return (
     <svg

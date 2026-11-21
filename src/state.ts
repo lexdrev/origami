@@ -10,6 +10,7 @@ import {
   type Info,
   type Lighting,
   type Settings,
+  type SharpnessState,
   type SoundState,
   type Telemetry,
   type TriggerState,
@@ -28,6 +29,7 @@ export const gyro = createStore<Loadable<GyroState>>({ status: "loading" });
 export const triggerState = createStore<Loadable<TriggerState>>({ status: "loading" });
 export const heldPower = createStore<Loadable<HeldPower>>({ status: "loading" });
 export const soundState = createStore<Loadable<SoundState>>({ status: "loading" });
+export const sharpnessState = createStore<Loadable<SharpnessState>>({ status: "loading" });
 export const steamLanguage = createStore<Language>("en");
 /** The last failed action, shown until the next one succeeds. */
 export const actionError = createStore<string | null>(null);
@@ -98,6 +100,11 @@ export function refreshSound(): Promise<void> {
   return load(soundState, backend.getSound);
 }
 
+/** Whether the running game has the sharpening layer; games start and end while the screen is open. */
+export function refreshSharpness(): Promise<void> {
+  return load(sharpnessState, backend.getSharpness);
+}
+
 /** What ORIGAMI changed follows every setting, so this is read when a screen showing it opens. */
 export function refreshChanges(): Promise<void> {
   return load(changes, backend.getChanges);
@@ -132,7 +139,7 @@ async function act(action: () => Promise<unknown>): Promise<boolean> {
 export function restoreAll(): Promise<boolean> {
   return act(async () => {
     settings.set({ status: "ready", value: await backend.restoreAll() });
-    await Promise.all([refreshChanges(), refreshGyro(), refreshHeldPower(), refreshSound()]);
+    await Promise.all([refreshChanges(), refreshGyro(), refreshHeldPower(), refreshSound(), refreshSharpness()]);
   });
 }
 
@@ -198,6 +205,10 @@ export const setSound = liveSetting("sound", refreshSound);
 export const setGameSound = liveSetting("gameSound", refreshSound);
 /** Saves the games' own power settings; the limits held follow them too. */
 export const setGamePower = liveSetting("gamePower", refreshHeldPower);
+/** Saves the sharpness; a game takes it as it starts. */
+export const setSharpness = liveSetting("sharpness", refreshSharpness);
+/** Saves the games' own sharpness. */
+export const setGameSharpness = liveSetting("gameSharpness", refreshSharpness);
 /** Saves the stick lighting; the rings follow it, and its brightness slider follows a held D-pad. */
 export const setLighting = liveSetting("lighting");
 

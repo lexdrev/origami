@@ -3,7 +3,17 @@
 
 // Browser stand-in for @decky/api with readings taken from the console (HARDWARE.md).
 
-import type { Change, Conflicts, HeldPower, Info, Settings, SoundState, Telemetry } from "../../src/backend";
+import type {
+  Change,
+  Conflicts,
+  HeldPower,
+  Info,
+  Settings,
+  SharpnessGameState,
+  SharpnessState,
+  SoundState,
+  Telemetry,
+} from "../../src/backend";
 
 const info: Info = {
   version: "1.0.0",
@@ -24,10 +34,13 @@ const info: Info = {
   sound: true,
   fanHold: true,
   overlayMenu: true,
+  sharpness: true,
 };
 const query = new URLSearchParams(location.search);
 // "?nohold" is a console whose fans hold no temperature: the Fans screen has the curve alone.
 if (query.has("nohold")) info.fanHold = false;
+// "?nosharpness" is a system without the sharpening layer: the main screen has no Service tile.
+if (query.has("nosharpness")) info.sharpness = false;
 
 let settings: Settings = {
   language: "auto",
@@ -74,6 +87,16 @@ let settings: Settings = {
       active: false,
     },
   ],
+  sharpness: { enabled: true, strength: 40 },
+  gameSharpness: [
+    {
+      appId: 1920490,
+      name: "The Outer Worlds: Spacer's Choice Edition",
+      sharpness: { enabled: true, strength: 70 },
+      active: true,
+    },
+    { appId: 1091500, name: "Cyberpunk 2077", sharpness: { enabled: false, strength: 40 }, active: true },
+  ],
 };
 // Steam's value, as gamescope shows it on the console while nothing else sets it.
 const STEAM_SATURATION = 100;
@@ -87,6 +110,8 @@ const conflicts: Conflicts = {
   fans: null,
   // "?soundplugin" stands for another plugin with a filter in front of the speakers.
   sound: query.has("soundplugin") ? "Sound Plugin" : null,
+  // "?sharpplugin" stands for another plugin that sets the sharpening layer itself.
+  sharpness: query.has("sharpplugin") ? "Sharpness Plugin" : null,
 };
 const changes: Change[] = [
   { module: "power", key: "tdp", original: null },
@@ -115,6 +140,8 @@ function restoreAll(): Settings {
     fans: null,
     sound: null,
     gameSound: settings.gameSound.map((game) => ({ ...game, active: false })),
+    sharpness: null,
+    gameSharpness: settings.gameSharpness.map((game) => ({ ...game, active: false })),
   };
   changes.splice(0);
   return settings;
@@ -170,6 +197,8 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   get_sound: soundState,
   game_started: () => undefined,
   set_game: () => undefined,
+  game_starting: () => undefined,
+  get_sharpness: sharpnessState,
   set_steam_tdp_limit: () => undefined,
 };
 
@@ -201,6 +230,28 @@ function soundState(): SoundState {
     failed: wanted && failed,
     clockFix: query.has("localclock"),
   };
+}
+
+// With "?game" the stand runs the game of the first profile. "?sharppending" is a sharpness changed
+// since that game started (its strength, or switched off), "?sharpstarting" one switched on since, "?sharpmissing" a game that did not load the layer, "?sharpblocked" one whose
+// launch options set the layer themselves.
+// "?sharpblocked" is a game started through another plugin's wrapper, "?sharplaunch" one whose launch
+// options set the layer by themselves; either way the sharpness there is not ORIGAMI's.
+function sharpnessState(): SharpnessState {
+  const taken = query.has("game") && (query.has("sharpblocked") || query.has("sharplaunch"));
+  if (!taken) return { game: sharpnessGame(), owner: null, sharpening: null, companion: null };
+  const owner = query.has("sharpblocked") ? "Frame Plugin" : null;
+  return { game: "managed", owner, sharpening: owner && "shaders", companion: "Other Frame Plugin" };
+}
+
+function sharpnessGame(): SharpnessGameState {
+  if (!query.has("game")) return "no_game";
+  const own = settings.gameSharpness.find((game) => game.appId === 1920490 && game.active);
+  const used = own?.sharpness ?? settings.sharpness;
+  if (query.has("sharppending")) return used?.enabled ? "new_strength" : "turning_off";
+  if (query.has("sharpstarting") && used?.enabled) return "turning_on";
+  if (!used?.enabled) return "off";
+  return query.has("sharpmissing") ? "missing" : "working";
 }
 
 // "?nobackend" in the address stands for a backend that never answers, as on a Decky Loader too old for it.

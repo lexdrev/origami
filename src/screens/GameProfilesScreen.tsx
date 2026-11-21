@@ -4,11 +4,11 @@
 import { useEffect, useState } from "react";
 
 import type { Settings } from "../backend";
-import { soundSummary, summary, without } from "../gameProfiles";
+import { sharpnessSummary, soundSummary, summary, without } from "../gameProfiles";
 import { openedProfile } from "../games";
 import { useMessages, type Messages } from "../i18n";
 import { back, navigate, type ScreenId } from "../navigation";
-import { setGamePower, setGameSound, settings } from "../state";
+import { setGamePower, setGameSharpness, setGameSound, settings } from "../state";
 import { useStore } from "../store";
 import { Header, Screen } from "../ui/blocks";
 import { NavRow } from "../ui/controls";
@@ -43,6 +43,21 @@ export function GameSoundsScreen() {
       select={(setting) => setting.gameSound}
       describe={(profile, messages) => soundSummary(profile.sound, messages)}
       keep={setGameSound}
+    />
+  );
+}
+
+/** The games with a sharpness of their own. */
+export function SharpnessProfilesScreen() {
+  const t = useMessages();
+  return (
+    <GameList
+      subtitle={t.service.profilesTitleSub}
+      hint={t.service.profilesHint}
+      opens="sharpnessProfile"
+      select={(setting) => setting.gameSharpness}
+      describe={(profile, messages) => sharpnessSummary(profile.sharpness, messages)}
+      keep={setGameSharpness}
     />
   );
 }

@@ -6,15 +6,17 @@ import { useEffect } from "react";
 
 import { runningPlugins } from "../deckyPlugins";
 import { curveHere } from "../fans";
-import { soundFor } from "../gameProfiles";
+import { sharpnessFor, soundFor } from "../gameProfiles";
 import { soundOwner } from "../sound";
 import { runningGame } from "../games";
 import { useMessages } from "../i18n";
 import { navigate } from "../navigation";
+import { readNotices } from "../notices";
 import { steamTdpSlider } from "../power";
 import { tileProblems } from "../problems";
 import { ENTER_PREFERRED_CHILD } from "../quickAccess";
 import { refreshSaturation, saturation } from "../saturation";
+import { takenNotice } from "../sharpness";
 import {
   conflicts,
   gyro,
@@ -22,16 +24,18 @@ import {
   info,
   refreshConflicts,
   refreshGyro,
+  refreshSharpness,
   refreshSound,
   refreshTriggerState,
   settings,
+  sharpnessState,
   soundState,
   triggerState,
 } from "../state";
 import { useStore } from "../store";
 import { Alert, Screen, Tile } from "../ui/blocks";
 import { IconButton } from "../ui/controls";
-import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon, SoundIcon } from "../ui/icons";
+import { DisplayIcon, FansIcon, GamepadIcon, GearIcon, PowerIcon, ServiceIcon, SoundIcon } from "../ui/icons";
 import { scrollToMiddle } from "../ui/scrollTop";
 import { usePoll } from "../usePoll";
 import { useTelemetry } from "../useTelemetry";
@@ -40,6 +44,8 @@ import { offeredRelease, updateState } from "../updates";
 import { tileTexts } from "./tiles";
 
 const SOUND_POLL_INTERVAL_MS = 2000;
+/** A game's launch options may keep the sharpness; a game starts and ends while the menu is open. */
+const SHARPNESS_POLL_INTERVAL_MS = 3000;
 const nothing = () => Promise.resolve();
 
 export function MainScreen() {
@@ -54,9 +60,11 @@ export function MainScreen() {
   const plugin = useStore(info);
   const slider = useStore(steamTdpSlider) === true;
   const sound = useStore(soundState);
+  const sharp = useStore(sharpnessState);
   const running = useStore(runningGame);
   const speakers = plugin.status === "ready" && plugin.value.sound;
   const fanHold = plugin.status === "ready" && plugin.value.fanHold;
+  const sharpening = plugin.status === "ready" && plugin.value.sharpness;
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.
   useEffect(() => {
@@ -68,6 +76,12 @@ export function MainScreen() {
   // Whether the speakers play and the filter runs, and whether the crackle after sleep happens
   // here, for the Sound tile and its count; headphones come and go while the menu is open.
   usePoll(speakers ? refreshSound : nothing, SOUND_POLL_INTERVAL_MS);
+  usePoll(sharpening ? refreshSharpness : nothing, SHARPNESS_POLL_INTERVAL_MS);
+  // In the running game the sharpness is another plugin's, or its launch options' own: the tile
+  // counts that until the Service screen has said whose it is.
+  const sharpnessTaken = sharp.status === "ready" && sharp.value.game === "managed";
+  const read = useStore(readNotices);
+  const sharpnessNotice = sharpnessTaken && !read.includes(takenNotice(sharp.value.owner));
   const setting = current.status === "ready" ? current.value : null;
   const soundNow = sound.status === "ready" ? sound.value : null;
   // The sound's owner is a plugin ORIGAMI knows or a program whose filter stands in PipeWire.
@@ -96,6 +110,12 @@ export function MainScreen() {
               : "program"
           : "unknown",
       soundState: soundNow,
+      sharpness:
+        setting && others
+          ? others.sharpness === null && !sharpnessTaken
+            ? sharpnessFor(setting, running)
+            : undefined
+          : "unknown",
     },
     t,
   );
@@ -112,6 +132,7 @@ export function MainScreen() {
           steamTdpSlider: slider,
           contested: held.status === "ready" && held.value.contested,
           clockCrackle: soundNow?.clockFix ?? null,
+          sharpnessNotice,
         })
       : null;
 
@@ -175,6 +196,18 @@ export function MainScreen() {
             problems={problems?.sound}
             onOpen={() => {
               navigate("sound");
+            }}
+          />
+        )}
+        {/* Only where the system has the layer the games are sharpened with. */}
+        {sharpening && (
+          <Tile
+            icon={<ServiceIcon />}
+            name={t.main.tiles.service}
+            {...tiles.service}
+            problems={problems?.service}
+            onOpen={() => {
+              navigate("service");
             }}
           />
         )}
