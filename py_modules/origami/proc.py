@@ -112,16 +112,19 @@ def run_blocking(
     timeout: float,
     user: tuple[int, int] | None = None,
     env: Mapping[str, str] | None = None,
+    feed: str | None = None,
 ) -> str:
     """run() for code that cannot await, such as what is undone while Decky unloads the plugin.
 
-    Raise CommandError on failure and TimeoutError when the program takes longer than `timeout`.
+    `feed` is text for the program's standard input, which is empty without it. Raise
+    CommandError on failure and TimeoutError when the program takes longer than `timeout`.
     """
     uid, gid = user if user is not None else (None, None)
     try:
         result = subprocess.run(
             args,
-            stdin=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL if feed is None else None,
+            input=None if feed is None else feed.encode(),
             capture_output=True,
             env=system_environment(env),
             user=uid,

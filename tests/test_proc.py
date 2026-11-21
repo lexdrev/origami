@@ -74,3 +74,11 @@ def test_blocking_run_returns_stdout_and_carries_stderr() -> None:
 def test_blocking_run_stops_waiting_at_its_timeout() -> None:
     with pytest.raises(TimeoutError):
         run_blocking(sys.executable, "-c", "import time; time.sleep(60)", timeout=0.5)
+
+
+def test_run_blocking_feeds_text_to_the_program() -> None:
+    upper = "import sys; print(sys.stdin.read().upper())"
+
+    assert run_blocking(sys.executable, "-c", upper, timeout=10, feed="text").strip() == "TEXT"
+    # Without it the program's input is empty.
+    assert run_blocking(sys.executable, "-c", upper, timeout=10).strip() == ""
