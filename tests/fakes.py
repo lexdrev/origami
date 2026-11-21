@@ -1,8 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import json
 import os
 from pathlib import Path
+
+from origami.proc import CommandError
 
 
 class FakeRoot:
@@ -77,6 +80,14 @@ class FakeRoot:
         self.hidraw(1, driver="asus", phys=f"{phys}1", hid_id=2)
         return self.hidraw(2, driver="asus_rog_ally", phys=f"{phys}2", hid_id=3)
 
+    def vkbasalt(self) -> Path:
+        """Add vkBasalt as Fedora's package installs it, and the user's home; returns the home."""
+        self.write("usr/share/vulkan/implicit_layer.d/vkBasalt.json", VKBASALT_MANIFEST)
+        self.write("usr/lib64/vkbasalt/libvkbasalt.so", "")
+        home = self.path / "home" / "user"
+        home.mkdir(parents=True, exist_ok=True)
+        return home
+
 
 ALLY_X_GAMEPAD_DESCRIPTOR = bytes.fromhex(
     "05010905a101850ba10009300931150026ffff350046ffff950275108102c0a10009330934150026"
@@ -146,3 +157,64 @@ class FakeDisplay:
         if atom not in self.properties:
             return f"{atom}:  not found.\n"
         return f"{atom}(CARDINAL) = {self.properties[atom]}\n"
+
+
+class FakeUser:
+    """The programs ORIGAMI runs as the user to write into their home, done on the test's files."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, ...]] = []
+        self.users: list[tuple[int, int] | None] = []
+        self.failing: str | None = None
+
+    def __call__(
+        self,
+        *args: str,
+        timeout: float,
+        user: tuple[int, int] | None = None,
+        feed: str | None = None,
+    ) -> str:
+        assert timeout > 0
+        self.calls.append(args)
+        self.users.append(user)
+        if args[0] == self.failing:
+            raise CommandError(f"{args[0]} exited with 1: no", 1)
+        match args:
+            case ("mkdir", "-p", folder):
+                Path(folder).mkdir(parents=True, exist_ok=True)
+            case ("dd", target, "status=none"):
+                assert feed is not None
+                Path(target.removeprefix("of=")).write_text(feed, encoding="utf-8")
+            case ("chmod", "644", target):
+                Path(target).chmod(0o644)
+            case ("mv", "-f", source, target):
+                Path(source).replace(target)
+            case ("rm", "-f", target):
+                Path(target).unlink(missing_ok=True)
+            case ("head", "-c", _, source):
+                return Path(source).read_text(encoding="utf-8")
+            case _:
+                raise AssertionError(f"Unexpected command: {args}")
+        return ""
+
+
+VKBASALT_MANIFEST = json.dumps(
+    {
+        "file_format_version": "1.0.0",
+        "layer": {
+            "name": "VK_LAYER_VKBASALT_post_processing",
+            "type": "GLOBAL",
+            "library_path": "/usr/$LIB/vkbasalt/libvkbasalt.so",
+            "api_version": "1.3.223",
+            "implementation_version": "1",
+            "description": "a post processing layer",
+            "functions": {
+                "vkGetInstanceProcAddr": "vkBasalt_GetInstanceProcAddr",
+                "vkGetDeviceProcAddr": "vkBasalt_GetDeviceProcAddr",
+            },
+            "enable_environment": {"ENABLE_VKBASALT": "1"},
+            "disable_environment": {"DISABLE_VKBASALT": "1"},
+        },
+    }
+)
+"""The system's manifest as Fedora's package installs it (read on the console)."""

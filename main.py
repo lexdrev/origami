@@ -4,7 +4,7 @@
 """Decky entry point: a thin adapter over the backend in py_modules/origami."""
 
 from pathlib import Path
-from typing import cast
+from typing import TypeIs, cast
 
 import decky
 
@@ -22,6 +22,7 @@ class Plugin:
             data_dir=Path(decky.DECKY_PLUGIN_RUNTIME_DIR),
             decky_home=Path(decky.DECKY_HOME),
             plugin_dir=Path(decky.DECKY_PLUGIN_DIR),
+            user_home=Path(decky.DECKY_USER_HOME),
             version=decky.DECKY_PLUGIN_VERSION,
             decky_version=decky.DECKY_VERSION or None,
         )
@@ -90,11 +91,19 @@ class Plugin:
         await self._app.set_steam_tdp_limit(on=on)
 
     async def set_game(self, app_id: object) -> None:
-        if app_id is not None and (
-            not isinstance(app_id, int) or isinstance(app_id, bool) or app_id <= 0
-        ):
+        if app_id is not None and not _app_id(app_id):
             raise TypeError("The running game is a Steam app id or none")
         await self._app.set_game(app_id)
+
+    async def game_starting(self, app_id: object, launch_options: object = None) -> None:
+        if not _app_id(app_id):
+            raise TypeError("The game Steam launches is a Steam app id")
+        if launch_options is not None and not isinstance(launch_options, str):
+            raise TypeError("Launch options are text or none")
+        await self._app.game_starting(app_id, launch_options)
+
+    async def get_sharpness(self) -> JsonValue:
+        return to_wire(await self._app.sharpness())
 
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
@@ -110,3 +119,7 @@ class Plugin:
 
     async def restore_all(self) -> JsonValue:
         return to_wire(await self._app.restore_all())
+
+
+def _app_id(value: object) -> TypeIs[int]:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0

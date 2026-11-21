@@ -396,6 +396,7 @@ def make_block(
             boost=None,
             fans=None,
             sound=None,
+            sharpness=None,
         )
 
     journal = ChangeJournal(tmp_path / "data" / "changes.json")

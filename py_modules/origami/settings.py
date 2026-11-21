@@ -16,6 +16,7 @@ from origami.jsonio import expect_bool, parse_object
 from origami.lighting import Lighting
 from origami.power import GamePower, Power
 from origami.saturation import MAX_PERCENT as MAX_SATURATION
+from origami.sharpness import GameSharpness, Sharpness
 from origami.sound import GameSound, Sound
 from origami.triggers import TriggerRumble
 from origami.vibration import Vibration
@@ -87,6 +88,10 @@ class Settings:
     """ORIGAMI's filter in front of the speakers; None until switched on: the system's sound."""
     game_sound: tuple[GameSound, ...] = ()
     """Games with a sound of their own, one profile each."""
+    sharpness: Sharpness | None = None
+    """Sharpening of the games' picture; None until switched on: the games as they draw."""
+    game_sharpness: tuple[GameSharpness, ...] = ()
+    """Games with a sharpness of their own, one profile each."""
 
     def power_for(self, game: int | None) -> Power:
         """The power a game runs with: its own profile while that is active, else the general."""
@@ -102,6 +107,14 @@ class Settings:
                 return profile.sound
         return self.sound
 
+    def sharpness_for(self, game: int | None) -> Sharpness | None:
+        """The sharpness a game starts with: its own profile while that is active, else the
+        general one."""
+        for profile in self.game_sharpness:
+            if profile.app_id == game and profile.active:
+                return profile.sharpness
+        return self.sharpness
+
     def restored(self) -> Settings:
         """These settings after "restore everything": nothing of the system is left to ORIGAMI.
 
@@ -109,7 +122,8 @@ class Settings:
         and Steam sets the TDP, which is a problem too until the user decides. The interface and the
         daily update check stay, and so do the TDP and the games' profiles for the next time ORIGAMI
         manages it, without their CPU boost: that flag is the system's again. The games' sounds
-        stay too, but waiting: none of them runs until its game's switch goes on again.
+        and sharpness stay too, but waiting: none of them applies until its game's switch goes
+        on again.
         """
         return Settings(
             language=self.language,
@@ -125,6 +139,7 @@ class Settings:
                 for profile in self.game_power
             ),
             game_sound=tuple(replace(profile, active=False) for profile in self.game_sound),
+            game_sharpness=tuple(replace(profile, active=False) for profile in self.game_sharpness),
         )
 
     def updated(self, changes: Mapping[str, object]) -> Settings:
@@ -140,7 +155,7 @@ class Settings:
                     parsed[key] = None if value is None else expect_bool(key, value)
                 case "qam_tab_before":
                     parsed[key] = _tab_position(value)
-                case "lighting" | "vibration" | "trigger_rumble" | "fans" | "sound":
+                case "lighting" | "vibration" | "trigger_rumble" | "fans" | "sound" | "sharpness":
                     parsed[key] = None if value is None else _OPTIONAL[key].from_json(value)
                 case "saturation":
                     parsed[key] = _saturation(value)
@@ -150,7 +165,7 @@ class Settings:
                     parsed[key] = None if value is None else _hold_action(value)
                 case "power":
                     parsed[key] = Power.from_json(value)
-                case "game_power" | "game_sound":
+                case "game_power" | "game_sound" | "game_sharpness":
                     parsed[key] = _game_profiles(key, value)
                 case _:
                     raise ValueError(f"Unknown setting: {key}")
@@ -184,15 +199,18 @@ class Settings:
             "fans": None if self.fans is None else self.fans.to_json(),
             "sound": None if self.sound is None else self.sound.to_json(),
             "game_sound": [profile.to_json() for profile in self.game_sound],
+            "sharpness": None if self.sharpness is None else self.sharpness.to_json(),
+            "game_sharpness": [profile.to_json() for profile in self.game_sharpness],
         }
 
 
-_OPTIONAL: dict[str, type[Lighting | Vibration | TriggerRumble | FanCurve | Sound]] = {
+_OPTIONAL: dict[str, type[Lighting | Vibration | TriggerRumble | FanCurve | Sound | Sharpness]] = {
     "lighting": Lighting,
     "vibration": Vibration,
     "trigger_rumble": TriggerRumble,
     "fans": FanCurve,
     "sound": Sound,
+    "sharpness": Sharpness,
 }
 """Settings that stay None until the user sets them, and the parsers of their values."""
 
@@ -212,15 +230,18 @@ def _saturation(value: object) -> int | None:
     raise ValueError(f"Saturation must be a percentage from 0 to {MAX_SATURATION}")
 
 
-_GAME_PROFILES: dict[str, type[GamePower | GameSound]] = {
+type GameProfile = GamePower | GameSound | GameSharpness
+
+_GAME_PROFILES: dict[str, type[GameProfile]] = {
     "game_power": GamePower,
     "game_sound": GameSound,
+    "game_sharpness": GameSharpness,
 }
 """The games' own settings, and the parsers of their profiles."""
 
 
-def _game_profiles(key: str, value: object) -> tuple[GamePower | GameSound, ...]:
-    """The games' own power or sound: a list with one profile a game."""
+def _game_profiles(key: str, value: object) -> tuple[GameProfile, ...]:
+    """The games' own power, sound or sharpness: a list with one profile a game."""
     kind, what = _GAME_PROFILES[key], key.removeprefix("game_")
     if not isinstance(value, list):
         raise ValueError(f"{key} must be a list")
@@ -253,17 +274,16 @@ def describe_changes(before: Settings, after: Settings) -> str:
     told = [
         f"{key} {_compact(value)}"
         for key, value in new.items()
-        if key not in ("game_power", "game_sound") and value != old.get(key)
+        if key not in _GAME_PROFILES and value != old.get(key)
     ]
     told += _game_changes("game", before.game_power, after.game_power)
     told += _game_changes("game sound", before.game_sound, after.game_sound)
+    told += _game_changes("game sharpness", before.game_sharpness, after.game_sharpness)
     return "; ".join(told)
 
 
 def _game_changes(
-    what: str,
-    before: tuple[GamePower, ...] | tuple[GameSound, ...],
-    after: tuple[GamePower, ...] | tuple[GameSound, ...],
+    what: str, before: tuple[GameProfile, ...], after: tuple[GameProfile, ...]
 ) -> list[str]:
     was = {profile.app_id: profile for profile in before}
     now = {profile.app_id for profile in after}

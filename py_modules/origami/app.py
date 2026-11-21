@@ -19,9 +19,10 @@ from origami.blocks.gamepad import GamepadBlock
 from origami.blocks.overlay import OverlayBlock
 from origami.blocks.overlay import offered as overlay_offered
 from origami.blocks.power import PowerBlock, power_settings_changed
+from origami.blocks.sharpness import SharpnessBlock, SharpnessState
 from origami.blocks.sound import LV2_DIR, SoundBlock, SoundState
 from origami.buttons import Button, layout_for
-from origami.decky_plugins import Conflicts, describe, read_conflicts
+from origami.decky_plugins import SHARPNESS_COMPANION, Conflicts, describe, read_conflicts
 from origami.device import Device, read_device
 from origami.fans import HOLD_BOARDS
 from origami.gyro import GyroState
@@ -59,6 +60,8 @@ class Environment:
     decky_home: Path
     plugin_dir: Path
     """ORIGAMI's own folder, with the HID-BPF programs in bin/."""
+    user_home: Path
+    """The home of the user Steam runs as; ORIGAMI itself runs as root."""
     version: str
     decky_version: str | None
 
@@ -76,6 +79,8 @@ class Info:
     """The fans can hold a temperature here: the hold knows this console's fans."""
     overlay_menu: bool
     """The system has an overlay menu of its own that ORIGAMI can keep in sight (B18)."""
+    sharpness: bool
+    """The system has the layer ORIGAMI sharpens the games with."""
 
 
 class Origami:
@@ -131,6 +136,9 @@ class Origami:
         self._sound = SoundBlock(
             context, lv2_dir=environment.plugin_dir / LV2_DIR, board=self._board_now
         )
+        self._sharpness = SharpnessBlock(
+            context, home=environment.user_home, companion=SHARPNESS_COMPANION
+        )
 
     async def start(self) -> None:
         try:
@@ -147,6 +155,7 @@ class Origami:
                 sound=device.board in SPEAKER_ZONES,
                 fan_hold=device.board in HOLD_BOARDS,
                 overlay_menu=await asyncio.to_thread(overlay_offered, self._env.root),
+                sharpness=await asyncio.to_thread(self._sharpness.supported),
             )
             log.info("ORIGAMI %s started, board %s", self._env.version, device.board)
         except Exception as error:
@@ -284,13 +293,29 @@ class Origami:
         async with self._settings_lock:
             await self._power.set_steam_tdp_limit(self._settings, on=on)
 
+    async def sharpness(self) -> SharpnessState:
+        """How the sharpness stands in the running game and whose it is there, for the screen."""
+        await self._started()
+        return await self._sharpness.state()
+
     async def set_game(self, app_id: int | None) -> None:
-        """Steam runs this game now, or none: the power and the sound follow its own profiles."""
+        """Steam runs this game now, or none: the power, the sound and the sharpness follow its
+        own profiles."""
         await self._started()
         self._battery.set_game(app_id)
         async with self._settings_lock:
             await self._power.set_game(self._settings, app_id)
             await self._sound.set_game(self._settings, app_id)
+            await self._sharpness.set_game(self._settings, app_id)
+
+    async def game_starting(self, app_id: int, launch_options: str | None = None) -> None:
+        """Steam launches this game: the sharpness is ready before the game loads its layers.
+
+        `launch_options` are the game's own in Steam, None where the frontend could not read them.
+        """
+        await self._started()
+        async with self._settings_lock:
+            await self._sharpness.game_starting(self._settings, app_id, launch_options)
 
     async def game_started(self) -> None:
         """Steam started a game: it writes its own limits meanwhile, so ORIGAMI writes again."""
@@ -370,6 +395,7 @@ class Origami:
         self._power.give_back_boost(owners.boost)
         self._give_back_controller(owners)
         self._display.give_back_saturation_now(owners.saturation)
+        self._sharpness.give_back()
         self._sound.give_back()
         log.info("ORIGAMI uninstalled")
 
@@ -391,6 +417,7 @@ class Origami:
         self._buttons.stop()
         self._overlay.stop()
         self._sound.stop()
+        self._sharpness.stop()
         log.info("ORIGAMI stopped")
 
     async def _follow_settings(self) -> None:
@@ -400,6 +427,7 @@ class Origami:
         await self._buttons.follow(settings)
         await self._overlay.follow(settings)
         await self._sound.follow(settings)
+        await self._sharpness.follow(settings)
         # The controller forgets ORIGAMI's lighting and vibration in sleep, and may come back as
         # new devices without the rumble program; the saturation goes back to Steam's on resume,
         # and the clock comes back off where the hardware clock keeps local time.

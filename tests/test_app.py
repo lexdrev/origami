@@ -20,7 +20,10 @@ from origami.blocks import display as display_block
 from origami.blocks import fans as fans_block
 from origami.blocks import gamepad as gamepad_block
 from origami.blocks import power as power_block
+from origami.blocks import sharpness as sharpness_block
 from origami.blocks.buttons import BUTTON_ACTION, QAM_PRESSED
+from origami.blocks.sharpness import CONFIG as SHARPNESS_CONFIG
+from origami.blocks.sharpness import MANIFEST as SHARPNESS_MANIFEST
 from origami.buttons import Button, ButtonAction
 from origami.decky_plugins import (
     BOOST_OWNERS,
@@ -28,6 +31,9 @@ from origami.decky_plugins import (
     LIGHTING_OWNERS,
     POWER_OWNERS,
     SATURATION_OWNERS,
+    SHARPNESS_COMPANION,
+    SHARPNESS_LAUNCHERS,
+    SHARPNESS_OWNERS,
     TRIGGER_OWNERS,
     VIBRATION_OWNERS,
 )
@@ -42,11 +48,12 @@ from origami.power import Power, PowerKeeper
 from origami.proc import CommandError
 from origami.rumble import SETTINGS_MAP
 from origami.settings import Language, Settings, SettingsStore
+from origami.sharpness import GameState
 from origami.tdp import Limits
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers, TriggerState
 from origami.vibration import Vibration
 
-from fakes import FakeHidBpf, FakeRoot
+from fakes import FakeHidBpf, FakeRoot, FakeUser
 
 
 @pytest.fixture(autouse=True)
@@ -81,6 +88,7 @@ def make_app(
         data_dir=tmp_path / "data",
         decky_home=tmp_path / "decky",
         plugin_dir=tmp_path / "plugin",
+        user_home=root.path / "home" / "user",
         version="0.1.0",
         decky_version="v3.3.1",
     )
@@ -2241,5 +2249,144 @@ def test_restoring_leaves_what_another_plugin_drives_now(
         assert sent_lighting == [Lighting.from_json(RAINBOW)]
         assert screen["written"] == [150]
         assert await app.changes() == []
+
+    asyncio.run(scenario())
+
+
+@pytest.fixture
+def sharpened(ally_x: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A console whose system has vkBasalt; returns the user's home."""
+    monkeypatch.setattr(sharpness_block, "run_blocking", FakeUser())
+    return ally_x.vkbasalt()
+
+
+def test_the_sharpness_is_offered_where_the_system_has_its_layer(
+    ally_x: FakeRoot, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert not (await app.info()).sharpness
+
+        ally_x.vkbasalt()
+        again = make_app(ally_x, tmp_path)
+        await again.start()
+        assert (await again.info()).sharpness
+
+    asyncio.run(scenario())
+
+
+def test_the_sharpness_is_ready_for_a_game_that_starts_and_goes_as_it_ends(
+    ally_x: FakeRoot, tmp_path: Path, sharpened: Path
+) -> None:
+    manifest, config = sharpened / SHARPNESS_MANIFEST, sharpened / SHARPNESS_CONFIG
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"sharpness": {"strength": 70}})
+        assert not manifest.exists()
+        assert (await app.sharpness()).game is GameState.NO_GAME
+
+        await app.game_starting(1920490)
+        assert manifest.exists()
+        assert "casSharpness = 0.70" in config.read_text(encoding="utf-8")
+        assert await app.changes() == [Change("sharpness", "layer", None)]
+
+        # The game's own profile, chosen while it runs, is written for its next start.
+        await app.set_game(1920490)
+        softer = {"app_id": 1920490, "name": "Game", "sharpness": {"strength": 20}}
+        await app.update_settings({"game_sharpness": [softer]})
+        assert "casSharpness = 0.20" in config.read_text(encoding="utf-8")
+
+        await app.set_game(None)
+        assert not manifest.exists() and not config.exists()
+        assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_a_game_run_by_another_plugin_names_it_and_the_plugin_the_sharpness_goes_with(
+    ally_x: FakeRoot, tmp_path: Path, sharpened: Path
+) -> None:
+    launcher = SHARPNESS_LAUNCHERS[0]
+    wrapper = sharpened / ".local" / "bin" / launcher.wrapper
+    wrapper.parent.mkdir(parents=True)
+    wrapper.write_text("export DISABLE_VKBASALT=1\n", encoding="utf-8")
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"sharpness": {}})
+
+        await app.game_starting(1920490, f"~/.local/bin/{launcher.wrapper} %command%")
+        await app.set_game(1920490)
+
+        # The frame generation to have with the sharpness is named though it is not installed.
+        state = await app.sharpness()
+        assert (state.game, state.owner) == (GameState.MANAGED, launcher.plugin)
+        assert state.companion == SHARPNESS_COMPANION
+        assert not (sharpened / SHARPNESS_MANIFEST).exists()
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_restoring_everything_takes_the_sharpness_out_of_the_games(
+    ally_x: FakeRoot, tmp_path: Path, sharpened: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        own = {"app_id": 1920490, "name": "Game", "sharpness": {"strength": 20}}
+        await app.update_settings({"sharpness": {}, "game_sharpness": [own]})
+        await app.game_starting(1920490)
+        await app.set_game(1920490)
+
+        restored = await app.restore_all()
+
+        assert restored.sharpness is None
+        assert [profile.active for profile in restored.game_sharpness] == [False]
+        assert not (sharpened / SHARPNESS_MANIFEST).exists()
+        assert await app.changes() == []
+        app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_uninstalling_takes_the_sharpness_away_without_waiting(
+    ally_x: FakeRoot, tmp_path: Path, sharpened: Path
+) -> None:
+    async def scenario() -> Origami:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"sharpness": {}})
+        await app.game_starting(1920490)
+        app.stop()
+        return app
+
+    app = asyncio.run(scenario())
+    assert (sharpened / SHARPNESS_MANIFEST).exists()
+
+    app.uninstall()
+
+    assert not (sharpened / SHARPNESS_MANIFEST).exists()
+    assert not (sharpened / SHARPNESS_CONFIG).exists()
+
+
+def test_a_plugin_that_manages_vkbasalt_keeps_it(
+    ally_x: FakeRoot, tmp_path: Path, sharpened: Path
+) -> None:
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        await app.update_settings({"sharpness": {}})
+        install_plugin(tmp_path, SHARPNESS_OWNERS[0])
+
+        assert (await app.follow_owners()).sharpness == SHARPNESS_OWNERS[0]
+        await app.game_starting(1920490)
+        assert not (sharpened / SHARPNESS_MANIFEST).exists()
+        app.stop()
 
     asyncio.run(scenario())

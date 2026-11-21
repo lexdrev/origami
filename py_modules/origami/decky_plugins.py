@@ -36,6 +36,28 @@ fan modes write the platform profile, which switches a fan curve off."""
 SOUND_OWNERS = ("Ally DSP",)
 """Plugins that put a filter of their own in front of the speakers; two would process the sound
 twice, so ORIGAMI then leaves the speakers alone."""
+SHARPNESS_OWNERS = ("vkBasalt Manager",)
+"""Plugins that write vkBasalt's configuration in the user's home, which ORIGAMI's sharpness
+writes too; ORIGAMI then leaves vkBasalt alone."""
+
+
+@dataclass(frozen=True, slots=True)
+class Launcher:
+    """A plugin that starts its games through a wrapper of its own in their launch options."""
+
+    plugin: str
+    wrapper: str
+    """The wrapper's file name, as a game's launch options have it."""
+    sharpening: str
+    """Where the plugin has a sharpening of its own: a key of the interface's texts."""
+
+
+SHARPNESS_LAUNCHERS = (Launcher("MAKO - Frame Generation", "mako-run", "shaders"),)
+"""Plugins whose wrapper builds a game's chain of Vulkan layers itself: it keeps vkBasalt out or
+loads one of its own, so in their games the sharpness is theirs and ORIGAMI says whose."""
+SHARPNESS_COMPANION = "Decky LSFG-VK"
+"""A frame generation plugin in whose games ORIGAMI's sharpness works (seen on the console). The
+screen names it as the way to have both, whether it is installed or not."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +73,7 @@ class Conflicts:
     """The plugin that holds the CPU boost: one that sets the whole power, or the boost alone."""
     fans: str | None
     sound: str | None
+    sharpness: str | None
 
 
 def describe(conflicts: Conflicts) -> str:
@@ -78,6 +101,14 @@ def read_conflicts(decky_home: Path) -> Conflicts:
         boost=owner(POWER_OWNERS + BOOST_OWNERS),
         fans=owner(FAN_OWNERS),
         sound=owner(SOUND_OWNERS),
+        sharpness=owner(SHARPNESS_OWNERS),
+    )
+
+
+def launcher_in(launch_options: str) -> Launcher | None:
+    """The plugin whose wrapper a game's launch options run; None when ORIGAMI knows none."""
+    return next(
+        (launcher for launcher in SHARPNESS_LAUNCHERS if launcher.wrapper in launch_options), None
     )
 
 

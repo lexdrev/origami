@@ -4,7 +4,14 @@
 import json
 from pathlib import Path
 
-from origami.decky_plugins import POWER_OWNERS, describe, enabled_plugins, read_conflicts
+from origami.decky_plugins import (
+    POWER_OWNERS,
+    SHARPNESS_LAUNCHERS,
+    describe,
+    enabled_plugins,
+    launcher_in,
+    read_conflicts,
+)
 
 
 def install(home: Path, folder: str, name: str) -> None:
@@ -76,3 +83,11 @@ def test_the_log_names_who_drives_what(tmp_path: Path) -> None:
     install(tmp_path, "huesync", "HueSync")
 
     assert describe(read_conflicts(tmp_path)) == "lighting HueSync"
+
+
+def test_the_plugin_whose_wrapper_launches_a_game_is_known_by_the_launch_options() -> None:
+    launcher = SHARPNESS_LAUNCHERS[0]
+
+    assert launcher_in(f"/home/user/.local/bin/{launcher.wrapper} %command%") is launcher
+    assert launcher_in("~/.other-wrapper %command%") is None
+    assert launcher_in("") is None

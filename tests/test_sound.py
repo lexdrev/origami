@@ -535,6 +535,7 @@ def no_conflicts(sound: str | None = None) -> Conflicts:
         boost=None,
         fans=None,
         sound=sound,
+        sharpness=None,
     )
 
 

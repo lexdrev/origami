@@ -226,6 +226,7 @@ async def no_conflicts() -> Conflicts:
         boost=None,
         fans=None,
         sound=None,
+        sharpness=None,
     )
 
 
