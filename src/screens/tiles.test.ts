@@ -175,6 +175,8 @@ describe("tile texts", () => {
     expect(service(null).value).toBe("Off");
     // Another plugin sets it, and before anything is read.
     expect(service(undefined)).toEqual({ value: "—", subtitle: "Another plugin" });
+    // The running game's launch options set the layer by themselves.
+    expect(service("launch")).toEqual({ value: "—", subtitle: "Launch options" });
     expect(service("unknown")).toEqual({ value: "—", subtitle: "" });
   });
 });

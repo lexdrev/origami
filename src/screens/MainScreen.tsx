@@ -112,9 +112,14 @@ export function MainScreen() {
       soundState: soundNow,
       sharpness:
         setting && others
-          ? others.sharpness === null && !sharpnessTaken
-            ? sharpnessFor(setting, running)
-            : undefined
+          ? others.sharpness !== null
+            ? undefined
+            : sharpnessTaken
+              ? // A plugin's wrapper keeps it, or the game's launch options by themselves.
+                sharp.value.owner === null
+                ? "launch"
+                : undefined
+              : sharpnessFor(setting, running)
           : "unknown",
     },
     t,

@@ -53,6 +53,7 @@ export const ru: Messages = {
     sharpnessSub: "Резкость в\u00a0играх",
     sharpnessOff: "Выкл",
     sharpnessOther: "Другой плагин",
+    sharpnessLaunch: "Параметры запуска",
   },
   settings: {
     title: "Настройки",

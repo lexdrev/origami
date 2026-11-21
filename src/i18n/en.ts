@@ -53,6 +53,7 @@ export const en: Messages = {
     sharpnessSub: "Sharpness in\u00a0games",
     sharpnessOff: "Off",
     sharpnessOther: "Another plugin",
+    sharpnessLaunch: "Launch options",
   },
   settings: {
     title: "Settings",

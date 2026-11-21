@@ -52,9 +52,10 @@ export interface OwnValues {
   soundState: SoundState | null;
   /**
    * The sharpness the next game starts with, null until switched on; undefined while another
-   * plugin sets it, "unknown" until the settings and the other plugins are read.
+   * plugin sets it, "launch" while the running game's launch options do, "unknown" until the
+   * settings and the other plugins are read.
    */
-  sharpness: Sharpness | null | undefined | "unknown";
+  sharpness: Sharpness | null | undefined | "unknown" | "launch";
 }
 
 const SEPARATOR = " · ";
@@ -113,6 +114,7 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
 function serviceText(sharpness: OwnValues["sharpness"], t: Messages): TileText {
   if (sharpness === "unknown") return { value: t.unknown, subtitle: "" };
   if (sharpness === undefined) return { value: t.unknown, subtitle: t.main.sharpnessOther };
+  if (sharpness === "launch") return { value: t.unknown, subtitle: t.main.sharpnessLaunch };
   return {
     value: sharpness?.enabled ? `${sharpness.strength}%` : t.main.sharpnessOff,
     subtitle: t.main.sharpnessSub,

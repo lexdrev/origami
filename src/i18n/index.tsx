@@ -80,6 +80,8 @@ export interface Messages {
     sharpnessSub: string;
     sharpnessOff: string;
     sharpnessOther: string;
+    /** Under the Service tile while the running game's launch options keep the sharpness. */
+    sharpnessLaunch: string;
   };
   settings: {
     title: string;
