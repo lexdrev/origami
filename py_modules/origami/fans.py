@@ -84,6 +84,12 @@ HOLD_GAIN = 1.5
 a minute, and a level moved faster than that swings."""
 HOLD_MOST = 6.0
 """Percent one look moves the level found at most."""
+HOLD_EASE = 3.0
+"""Percent a look takes off the level found per °C under the target, twice what it adds over it.
+Coming down too fast lets the SoC pass the target by a degree or two for a moment; coming down as
+slowly as going up kept the fans loud for two minutes after a heavy scene (measured 2026-11-21)."""
+HOLD_EASE_MOST = 10.0
+"""Percent one look takes off the level found at most."""
 HOLD_LEAN = 4
 """Percent of speed on top of the level found per °C over the target, and as much less under it:
 the answer to a change now, while the level found catches up."""
@@ -176,10 +182,10 @@ def hold_curve(target: int, level: int) -> Curve:
 class Hold:
     """Finds the fan speed at which the SoC rests at the target.
 
-    Too warm, and the level found goes up look by look; cooler than the target, and it comes down,
-    to HOLD_SLOWEST where the fans cannot let the SoC get that warm. At full speed they can do no
-    more. On top of it the level leans with the temperature now, which answers a change at once,
-    and while that brings the temperature back the level found waits.
+    Too warm, and the level found goes up look by look; cooler than the target, and it comes down
+    faster, to HOLD_SLOWEST where the fans cannot let the SoC get that warm. At full speed they can
+    do no more. On top of it the level leans with the temperature now, which answers a change at
+    once, and while that brings the temperature back the level found waits.
     """
 
     def __init__(self, target: int) -> None:
@@ -203,7 +209,10 @@ class Hold:
         nearing = 0.0 if self._before is None else (self._before - now) * (1 if over > 0 else -1)
         self._before = now
         if abs(over) > HOLD_REST and nearing * HOLD_AHEAD < abs(over):
-            move = max(-HOLD_MOST, min(HOLD_MOST, HOLD_GAIN * over))
+            if over > 0:
+                move = min(HOLD_MOST, HOLD_GAIN * over)
+            else:
+                move = max(-HOLD_EASE_MOST, HOLD_EASE * over)
             self._found = _speed(self._found + move)
         asked = _speed(self._found + HOLD_LEAN * over)
         at_an_end = asked in (float(HOLD_SLOWEST), float(FULL_SPEED))

@@ -212,6 +212,23 @@ def test_a_game_starting_on_slow_fans_does_not_swing_them() -> None:
     assert max(levels[-12:]) - min(levels[-12:]) <= 2
 
 
+def test_after_a_heavy_scene_the_fans_come_down_within_a_minute_and_a_half() -> None:
+    hold = Hold(55)
+    scene = Soc(slowest=77.0, fastest=67.5)
+    scene.temp = 55.0
+    assert scene.run(hold, 55, 9)[-1] == 100
+    game = Soc(slowest=58.9, fastest=49.3)
+    game.temp = scene.temp
+
+    levels = game.run(hold, 55, 48)
+
+    # Full speed while the SoC cools, then down to about the level it settles at and no way back.
+    assert levels[14] <= 50
+    assert max(levels[14:]) <= 50
+    assert max(levels[-12:]) - min(levels[-12:]) <= 2
+    assert game.temp == pytest.approx(55, abs=0.6)
+
+
 def test_a_temperature_on_its_way_to_the_target_leaves_the_level_found_alone() -> None:
     hold = Hold(60)
     for _ in range(3):
