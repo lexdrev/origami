@@ -6,6 +6,8 @@
 import asyncio
 import logging
 import os
+import threading
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -126,6 +128,7 @@ class SharpnessBlock:
         self._launcher: Launcher | None = None
         """The plugin whose wrapper those launch options run, where ORIGAMI knows it."""
         self._lock = asyncio.Lock()
+        self._files = threading.Lock()
         self._launch = BackgroundTask("origami-sharpness-launch", self._give_launch_up)
         self._watch = BackgroundTask("origami-sharpness-watch", self._watch_environment)
 
@@ -154,14 +157,16 @@ class SharpnessBlock:
         would spoil each other's, so ORIGAMI writes nothing for such a game.
         """
         self._settings = settings
-        self._starting = app_id
         managed = await asyncio.to_thread(self._managed_by_launch, launch_options)
         self._managed = app_id if managed else None
         self._launcher = launcher_in(launch_options) if managed and launch_options else None
         if managed:
             log.info("Sharpness is left to the launch options of game %d", app_id)
         self._launch.cancel()
-        self._launch.start()
+        # Steam may have told of the game already: then there is no launch left to wait for.
+        if app_id != self._game:
+            self._starting = app_id
+            self._launch.start()
         await self._sync()
         self._watch_again()
 
@@ -173,9 +178,11 @@ class SharpnessBlock:
         self._game = app_id
         if app_id is None:
             self._started, self._known = None, False
-            self._managed = None
-            self._launcher = None
-            self._watch.cancel()
+            # A game launched meanwhile keeps what its launch told of it.
+            if self._starting is None:
+                self._managed = None
+                self._launcher = None
+                self._watch.cancel()
         else:
             # A game whose launch ORIGAMI did not see found files ORIGAMI cannot tell.
             self._known = self._starting == app_id
@@ -198,6 +205,7 @@ class SharpnessBlock:
         root = self._context.root
         if game == self._managed or await asyncio.to_thread(managed_by_game, root):
             # The layer in such a game, if any, is not ORIGAMI's to tell of or to set.
+            self._managed = game
             launcher = self._launcher
             return SharpnessState(
                 GameState.MANAGED,
@@ -212,16 +220,20 @@ class SharpnessBlock:
         )
 
     def stop(self) -> None:
-        """Decky is unloading ORIGAMI: the files stay for the game that runs with them."""
-        self._launch.cancel()
-        self._watch.cancel()
+        """Decky is unloading ORIGAMI: the files go, as nothing would take them away afterwards.
+
+        The game that runs has the layer loaded already. Left behind, the files would load it into
+        whatever starts while ORIGAMI is switched off, or after the system restarts.
+        """
+        self.give_back()
 
     def give_back(self) -> None:
-        """Remove the files and put the user's own configuration back; Decky removes ORIGAMI."""
+        """Remove the files and put the user's own configuration back, without waiting long."""
         self._launch.cancel()
         self._watch.cancel()
         try:
-            self._take_away(GIVE_BACK_SECONDS)
+            with self._files:
+                self._take_away(GIVE_BACK_SECONDS)
         except (CommandError, TimeoutError, OSError) as error:
             log.warning("Sharpness not taken away: %s", error)
 
@@ -251,17 +263,21 @@ class SharpnessBlock:
         """Whether the launch options, or a script they run, set vkBasalt's variables."""
         if options is None:
             return False
-        if sets_vkbasalt(options):
+        # A known wrapper builds the chain of layers itself, however the options spell its path.
+        if sets_vkbasalt(options) or launcher_in(options) is not None:
             return True
         for program in launch_programs(options):
             script = self._home / program[2:] if program.startswith("~/") else Path(program)
             try:
-                if not script.is_file() or script.stat().st_size > MAX_SCRIPT_BYTES:
+                # What the system makes up as it is read (/proc) has no size, and is no script.
+                if not script.is_file() or not 0 < script.stat().st_size <= MAX_SCRIPT_BYTES:
                     continue
-                if sets_vkbasalt(script.read_text(encoding="utf-8", errors="replace")):
-                    return True
+                with script.open("rb") as file:
+                    text = file.read(MAX_SCRIPT_BYTES).decode(errors="replace")
             except OSError:
                 continue
+            if sets_vkbasalt(text):
+                return True
         return False
 
     async def _wanted(self, game: int) -> Sharpness | None:
@@ -278,6 +294,11 @@ class SharpnessBlock:
         async with self._lock:
             game = self._starting if self._starting is not None else self._game
             wanted = None if game is None else await self._wanted(game)
+            # The first write for a game that runs already: its environment shows whether another
+            # program reads the configuration ORIGAMI would write.
+            first = wanted is not None and self._on_disk is None and game == self._game
+            if first and await asyncio.to_thread(managed_by_game, self._context.root):
+                self._managed, wanted = game, None
             try:
                 await asyncio.to_thread(self._set, wanted)
             except (CommandError, TimeoutError, OSError, ValueError) as error:
@@ -286,15 +307,17 @@ class SharpnessBlock:
                 )
 
     def _set(self, wanted: Sharpness | None) -> None:
-        if wanted is None:
-            self._take_away(TIMEOUT_SECONDS)
-        elif wanted != self._on_disk:
-            try:
-                self._put(wanted)
-            except CommandError, TimeoutError, OSError:
-                # Half of the files would load the layer with another configuration, or none.
+        # One at a time, also when the task that asked before was cancelled while its thread ran.
+        with self._files:
+            if wanted is None:
                 self._take_away(TIMEOUT_SECONDS)
-                raise
+            elif wanted != self._on_disk:
+                try:
+                    self._put(wanted)
+                except CommandError, TimeoutError, OSError:
+                    # Half of the files would load the layer with another configuration, or none.
+                    self._take_away(TIMEOUT_SECONDS)
+                    raise
 
     def _put(self, sharpness: Sharpness) -> None:
         user = self._user()
@@ -316,6 +339,8 @@ class SharpnessBlock:
             return
         user = self._user()
         self._run("rm", "-f", str(manifest), timeout=timeout, user=user)
+        # Without the manifest the next game needs both files written again, whatever fails below.
+        self._on_disk = None
         # A configuration written over ORIGAMI's meanwhile is somebody's own and stays.
         if os.path.lexists(config) and own_config(self._read(config, user, timeout)):
             original = journal.original(*JOURNAL)
@@ -359,11 +384,27 @@ class SharpnessBlock:
         return owner.st_uid, owner.st_gid
 
 
-def layer_loaded(root: Path) -> bool:
-    """Whether some process has vkBasalt's library mapped: a game that loaded the layer."""
-    for maps in (root / "proc").glob("[0-9]*/maps"):
+def game_processes(root: Path) -> Iterator[tuple[Path, list[bytes]]]:
+    """The processes of the games Steam started: each one's folder in /proc and its environment."""
+    for environment in (root / "proc").glob("[0-9]*/environ"):
         try:
-            if LIBRARY in maps.read_text(encoding="utf-8", errors="replace"):
+            variables = environment.read_bytes().split(b"\0")
+        except OSError:
+            # The process ended meanwhile.
+            continue
+        if any(item.startswith(STEAM_GAME) for item in variables):
+            yield environment.parent, variables
+
+
+def layer_loaded(root: Path) -> bool:
+    """Whether a game's process has vkBasalt's library mapped: the game loaded the layer.
+
+    Only the games' processes count: while the files are there, anything else that starts with
+    Vulkan loads the layer too.
+    """
+    for process, _ in game_processes(root):
+        try:
+            if LIBRARY in (process / "maps").read_text(encoding="utf-8", errors="replace"):
                 return True
         except OSError:
             # The process ended meanwhile.
@@ -377,14 +418,8 @@ def managed_by_game(root: Path) -> bool:
     Launch options do that, and so does a wrapper in them that builds the game's chain of Vulkan
     layers itself: it switches vkBasalt off, or loads one of its own with its own configuration.
     """
-    for environment in (root / "proc").glob("[0-9]*/environ"):
-        try:
-            variables = environment.read_bytes().split(b"\0")
-        except OSError:
-            # The process ended meanwhile.
-            continue
-        if not any(item.startswith(STEAM_GAME) for item in variables):
-            continue
-        if any(item in OWN_VARIABLES or item.startswith(OWN_CONFIG_VARIABLE) for item in variables):
-            return True
-    return False
+    return any(
+        item in OWN_VARIABLES or item.startswith(OWN_CONFIG_VARIABLE)
+        for _, variables in game_processes(root)
+        for item in variables
+    )

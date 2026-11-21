@@ -2363,11 +2363,14 @@ def test_uninstalling_takes_the_sharpness_away_without_waiting(
         await app.start()
         await app.update_settings({"sharpness": {}})
         await app.game_starting(1920490)
+        assert (sharpened / SHARPNESS_MANIFEST).exists()
+        # Unloaded, ORIGAMI could not take the files away when the game ends.
         app.stop()
         return app
 
     app = asyncio.run(scenario())
-    assert (sharpened / SHARPNESS_MANIFEST).exists()
+    assert not (sharpened / SHARPNESS_MANIFEST).exists()
+    assert not (sharpened / SHARPNESS_CONFIG).exists()
 
     app.uninstall()
 

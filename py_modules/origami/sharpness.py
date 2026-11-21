@@ -32,6 +32,8 @@ NEVER_PRESSED = "F35"
 """A key no keyboard has: vkBasalt switches its effects on a key press, Home unless told."""
 SETS_VKBASALT = re.compile(r"\b(?:ENABLE_VKBASALT|DISABLE_VKBASALT|VKBASALT_CONFIG_FILE)=")
 """An assignment of one of vkBasalt's own variables, in launch options or in a script."""
+HOME_SPELLINGS = ("$HOME/", "${HOME}/")
+"""The user's home in launch options, besides "~/"."""
 OWN_STRENGTH = re.compile(r"^casSharpness = (\d\.\d\d)$", re.MULTILINE)
 
 
@@ -213,8 +215,16 @@ def sets_vkbasalt(text: str) -> bool:
 def launch_programs(options: str) -> list[str]:
     """The programs Steam's launch options run in front of the game, as they are written.
 
-    The words before %command% that are paths, the home as "~" too; variables are not programs.
+    The words before %command% that are paths, quoted or not; the home, however it is written,
+    comes back as "~". Variables are not programs.
     """
-    return [
-        word for word in options.split("%command%", 1)[0].split() if word.startswith(("/", "~/"))
-    ]
+    programs: list[str] = []
+    for word in options.split("%command%", 1)[0].split():
+        path = word.strip("\"'")
+        for home in HOME_SPELLINGS:
+            if path.startswith(home):
+                path = "~/" + path[len(home) :]
+                break
+        if path.startswith(("/", "~/")):
+            programs.append(path)
+    return programs

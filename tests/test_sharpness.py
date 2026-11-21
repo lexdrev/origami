@@ -42,6 +42,7 @@ GAME = 1920490
 LAUNCHER = SHARPNESS_LAUNCHERS[0]
 """A plugin whose launch wrapper keeps the sharpness in its games."""
 OTHER = 7
+NUL = "\0"
 
 
 def test_sharpness_settings_parse_and_keep_their_defaults() -> None:
@@ -125,6 +126,11 @@ def test_launch_options_that_set_vkbasalt_are_told_from_those_that_only_name_it(
         "/home/user/bin/run"
     ]
     assert launch_programs("") == []
+    # The home is written in other ways too, and a path may be quoted.
+    assert launch_programs("$HOME/.local/bin/run %command%") == ["~/.local/bin/run"]
+    assert launch_programs("${HOME}/run %command%") == ["~/run"]
+    assert launch_programs('"/opt/my/run" %command%') == ["/opt/my/run"]
+    assert launch_programs("run %command%") == []
 
 
 def test_the_state_of_a_running_game() -> None:
@@ -190,6 +196,7 @@ def game_with_the_layer(tmp_path: Path, pid: int = 5000) -> Path:
     """A game's process that has the layer's library mapped."""
     maps = tmp_path / "root" / "proc" / str(pid) / "maps"
     maps.parent.mkdir(parents=True, exist_ok=True)
+    (maps.parent / "environ").write_bytes(f"HOME=/home/user{NUL}SteamAppId={GAME}{NUL}".encode())
     maps.write_text(
         "7f00-7f10 r-xp 00000000 00:1f 42 /usr/lib64/vkbasalt/libvkbasalt.so\n", encoding="utf-8"
     )
@@ -438,6 +445,13 @@ def test_the_layer_is_found_in_a_process_that_mapped_it(tmp_path: Path) -> None:
     (root / "proc" / "100" / "maps").write_text("7f00-7f10 r-xp /usr/lib64/libc.so.6\n")
     assert not layer_loaded(root)
 
+    # Something else that started with Vulkan while the files were there is not the game.
+    steam_process(tmp_path, 200, "HOME=/home/user")
+    (root / "proc" / "200" / "maps").write_text(
+        "7f00-7f10 r-xp /usr/lib64/vkbasalt/libvkbasalt.so\n"
+    )
+    assert not layer_loaded(root)
+
     game_with_the_layer(tmp_path)
     assert layer_loaded(root)
 
@@ -591,6 +605,167 @@ def test_a_running_game_with_its_own_vkbasalt_is_left_alone_from_the_first_look(
         await block.set_game(settings, GAME)
         assert user.calls == []
         assert (home / CONFIG).read_text(encoding="utf-8") == theirs
+        assert (await block.state()).game is GameState.MANAGED
+        block.stop()
+
+    asyncio.run(scenario())
+
+
+def test_a_known_wrapper_keeps_the_sharpness_however_its_path_is_written(tmp_path: Path) -> None:
+    user = FakeUser()
+    block, _ = make_block(tmp_path, user)
+    settings = Settings(sharpness=Sharpness())
+
+    async def scenario() -> None:
+        # The wrapper is not a file ORIGAMI can read here: its name is enough.
+        for options in (
+            f"{LAUNCHER.wrapper} %command%",
+            f"$HOME/.local/bin/{LAUNCHER.wrapper} %command%",
+            f'"/opt/{LAUNCHER.wrapper}" %command%',
+        ):
+            await block.game_starting(settings, GAME, options)
+            await block.set_game(settings, GAME)
+            state = await block.state()
+            assert (state.game, state.owner) == (GameState.MANAGED, LAUNCHER.plugin), options
+            assert user.calls == []
+            await block.set_game(settings, None)
+        block.stop()
+
+    asyncio.run(scenario())
+
+
+def test_what_is_no_script_in_the_launch_options_is_not_read(tmp_path: Path) -> None:
+    block, home = make_block(tmp_path, FakeUser())
+    settings = Settings(sharpness=Sharpness())
+    empty = home / "empty"
+    empty.touch()
+    program = home / "program"
+    program.write_bytes(b"\0" * (sharpness_block.MAX_SCRIPT_BYTES + 1) + b"DISABLE_VKBASALT=1")
+
+    async def scenario() -> None:
+        for options in (f"{empty} %command%", f"{program} %command%"):
+            await block.game_starting(settings, GAME, options)
+            await block.set_game(settings, GAME)
+            assert (home / MANIFEST).exists(), options
+            assert (await block.state()).game is not GameState.MANAGED
+            await block.set_game(settings, None)
+            assert not (home / MANIFEST).exists()
+        block.stop()
+
+    asyncio.run(scenario())
+
+
+def test_unloading_takes_the_files_away(tmp_path: Path) -> None:
+    block, home = make_block(tmp_path, FakeUser())
+    settings = Settings(sharpness=Sharpness())
+    theirs = "effects = fxaa"
+    (home / CONFIG).parent.mkdir(parents=True)
+    (home / CONFIG).write_text(theirs, encoding="utf-8")
+
+    async def scenario() -> None:
+        await block.game_starting(settings, GAME)
+        await block.set_game(settings, GAME)
+        assert (home / MANIFEST).exists()
+        # Nothing would take them away while ORIGAMI is not loaded.
+        block.stop()
+
+    asyncio.run(scenario())
+
+    assert not (home / MANIFEST).exists()
+    assert (home / CONFIG).read_text(encoding="utf-8") == theirs
+    assert not in_journal(tmp_path)
+
+
+def test_a_take_away_that_fails_midway_does_not_keep_the_next_game_without_the_layer(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    user = FakeUser()
+    block, home = make_block(tmp_path, user)
+    settings = Settings(sharpness=Sharpness())
+
+    async def scenario() -> None:
+        await block.game_starting(settings, GAME)
+        await block.set_game(settings, GAME)
+        # The manifest goes, and then the configuration cannot be read.
+        user.failing = "head"
+        await block.set_game(settings, None)
+        assert "Sharpness not taken away" in caplog.text
+        assert not (home / MANIFEST).exists()
+        user.failing = None
+        # The same sharpness as before: the files are written again all the same.
+        await block.game_starting(settings, GAME)
+        assert (home / MANIFEST).exists() and (home / CONFIG).exists()
+        await block.set_game(settings, GAME)
+        await block.set_game(settings, None)
+        assert not (home / CONFIG).exists()
+        assert not in_journal(tmp_path)
+
+    asyncio.run(scenario())
+
+
+def test_a_game_steam_told_of_before_its_launch_leaves_no_launch_waiting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sharpness_block, "LAUNCH_SECONDS", 0.01)
+    user = FakeUser()
+    block, home = make_block(tmp_path, user)
+    settings = Settings(sharpness=Sharpness())
+    wrapper = home / ".wrapper"
+    wrapper.write_text("export DISABLE_VKBASALT=1\n", encoding="utf-8")
+
+    async def scenario() -> None:
+        # The running game first, its launch a moment later: the launch still tells whose it is.
+        await block.set_game(settings, GAME)
+        assert (home / MANIFEST).exists()
+        await block.game_starting(settings, GAME, "~/.wrapper %command%")
+        assert not (home / MANIFEST).exists()
+        assert (await block.state()).game is GameState.MANAGED
+        # No launch is given up later, and the game's end leaves nothing behind.
+        await asyncio.sleep(0.1)
+        await block.set_game(settings, None)
+        assert (await block.state()).game is GameState.NO_GAME
+        await block.game_starting(settings, OTHER)
+        assert (home / MANIFEST).exists()
+        block.stop()
+
+    asyncio.run(scenario())
+
+
+def test_a_game_launched_as_another_ends_keeps_what_its_launch_told(tmp_path: Path) -> None:
+    user = FakeUser()
+    block, home = make_block(tmp_path, user)
+    settings = Settings(sharpness=Sharpness())
+
+    async def scenario() -> None:
+        await block.game_starting(settings, OTHER)
+        await block.set_game(settings, OTHER)
+        # The next game is launched before Steam tells that the first one ended.
+        await block.game_starting(settings, GAME, "DISABLE_VKBASALT=1 %command%")
+        assert not (home / MANIFEST).exists()
+        calls = len(user.calls)
+        await block.set_game(settings, None)
+        await block.set_game(settings, GAME)
+        assert len(user.calls) == calls
+        assert (await block.state()).game is GameState.MANAGED
+        block.stop()
+
+    asyncio.run(scenario())
+
+
+def test_switched_on_in_a_running_game_with_its_own_vkbasalt_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    user = FakeUser()
+    block, _ = make_block(tmp_path, user)
+    off = Settings(sharpness=Sharpness(enabled=False))
+
+    async def scenario() -> None:
+        # Launch options ORIGAMI could not read, and nothing to write at the launch.
+        await block.game_starting(off, GAME)
+        await block.set_game(off, GAME)
+        steam_process(tmp_path, 300, f"SteamAppId={GAME}", "ENABLE_VKBASALT=1")
+        await block.follow(Settings(sharpness=Sharpness()))
+        assert user.calls == []
         assert (await block.state()).game is GameState.MANAGED
         block.stop()
 

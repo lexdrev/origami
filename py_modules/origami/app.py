@@ -168,6 +168,9 @@ class Origami:
         await self._battery.start()
         # Frontend calls may come in as soon as the settings are loaded: they wait for these.
         async with self._settings_lock:
+            # The sharpness files of a run that ended while its game was on go first: the
+            # session that starts now would load the layer from them.
+            await self._sharpness.follow(self._settings)
             self._owners = await self.conflicts()
             await self._restore_controller("at start")
             await self._gamepad.restore_gyro(self._settings)
