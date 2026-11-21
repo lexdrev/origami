@@ -24,6 +24,7 @@ const info: Info = {
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   sound: true,
+  fanHold: true,
   overlayMenu: true,
 };
 
@@ -38,6 +39,7 @@ const steamos: Info = {
   },
   buttons: [],
   sound: true,
+  fanHold: false,
   overlayMenu: true,
 };
 

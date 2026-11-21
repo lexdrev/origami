@@ -50,6 +50,11 @@ export function curveName(curve: FanCurve | null, t: Messages): string {
   return t.fans.presets[presetOf(curve.points)?.id ?? "custom"];
 }
 
+/** The curve as this console follows it: where the fans hold no temperature, by its points. */
+export function curveHere(curve: FanCurve | null, canHold: boolean): FanCurve | null {
+  return curve !== null && curve.hold && !canHold ? { ...curve, hold: false } : curve;
+}
+
 /** The temperature the fans hold, for the card's head and the tile; null while a curve runs them. */
 export function heldTarget(curve: FanCurve | null): number | null {
   return curve !== null && curve.enabled && curve.hold ? curve.target : null;
@@ -77,7 +82,10 @@ export function speedOn(curve: readonly CurvePoint[], temp: number): number {
   return speed;
 }
 
-/** How fast fan 1 turns at a speed asked, in percent and rpm, as measured on the ROG Xbox Ally X. */
+/**
+ * How fast fan 1 turns at a speed asked, in percent and rpm, as measured on the ROG Xbox Ally X.
+ * Other fans turn otherwise: only the consoles that hold a temperature tell a step by it.
+ */
 const RPM_AT: readonly CurvePoint[] = [
   [0, 0],
   [8, 3700],

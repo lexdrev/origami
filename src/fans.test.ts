@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  curveHere,
   curveName,
   curveSteps,
   DEFAULT_FAN_CURVE,
@@ -81,6 +82,15 @@ describe("fan curve", () => {
     // The curve that holds a temperature: its level, or the step over the target it has not let go.
     expect(speedNow(held, 60, 5200)).toBe(40);
     expect(speedNow(held, 64.5, 5700)).toBe(50);
+  });
+
+  it("follows the points where the fans hold no temperature", () => {
+    const holding = { ...DEFAULT_FAN_CURVE, hold: true, target: 55 };
+
+    expect(curveHere(holding, true)).toBe(holding);
+    expect(curveHere(holding, false)).toEqual({ ...holding, hold: false });
+    expect(curveHere(DEFAULT_FAN_CURVE, false)).toBe(DEFAULT_FAN_CURVE);
+    expect(curveHere(null, false)).toBeNull();
   });
 
   it("holds a temperature only while it is on and asked to", () => {

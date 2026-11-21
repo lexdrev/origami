@@ -5,6 +5,7 @@ import { Focusable } from "@decky/ui";
 import { useEffect } from "react";
 
 import { runningPlugins } from "../deckyPlugins";
+import { curveHere } from "../fans";
 import { soundFor } from "../gameProfiles";
 import { soundOwner } from "../sound";
 import { runningGame } from "../games";
@@ -55,6 +56,7 @@ export function MainScreen() {
   const sound = useStore(soundState);
   const running = useStore(runningGame);
   const speakers = plugin.status === "ready" && plugin.value.sound;
+  const fanHold = plugin.status === "ready" && plugin.value.fanHold;
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.
   useEffect(() => {
@@ -84,7 +86,7 @@ export function MainScreen() {
       tdp: held.status === "ready" ? (held.value.limits?.spl ?? null) : null,
       lighting: setting?.lighting && others?.lighting === null ? setting.lighting.enabled : undefined,
       triggers: setting && ownTriggers ? setting.triggerRumble : undefined,
-      fanCurve: setting && others?.fans === null ? setting.fans : undefined,
+      fanCurve: setting && others?.fans === null ? curveHere(setting.fans, fanHold) : undefined,
       sound:
         setting && others
           ? soundTaken === null

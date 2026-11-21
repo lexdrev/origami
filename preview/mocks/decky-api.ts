@@ -22,9 +22,12 @@ const info: Info = {
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   sound: true,
+  fanHold: true,
   overlayMenu: true,
 };
 const query = new URLSearchParams(location.search);
+// "?nohold" is a console whose fans hold no temperature: the Fans screen has the curve alone.
+if (query.has("nohold")) info.fanHold = false;
 
 let settings: Settings = {
   language: "auto",

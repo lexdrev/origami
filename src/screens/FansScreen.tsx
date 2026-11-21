@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { FanCurve, Telemetry } from "../backend";
 import { fanHistory } from "../fanHistory";
 import {
+  curveHere,
   curveName,
   curveSteps,
   DEFAULT_FAN_CURVE,
@@ -24,7 +25,7 @@ import {
 import { useMessages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
 import { back } from "../navigation";
-import { conflicts, refreshConflicts, setFans, settings } from "../state";
+import { conflicts, info, refreshConflicts, setFans, settings } from "../state";
 import { useStore } from "../store";
 import { Card, Header, Screen } from "../ui/blocks";
 import { ChoiceGroup, filledTrack, Slider } from "../ui/controls";
@@ -46,6 +47,7 @@ export function FansScreen() {
   const t = useMessages();
   const current = useStore(settings);
   const owners = useStore(conflicts);
+  const plugin = useStore(info);
   const readings = useTelemetry();
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export function FansScreen() {
 
   const fans = readings.status === "ready" ? readings.value.fans : null;
   const owner = owners.status === "ready" ? owners.value.fans : null;
+  const canHold = plugin.status === "ready" && plugin.value.fanHold;
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={t.fans.title} />
@@ -65,7 +68,7 @@ export function FansScreen() {
         (owner !== null ? (
           <OwnedBy title={t.fans.ownedBy(owner)} text={t.fans.ownedText(owner)} />
         ) : (
-          <CurveCard curve={current.value.fans} fans={fans} />
+          <CurveCard curve={curveHere(current.value.fans, canHold)} fans={fans} canHold={canHold} />
         ))}
     </Screen>
   );
@@ -176,16 +179,24 @@ function Temperatures({ fans }: { fans: FanReadings | null }) {
 
 const percent = (value: number) => `${value}%`;
 
+interface CurveCardProps {
+  curve: FanCurve | null;
+  fans: FanReadings | null;
+  /** The fans can hold a temperature on this console. */
+  canHold: boolean;
+}
+
 /**
  * What runs both fans: the switch in the head, and while it is on the choice between the curve and
  * a temperature to hold, each with the curve the firmware follows and the temperature now on it.
+ * A console whose fans hold no temperature has the curve alone, and no step told by the fans' speed.
  */
-function CurveCard({ curve, fans }: { curve: FanCurve | null; fans: FanReadings | null }) {
+function CurveCard({ curve, fans, canHold }: CurveCardProps) {
   const t = useMessages();
   const current = curve ?? DEFAULT_FAN_CURVE;
   const on = curve?.enabled ?? false;
   const hottest = hottestOf(fans);
-  const rpm = fans?.speedsRpm[0] ?? null;
+  const rpm = canHold ? (fans?.speedsRpm[0] ?? null) : null;
   const held = fans?.holdCurve ?? null;
   const state = held !== null && hottest !== null ? holdState(held, current.target, hottest) : "holding";
   const target = heldTarget(curve);
@@ -208,19 +219,23 @@ function CurveCard({ curve, fans }: { curve: FanCurve | null; fans: FanReadings 
         },
       }}
     >
-      <span className="og-card__label">{t.fans.mode}</span>
-      <ChoiceGroup
-        label={t.fans.mode}
-        choices={[
-          { value: "curve", label: t.fans.modes.curve },
-          { value: "hold", label: t.fans.modes.hold },
-        ]}
-        value={current.hold ? "hold" : "curve"}
-        action={t.actions.select}
-        onChange={(mode) => {
-          setFans({ ...current, enabled: true, hold: mode === "hold" });
-        }}
-      />
+      {canHold && (
+        <>
+          <span className="og-card__label">{t.fans.mode}</span>
+          <ChoiceGroup
+            label={t.fans.mode}
+            choices={[
+              { value: "curve", label: t.fans.modes.curve },
+              { value: "hold", label: t.fans.modes.hold },
+            ]}
+            value={current.hold ? "hold" : "curve"}
+            action={t.actions.select}
+            onChange={(mode) => {
+              setFans({ ...current, enabled: true, hold: mode === "hold" });
+            }}
+          />
+        </>
+      )}
       {current.hold ? (
         <HoldSettings curve={current} held={held} hottest={hottest} rpm={rpm} full={state === "full"} />
       ) : (

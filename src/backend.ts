@@ -35,6 +35,8 @@ export interface Info {
   buttons: ConsoleButton[];
   /** ORIGAMI processes this console's speakers: it has their protection. */
   sound: boolean;
+  /** The fans can hold a temperature here: the hold knows this console's fans. */
+  fanHold: boolean;
   /** The system has an overlay menu of its own that ORIGAMI can keep in sight. */
   overlayMenu: boolean;
 }
