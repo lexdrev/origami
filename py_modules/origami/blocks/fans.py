@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 from origami.blocks import Context
 from origami.fans import (
+    HOLD_BOARDS,
     POLL_SECONDS,
     Curve,
     FanCurve,
@@ -33,13 +34,20 @@ class FansBlock:
 
     The firmware's own curve may bring back its platform profile's own power, so giving the fans
     back has the power keeper write its limits again (`limits_again`, safe from a worker thread)
-    and look at once (`look`, on the event loop only).
+    and look at once (`look`, on the event loop only). A temperature is held only on the consoles
+    whose fans the hold knows (`board` names this one); on the others the curve follows its points.
     """
 
     def __init__(
-        self, context: Context, *, limits_again: Callable[[str], None], look: Callable[[], None]
+        self,
+        context: Context,
+        *,
+        limits_again: Callable[[str], None],
+        look: Callable[[], None],
+        board: Callable[[], str | None],
     ) -> None:
         self._context = context
+        self._board = board
         self._limits_again = limits_again
         self._look = look
         self._curve: FanCurve | None = None
@@ -74,7 +82,7 @@ class FansBlock:
             and owner is None
             and await asyncio.to_thread(curve_dir, root) is not None
         )
-        if curve is None or not keep or not curve.hold:
+        if curve is None or not keep or not self._holds(curve):
             # The next hold starts afresh, not from the level this one was left at.
             self._holder = None
         if curve is not None and keep:
@@ -90,7 +98,7 @@ class FansBlock:
     def held(self) -> Curve | None:
         """The curve in the firmware while ORIGAMI holds a temperature with it, for the screen."""
         curve = self._curve
-        return self._written if curve is not None and curve.enabled and curve.hold else None
+        return self._written if curve is not None and curve.enabled and self._holds(curve) else None
 
     def give_back(self, owner: str | None) -> bool:
         """Let the firmware run the fans on its own curve again; blocks briefly.
@@ -120,9 +128,13 @@ class FansBlock:
     def stop(self) -> None:
         self._keeper.cancel()
 
+    def _holds(self, curve: FanCurve) -> bool:
+        """Whether the curve holds a temperature here: asked to, on a console whose fans can."""
+        return curve.hold and self._board() in HOLD_BOARDS
+
     def _wanted(self, curve: FanCurve) -> Curve:
         """The curve for the firmware now: the user's points, or the slope at the level found."""
-        if not curve.hold:
+        if not self._holds(curve):
             return own_curve(curve.points)
         if self._holder is None:
             self._holder = Hold(curve.target)
@@ -158,7 +170,7 @@ class FansBlock:
             curve, holder = self._curve, self._holder
             if curve is None or not curve.enabled:
                 continue
-            if curve.hold and holder is not None:
+            if holder is not None and self._holds(curve):
                 temp = await asyncio.to_thread(hottest, root)
                 # Unread, the slope in the firmware goes on by itself.
                 if temp is not None:

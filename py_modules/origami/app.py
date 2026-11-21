@@ -23,6 +23,7 @@ from origami.blocks.sound import LV2_DIR, SoundBlock, SoundState
 from origami.buttons import Button, layout_for
 from origami.decky_plugins import Conflicts, describe, read_conflicts
 from origami.device import Device, read_device
+from origami.fans import HOLD_BOARDS
 from origami.gyro import GyroState
 from origami.hid_bpf import HidBpfProgram
 from origami.inputplumber import PASTE, NoKeyboardError, press_keys
@@ -71,6 +72,8 @@ class Info:
     """The buttons ORIGAMI may drive here; the system keeps the others (both on the ROG Ally)."""
     sound: bool
     """ORIGAMI processes this console's speakers: it has their protection."""
+    fan_hold: bool
+    """The fans can hold a temperature here: the hold knows this console's fans."""
     overlay_menu: bool
     """The system has an overlay menu of its own that ORIGAMI can keep in sight (B18)."""
 
@@ -107,7 +110,12 @@ class Origami:
         )
         self._power = PowerBlock(context)
         self._battery = BatteryBlock(context, environment.data_dir / "battery.json")
-        self._fans = FansBlock(context, limits_again=self._power.write_again, look=self._power.look)
+        self._fans = FansBlock(
+            context,
+            limits_again=self._power.write_again,
+            look=self._power.look,
+            board=self._board_now,
+        )
         self._display = DisplayBlock(
             context, self._controller_lock, saturation_top=self._saturation_top
         )
@@ -137,6 +145,7 @@ class Origami:
                 versions=versions,
                 buttons=tuple(buttons),
                 sound=device.board in SPEAKER_ZONES,
+                fan_hold=device.board in HOLD_BOARDS,
                 overlay_menu=await asyncio.to_thread(overlay_offered, self._env.root),
             )
             log.info("ORIGAMI %s started, board %s", self._env.version, device.board)

@@ -52,6 +52,10 @@ CUSTOM, FIRMWARE = 1, 2
 POLL_SECONDS = 5.0
 CURVE_HWMON = "asus_custom_fan_curve"
 
+HOLD_BOARDS = frozenset({"RC73XA", "RC74XA"})
+"""The consoles whose fans hold a temperature: the Xbox Ally X, where the hold was measured, and
+the X20, taken to have the same fans. Other fans turn at other speeds, and the ROG Ally's firmware
+runs them faster than the curve asks from 60 °C: there the curve follows its points."""
 HOLD_COOLEST, HOLD_WARMEST = 45, 75
 """The targets to choose from, in °C. Under the first no TDP a game runs at gets the SoC; over the
 last the net would have to start before the target to be at SAFE_PERCENT by SAFE_FROM."""

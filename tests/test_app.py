@@ -1713,6 +1713,33 @@ def test_origami_holds_its_fan_curve_and_gives_the_fans_back(
 
 
 @pytest.mark.usefixtures("quick_power")
+def test_the_fans_hold_a_temperature_only_on_the_consoles_measured(
+    powered: FakeRoot, fan_curves: Path, tmp_path: Path
+) -> None:
+    async def scenario(board: str) -> Origami:
+        powered.write("sys/class/dmi/id/board_name", board)
+        app = make_app(powered, tmp_path / board)
+        await app.start()
+        await app.update_settings({"fans": {"enabled": True, "hold": True, "target": 55}})
+        return app
+
+    async def scenarios() -> None:
+        # The ROG Ally's fans stop where the hold would keep them turning: it follows the points.
+        ally = await scenario("RC71L")
+        assert not (await ally.info()).fan_hold
+        assert fan_speeds(fan_curves) == [0, 26, 64, 102, 140, 191, 255, 255]
+        assert (await ally.telemetry()).fans.hold_curve is None
+        ally.stop()
+
+        for board in ("RC73XA", "RC74XA"):
+            app = await scenario(board)
+            assert (await app.info()).fan_hold
+            assert (await app.telemetry()).fans.hold_curve is not None
+            app.stop()
+
+    asyncio.run(scenarios())
+
+
 def test_origami_holds_a_temperature_with_the_fans(
     powered: FakeRoot, fan_curves: Path, tmp_path: Path
 ) -> None:
