@@ -63,10 +63,10 @@ export interface OwnValues {
   /**
    * The sharpness the next game starts with, null until switched on; undefined while another
    * plugin sets it, "launch" while the running game's launch options do, "unknown" until the
-   * settings and the other plugins are read, "none" where the system has no layer to sharpen with.
+   * settings and the other plugins are read, "none" where ORIGAMI has no layer to sharpen with.
    */
   sharpness: Sharpness | null | undefined | "unknown" | "launch" | "none";
-  /** The disk of the user's home, shown where the tile has no sharpness; null until read. */
+  /** The disk of the user's home, where ORIGAMI can clean up after Steam; null elsewhere and until read. */
   storage: Storage | null;
 }
 
@@ -123,19 +123,19 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
 }
 
 /**
- * The Service tile shows the sharpness, the one setting of its screen that has a value; without
- * it, the free space its cleanup is about.
+ * The Service tile shows the sharpness, the one setting of its screen that has a value, and after
+ * it the free space its cleanup is about; without the sharpness, the free space alone.
  */
 function serviceText(sharpness: OwnValues["sharpness"], storage: Storage | null, t: Messages): TileText {
   if (sharpness === "unknown") return { value: t.unknown, subtitle: "" };
-  if (sharpness === "none") {
-    return { value: storage === null ? t.unknown : formatSize(storage.free, t), subtitle: t.main.storageSub };
-  }
+  const free = storage === null ? null : formatSize(storage.free, t);
+  if (sharpness === "none") return { value: free ?? t.unknown, subtitle: t.main.storageSub };
+  // Whose the sharpness is where it is not ORIGAMI's fills the two lines by itself.
   if (sharpness === undefined) return { value: t.unknown, subtitle: t.main.sharpnessOther };
   if (sharpness === "launch") return { value: t.unknown, subtitle: t.main.sharpnessLaunch };
   return {
     value: sharpness?.enabled ? `${sharpness.strength}%` : t.main.sharpnessOff,
-    subtitle: t.main.sharpnessSub,
+    subtitle: line(t.main.sharpnessSub, free !== null && t.main.storageFree(free)),
   };
 }
 

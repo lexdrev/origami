@@ -50,11 +50,12 @@ export const en: Messages = {
     soundNoSpeakers: "No speakers found",
     soundWidths: { off: "width\u00a0off", moderate: "width\u00a0moderate", strong: "width\u00a0strong" },
     soundVoices: "clearer\u00a0voices",
-    sharpnessSub: "Sharpness in\u00a0games",
+    sharpnessSub: "Game sharpness",
     sharpnessOff: "Off",
     sharpnessOther: "Another plugin",
     sharpnessLaunch: "Launch options",
     storageSub: "Free on the\u00a0disk",
+    storageFree: (size) => `${size}\u00a0free`,
   },
   settings: {
     title: "Settings",

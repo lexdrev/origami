@@ -85,6 +85,8 @@ export interface Messages {
     sharpnessLaunch: string;
     /** Under the Service tile where it has no sharpness: its value is the space left on the disk. */
     storageSub: string;
+    /** After the sharpness under the Service tile: the space left on the disk. */
+    storageFree(size: string): string;
   };
   settings: {
     title: string;

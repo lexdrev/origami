@@ -55,6 +55,7 @@ export const ru: Messages = {
     sharpnessOther: "Другой плагин",
     sharpnessLaunch: "Параметры запуска",
     storageSub: "Свободно на\u00a0диске",
+    storageFree: (size) => `свободно\u00a0${size}`,
   },
   settings: {
     title: "Настройки",

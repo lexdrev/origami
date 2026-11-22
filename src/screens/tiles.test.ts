@@ -172,7 +172,7 @@ describe("tile texts", () => {
   it("show the strength the next game is sharpened with", () => {
     const service = (sharpness: OwnValues["sharpness"]) => tileTexts(null, { ...none, sharpness }, en).service;
 
-    expect(service({ enabled: true, strength: 70 })).toEqual({ value: "70%", subtitle: `Sharpness in${NBSP}games` });
+    expect(service({ enabled: true, strength: 70 })).toEqual({ value: "70%", subtitle: "Game sharpness" });
     expect(service({ enabled: false, strength: 70 }).value).toBe("Off");
     expect(service(null).value).toBe("Off");
     // Another plugin sets it, and before anything is read.
@@ -184,6 +184,17 @@ describe("tile texts", () => {
       subtitle: `Free on the${NBSP}disk`,
     });
     expect(service("none")).toEqual({ value: "—", subtitle: `Free on the${NBSP}disk` });
+    // With the layer the free space comes after ORIGAMI's sharpness; whose it is elsewhere stands alone.
+    const withDisk = (sharpness: OwnValues["sharpness"], t = en) =>
+      tileTexts(null, { ...none, sharpness, storage }, t).service;
+    expect(withDisk({ enabled: true, strength: 40 })).toEqual({
+      value: "40%",
+      subtitle: `Game sharpness · 191${NBSP}GB${NBSP}free`,
+    });
+    expect(withDisk(null, ru).subtitle).toBe(`Резкость в${NBSP}играх · свободно${NBSP}191${NBSP}ГБ`);
+    expect(withDisk(undefined).subtitle).toBe("Another plugin");
+    expect(withDisk("launch").subtitle).toBe("Launch options");
+    expect(withDisk("unknown").subtitle).toBe("");
     // The running game's launch options set the layer by themselves.
     expect(service("launch")).toEqual({ value: "—", subtitle: "Launch options" });
     expect(service("unknown")).toEqual({ value: "—", subtitle: "" });

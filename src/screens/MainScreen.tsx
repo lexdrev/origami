@@ -81,10 +81,10 @@ export function MainScreen() {
   // here, for the Sound tile and its count; headphones come and go while the menu is open.
   usePoll(speakers ? refreshSound : nothing, SOUND_POLL_INTERVAL_MS);
   usePoll(sharpening ? refreshSharpness : nothing, SHARPNESS_POLL_INTERVAL_MS);
-  // Without the sharpness the Service tile shows the space left on the disk.
+  // The Service tile shows the space left on the disk, which a cleanup has just changed.
   useEffect(() => {
-    if (cleaning && !sharpening) void refreshStorage();
-  }, [cleaning, sharpening]);
+    if (cleaning) void refreshStorage();
+  }, [cleaning]);
   // In the running game the sharpness is another plugin's, or its launch options' own: the tile
   // counts that until the Service screen has said whose it is.
   const sharpnessTaken = sharp.status === "ready" && sharp.value.game === "managed";
@@ -118,7 +118,7 @@ export function MainScreen() {
               : "program"
           : "unknown",
       soundState: soundNow,
-      storage: disk.status === "ready" ? disk.value : null,
+      storage: cleaning && disk.status === "ready" ? disk.value : null,
       sharpness:
         !sharpening && cleaning
           ? "none"
