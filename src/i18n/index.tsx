@@ -230,10 +230,14 @@ export interface Messages {
     /** Under the curve's name while it is on: what the preset gives and what it costs. */
     curveSubs: Record<FanPreset["id"] | "custom", string>;
     /** Under the target while it is held: how the fans stand to it. */
-    holdSubs: Record<HoldState, string>;
+    holdSubs: Record<Exclude<HoldState, "under">, string>;
+    /** In its place while a temperature under the firmware's floor is held instead of the target. */
+    holdUnder(held: string, floor: string): string;
     curveOff: string;
     presets: Record<FanPreset["id"] | "default" | "custom", string>;
     speedNow(temp: string, speed: string): string;
+    /** The same while the firmware's own floor runs the fans faster than the curve asks. */
+    speedNowFirmware(temp: string, speed: string): string;
     chart: string;
     preset: string;
     point: string;
@@ -245,6 +249,8 @@ export interface Messages {
     holdNote: string;
     /** In place of the note while the fans run at full speed and the chip is warmer than asked. */
     holdFull: string;
+    /** Under the settings where the firmware has a floor: from where, how fast, and until when. */
+    floorNote(from: string, speed: string, back: string): string;
     ownedBy(plugin: string): string;
     ownedText(plugin: string): string;
   };

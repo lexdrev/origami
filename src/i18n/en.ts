@@ -193,10 +193,13 @@ export const en: Messages = {
       holding: "Quiet while the chip is no\u00a0warmer",
       full: "At full speed · the chip is warmer",
       slowest: "At the slowest · the chip is cooler",
+      floor: "Firmware-run · the chip is cooler",
     },
+    holdUnder: (held, floor) => `Holds ${held} · louder from\u00a0${floor}`,
     curveOff: "No more than 78% even at\u00a094\u00a0°C",
     presets: { default: "Default", quiet: "Quiet", balance: "Balanced", power: "Strong", custom: "Custom" },
     speedNow: (temp, speed) => `Now ${temp} → ${speed}`,
+    speedNowFirmware: (temp, speed) => `Now ${temp} → ${speed} · firmware`,
     chart: "Fan speed by temperature",
     preset: "Preset",
     point: "Point",
@@ -207,6 +210,8 @@ export const en: Messages = {
     target: "Keep at or under",
     holdNote: "The speed follows by itself · 10\u00a0°C over the target always 100%",
     holdFull: "The fans run at full speed · a lower TDP cools it: about 1\u00a0°C a watt",
+    floorNote: (from, speed, back) =>
+      `From\u00a0${from} this console's firmware runs the fans at about ${speed} by itself, until the chip is back at\u00a0${back}`,
     ownedBy: (plugin) => `${plugin} controls the fans`,
     ownedText: (plugin) =>
       `Only one plugin can set the curve, so ORIGAMI leaves it alone. Switch off or remove ${plugin} in Decky, and the curve settings appear here.`,

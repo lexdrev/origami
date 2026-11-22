@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { FanCurve } from "./backend";
+import type { FanCurve, HoldFans } from "./backend";
 import type { Messages } from "./i18n";
 
 // ORIGAMI's fan curve (origami.fans): seven points from 30 to 90 °C for both fans, and full speed
@@ -10,7 +10,8 @@ import type { Messages } from "./i18n";
 // the fans run at the speed of the last point the temperature has passed, and on the way down they
 // keep that speed for some degrees under the point. Instead of the points the curve can hold a
 // temperature: the backend then finds the speed for it and keeps it in the firmware, with steps to
-// full speed over the target.
+// full speed over the target. A console's firmware may have a floor of its own: from some
+// temperature it runs the fans at a speed of its own at least, whatever the curve asks.
 
 export const FAN_TEMPS = [30, 40, 50, 60, 70, 80, 90] as const;
 export const FAN_STEP = 5;
@@ -82,38 +83,43 @@ export function speedOn(curve: readonly CurvePoint[], temp: number): number {
   return speed;
 }
 
-/**
- * How fast fan 1 turns at a speed asked, in percent and rpm, as measured on the ROG Xbox Ally X.
- * Other fans turn otherwise: only the consoles that hold a temperature tell a step by it.
- */
-const RPM_AT: readonly CurvePoint[] = [
-  [0, 0],
-  [8, 3700],
-  [15, 4000],
-  [30, 4735],
-  [45, 5460],
-  [60, 6100],
-  [70, 6600],
-  [100, 8000],
-];
-
-function rpmAt(percent: number): number {
-  const above = RPM_AT.findIndex(([asked]) => asked >= percent);
-  const [high, fast] = RPM_AT[above] ?? [FULL_SPEED, 8000];
-  const [low, slow] = RPM_AT[above - 1] ?? [high, fast];
+/** Fan 1's speed in rpm at a speed asked, on the line between the two measured around it. */
+function rpmAt(table: readonly CurvePoint[], percent: number): number {
+  const above = table.findIndex(([asked]) => asked >= percent);
+  const [high, fast] = table[above] ?? table[table.length - 1] ?? [FULL_SPEED, 0];
+  const [low, slow] = table[above - 1] ?? [high, fast];
   return high === low ? fast : slow + ((fast - slow) * (percent - low)) / (high - low);
 }
 
+/** °C under the end of a firmware's floor that still count as on it (origami.fans). */
+const FLOOR_NEAR = 0.5;
+
+export interface FanSpeed {
+  /** The speed the fans run at now, in the curve's percent. */
+  percent: number;
+  /** The firmware's own floor runs them: faster than the curve asks. */
+  byFirmware: boolean;
+}
+
 /**
- * The speed the fans run at now, in percent. The firmware takes a step up at its point's temperature
- * and lets it go only some degrees under, so a chip that has cooled can still be on the step above
- * the one its temperature asks: the fans' own speed tells which of the two. Unknown, it is the step asked.
+ * The speed the fans run at now. The firmware takes a step up at its point's temperature and lets it
+ * go only some degrees under, so a chip that has cooled can still be on the step above the one its
+ * temperature asks; and where the firmware has a floor, it may run them at that instead. The fans'
+ * own speed tells which. Unknown, or on fans nothing is measured of, it is the step asked.
  */
-export function speedNow(curve: readonly CurvePoint[], temp: number, rpm: number | null): number {
+export function speedNow(
+  curve: readonly CurvePoint[],
+  temp: number,
+  rpm: number | null,
+  fans: HoldFans | null,
+): FanSpeed {
   const asked = speedOn(curve, temp);
+  if (rpm === null || fans === null) return { percent: asked, byFirmware: false };
   const above = curve.find(([at]) => at > temp)?.[1] ?? asked;
-  if (rpm === null) return asked;
-  return Math.abs(rpmAt(above) - rpm) < Math.abs(rpmAt(asked) - rpm) ? above : asked;
+  const floor = fans.floor !== null && temp > fans.floor.back - FLOOR_NEAR ? Math.max(asked, fans.floor.percent) : asked;
+  const off = (speed: number) => Math.abs(rpmAt(fans.rpm, speed) - rpm);
+  const percent = [above, floor].reduce((nearest, speed) => (off(speed) < off(nearest) ? speed : nearest), asked);
+  return { percent, byFirmware: percent === floor && floor !== asked && floor !== above };
 }
 
 /** The curve as the fans follow it, for a chart: level from each point to the next, then the step. */
@@ -124,20 +130,42 @@ export function curveSteps(curve: readonly CurvePoint[]): CurvePoint[] {
   });
 }
 
-export type HoldState = "holding" | "full" | "slowest";
+export type HoldState = "holding" | "full" | "slowest" | "floor" | "under";
 
 /** A degree off the target counts as held: the backend rests within half of one. */
 const HELD_WITHIN = 1;
-/** The least a hold asks (origami.fans.HOLD_SLOWEST): asked for nothing, the fans would stop. */
-const SLOWEST = 8;
+/** °C over the temperature held where the curve's steps to full speed begin (origami.fans.HOLD_NET). */
+const HOLD_NET = 4;
+
+/**
+ * The temperature the curve in the firmware holds: the target, or one under the firmware's floor
+ * while slower fans keep the chip there.
+ */
+export function heldAt(curve: readonly CurvePoint[], target: number): number {
+  const net = curve[1]?.[0];
+  return net === undefined ? target : net - HOLD_NET;
+}
 
 /**
  * How the hold stands: the fans at full speed and the chip still warmer than asked, the fans at
- * their slowest and the chip cooler anyway, or the target held.
+ * their slowest and the chip cooler anyway, the firmware's floor keeping the chip cooler than asked,
+ * a temperature under that floor held instead of the target, or the target held.
  */
-export function holdState(curve: readonly CurvePoint[], target: number, temp: number): HoldState {
+export function holdState(
+  curve: readonly CurvePoint[],
+  target: number,
+  temp: number,
+  fans: HoldFans,
+  byFirmware: boolean,
+): HoldState {
   const speed = speedOn(curve, temp);
-  if (speed >= FULL_SPEED && temp > target + HELD_WITHIN) return "full";
-  if (speed <= SLOWEST && temp < target - HELD_WITHIN) return "slowest";
-  return "holding";
+  const held = heldAt(curve, target);
+  if (speed >= FULL_SPEED && temp > held + HELD_WITHIN) return "full";
+  if (temp < held - HELD_WITHIN) {
+    if (speed <= fans.slowest) return "slowest";
+    const { floor } = fans;
+    // Asked the floor's own speed, the hold is at the least the firmware leaves it there.
+    if (floor !== null && (byFirmware || (speed === floor.percent && temp > floor.back))) return "floor";
+  }
+  return held < target ? "under" : "holding";
 }

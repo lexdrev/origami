@@ -24,7 +24,7 @@ const info: Info = {
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   sound: true,
-  fanHold: true,
+  fanHold: { slowest: 8, rpm: [[0, 0], [100, 8000]], floor: null },
   overlayMenu: true,
   sharpness: true,
 };
@@ -40,7 +40,7 @@ const steamos: Info = {
   },
   buttons: [],
   sound: true,
-  fanHold: false,
+  fanHold: null,
   overlayMenu: true,
   sharpness: true,
 };

@@ -27,6 +27,25 @@ export interface Versions {
 /** A button of the console ORIGAMI may drive (origami.buttons.Button). */
 export type ConsoleButton = "quick_access" | "armoury_crate" | "armoury_crate_hold";
 
+/** A speed the firmware runs the fans at by itself, whatever the curve asks (origami.fans.Floor). */
+export interface FanFloor {
+  /** °C from which the fans run at the floor at least. */
+  at: number;
+  /** °C the chip cools to before the firmware lets the fans go. */
+  back: number;
+  /** About the floor, in the curve's percent. */
+  percent: number;
+}
+
+/** A console's fans as measured on it (origami.fans.HoldFans). */
+export interface HoldFans {
+  /** Percent the fans are never asked less than: asked for nothing, they stop. */
+  slowest: number;
+  /** How fast fan 1 turns at a speed asked: percent and rpm, from nothing to full speed. */
+  rpm: [number, number][];
+  floor: FanFloor | null;
+}
+
 export interface Info {
   version: string;
   device: Device;
@@ -35,8 +54,8 @@ export interface Info {
   buttons: ConsoleButton[];
   /** ORIGAMI processes this console's speakers: it has their protection. */
   sound: boolean;
-  /** The fans can hold a temperature here: the hold knows this console's fans. */
-  fanHold: boolean;
+  /** What the hold knows of this console's fans; null where they hold no temperature. */
+  fanHold: HoldFans | null;
   /** The system has an overlay menu of its own that ORIGAMI can keep in sight. */
   overlayMenu: boolean;
   /** The system has the layer ORIGAMI sharpens the games with. */

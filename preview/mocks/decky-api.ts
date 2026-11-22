@@ -7,6 +7,7 @@ import type {
   Change,
   Conflicts,
   HeldPower,
+  HoldFans,
   Info,
   Settings,
   SharpnessGameState,
@@ -14,6 +15,38 @@ import type {
   SoundState,
   Telemetry,
 } from "../../src/backend";
+
+// The fans as the backend knows them (origami.fans): the Xbox Ally X's and the first ROG Ally's.
+const XBOX_ALLY_X: HoldFans = {
+  slowest: 8,
+  rpm: [
+    [0, 0],
+    [8, 3700],
+    [15, 4000],
+    [30, 4735],
+    [45, 5460],
+    [60, 6100],
+    [70, 6600],
+    [100, 8000],
+  ],
+  floor: null,
+};
+const ROG_ALLY: HoldFans = {
+  slowest: 15,
+  rpm: [
+    [0, 0],
+    [10, 3300],
+    [15, 3500],
+    [25, 4100],
+    [30, 4400],
+    [45, 5200],
+    [60, 6000],
+    [75, 6800],
+    [90, 7400],
+    [100, 7700],
+  ],
+  floor: { at: 60, back: 56, percent: 50 },
+};
 
 const info: Info = {
   version: "1.0.0",
@@ -32,13 +65,20 @@ const info: Info = {
   },
   buttons: ["armoury_crate", "armoury_crate_hold", "quick_access"],
   sound: true,
-  fanHold: true,
+  fanHold: XBOX_ALLY_X,
   overlayMenu: true,
   sharpness: true,
 };
 const query = new URLSearchParams(location.search);
 // "?nohold" is a console whose fans hold no temperature: the Fans screen has the curve alone.
-if (query.has("nohold")) info.fanHold = false;
+if (query.has("nohold")) info.fanHold = null;
+// "?ally" is the first ROG Ally: its firmware runs the fans at a floor of its own from 60 °C.
+const ally = query.has("ally");
+const atFloor = query.get("ally") === "floor";
+if (ally) {
+  info.device = { board: "RC71L", product: "ROG Ally RC71L_RC71L", model: "ROG Ally" };
+  info.fanHold = ROG_ALLY;
+}
 // "?nosharpness" is a system without the sharpening layer: the main screen has no Service tile.
 if (query.has("nosharpness")) info.sharpness = false;
 
@@ -148,9 +188,28 @@ function restoreAll(): Settings {
 }
 
 // The curve the backend keeps in the firmware (origami.fans.hold_curve), at the level it starts from.
-function holdCurve(target: number): [number, number][] {
-  const net = [35, 50, 65, 80, 90].map((least, step): [number, number] => [target + 4 + step, Math.max(40, least)]);
-  return [[30, 40], ...net, [target + 10, 100], [100, 100]];
+// Where the firmware has a floor, a target over it is held two degrees under the floor's start.
+function holdCurve(asked: number): [number, number][] {
+  const floor = info.fanHold?.floor ?? null;
+  const target = floor === null || atFloor ? asked : Math.min(asked, floor.at - 2);
+  const level = floor !== null && atFloor ? floor.percent : 40;
+  const net = [35, 50, 65, 80, 90].map((least, step): [number, number] => [target + 4 + step, Math.max(level, least)]);
+  return [[30, level], ...net, [target + 10, 100], [100, 100]];
+}
+
+function holding(): boolean {
+  return settings.fans !== null && settings.fans.enabled && settings.fans.hold;
+}
+
+// The ROG Ally in a game: on a curve its firmware has the fans at the floor, 5400 rpm at 64 °C; with
+// a temperature held the fans turn slower, under the floor's start. "?ally=floor" is a heavier game:
+// the chip at the floor all the same, two degrees cooler there than the target asks.
+function allyFans(): Telemetry["fans"] | null {
+  if (!ally) return null;
+  if (!holding()) return { speedsRpm: [5400, 5200], cpuTempC: 64, gpuTempC: 63, holdCurve: null };
+  const target = settings.fans?.target ?? 60;
+  if (atFloor) return { speedsRpm: [5400, 5200], cpuTempC: target - 2, gpuTempC: target - 4, holdCurve: holdCurve(target) };
+  return { speedsRpm: [4900, 4900], cpuTempC: 58.2, gpuTempC: 56, holdCurve: holdCurve(target) };
 }
 
 // "?battery" takes the charger away: the battery tells how long it lasts.
@@ -169,11 +228,11 @@ function telemetry(): Telemetry {
         ? { percent: 54, charging: false, minutesLeft: 95, untilPct: 10, drainW: 29.4 + wobble * 0.2, capacityPct: 93 }
         : { percent: 68, charging: true, minutesLeft: null, untilPct: null, drainW: null, capacityPct: 93 },
     },
-    fans: {
+    fans: allyFans() ?? {
       speedsRpm: [5200 + Math.round(wobble * 80), 5300],
       cpuTempC: 63.4,
       gpuTempC: 61,
-      holdCurve: settings.fans?.enabled && settings.fans.hold ? holdCurve(settings.fans.target) : null,
+      holdCurve: holding() ? holdCurve(settings.fans?.target ?? 60) : null,
     },
     gamepad: { vibrationPct: [100, 100] },
   };

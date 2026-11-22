@@ -63,7 +63,7 @@ export function MainScreen() {
   const sharp = useStore(sharpnessState);
   const running = useStore(runningGame);
   const speakers = plugin.status === "ready" && plugin.value.sound;
-  const fanHold = plugin.status === "ready" && plugin.value.fanHold;
+  const fanHold = plugin.status === "ready" && plugin.value.fanHold !== null;
   const sharpening = plugin.status === "ready" && plugin.value.sharpness;
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.

@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { FanCurve, Telemetry } from "../backend";
+import type { FanCurve, HoldFans, Telemetry } from "../backend";
 import { fanHistory } from "../fanHistory";
 import {
   curveHere,
@@ -13,6 +13,7 @@ import {
   FAN_PRESETS,
   FAN_STEP,
   FAN_TEMPS,
+  heldAt,
   heldTarget,
   HOLD_TARGETS,
   holdState,
@@ -21,8 +22,9 @@ import {
   presetOf,
   speedNow,
   type CurvePoint,
+  type FanSpeed,
 } from "../fans";
-import { useMessages } from "../i18n";
+import { useMessages, type Messages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
 import { back } from "../navigation";
 import { conflicts, info, refreshConflicts, setFans, settings } from "../state";
@@ -56,7 +58,7 @@ export function FansScreen() {
 
   const fans = readings.status === "ready" ? readings.value.fans : null;
   const owner = owners.status === "ready" ? owners.value.fans : null;
-  const canHold = plugin.status === "ready" && plugin.value.fanHold;
+  const holdFans = plugin.status === "ready" ? plugin.value.fanHold : null;
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={t.fans.title} />
@@ -68,7 +70,7 @@ export function FansScreen() {
         (owner !== null ? (
           <OwnedBy title={t.fans.ownedBy(owner)} text={t.fans.ownedText(owner)} />
         ) : (
-          <CurveCard curve={curveHere(current.value.fans, canHold)} fans={fans} canHold={canHold} />
+          <CurveCard curve={curveHere(current.value.fans, holdFans !== null)} fans={fans} holdFans={holdFans} />
         ))}
     </Screen>
   );
@@ -179,36 +181,48 @@ function Temperatures({ fans }: { fans: FanReadings | null }) {
 
 const percent = (value: number) => `${value}%`;
 
+/** The temperature now and the speed the fans run at, with the firmware named while its floor runs them. */
+function speedLabel(t: Messages, temp: string, speed: FanSpeed | null): string {
+  const shown = speed === null ? t.unknown : percent(speed.percent);
+  return speed?.byFirmware ? t.fans.speedNowFirmware(temp, shown) : t.fans.speedNow(temp, shown);
+}
+
 interface CurveCardProps {
   curve: FanCurve | null;
   fans: FanReadings | null;
-  /** The fans can hold a temperature on this console. */
-  canHold: boolean;
+  /** What is measured of this console's fans; null where they hold no temperature. */
+  holdFans: HoldFans | null;
 }
 
 /**
  * What runs both fans: the switch in the head, and while it is on the choice between the curve and
  * a temperature to hold, each with the curve the firmware follows and the temperature now on it.
  * A console whose fans hold no temperature has the curve alone, and no step told by the fans' speed.
+ * Where the firmware has a floor of its own, a note under the settings tells of it.
  */
-function CurveCard({ curve, fans, canHold }: CurveCardProps) {
+function CurveCard({ curve, fans, holdFans }: CurveCardProps) {
   const t = useMessages();
   const current = curve ?? DEFAULT_FAN_CURVE;
   const on = curve?.enabled ?? false;
   const hottest = hottestOf(fans);
-  const rpm = canHold ? (fans?.speedsRpm[0] ?? null) : null;
+  const rpm = fans?.speedsRpm[0] ?? null;
   const held = fans?.holdCurve ?? null;
-  const state = held !== null && hottest !== null ? holdState(held, current.target, hottest) : "holding";
+  const temp = (value: number) => withUnit(String(value), t.units.celsius);
+  const floor = holdFans?.floor ?? null;
+  const state =
+    held !== null && hottest !== null && holdFans !== null
+      ? holdState(held, current.target, hottest, holdFans, speedNow(held, hottest, rpm, holdFans).byFirmware)
+      : "holding";
   const target = heldTarget(curve);
-  const subtitle = current.hold
-    ? t.fans.holdSubs[state]
-    : t.fans.curveSubs[presetOf(current.points)?.id ?? "custom"];
+  const holdSubtitle =
+    state === "under" && held !== null && floor !== null
+      ? t.fans.holdUnder(temp(heldAt(held, current.target)), temp(floor.at))
+      : t.fans.holdSubs[state === "under" ? "holding" : state];
+  const subtitle = current.hold ? holdSubtitle : t.fans.curveSubs[presetOf(current.points)?.id ?? "custom"];
   return (
     <Card
       title={
-        target !== null
-          ? t.fans.holds(withUnit(String(target), t.units.celsius))
-          : t.fans.curve(curveName(curve, t))
+        target !== null ? t.fans.holds(temp(target)) : t.fans.curve(curveName(curve, t))
       }
       subtitle={on ? subtitle : t.fans.curveOff}
       toggle={{
@@ -219,7 +233,7 @@ function CurveCard({ curve, fans, canHold }: CurveCardProps) {
         },
       }}
     >
-      {canHold && (
+      {holdFans !== null && (
         <>
           <span className="og-card__label">{t.fans.mode}</span>
           <ChoiceGroup
@@ -237,9 +251,21 @@ function CurveCard({ curve, fans, canHold }: CurveCardProps) {
         </>
       )}
       {current.hold ? (
-        <HoldSettings curve={current} held={held} hottest={hottest} rpm={rpm} full={state === "full"} />
+        <HoldSettings
+          curve={current}
+          held={held}
+          hottest={hottest}
+          rpm={rpm}
+          holdFans={holdFans}
+          full={state === "full"}
+        />
       ) : (
-        <CurveSettings curve={current} hottest={hottest} rpm={rpm} />
+        <CurveSettings curve={current} hottest={hottest} rpm={rpm} holdFans={holdFans} />
+      )}
+      {floor !== null && (
+        <span className="og-choices__note">
+          {t.fans.floorNote(temp(floor.at), percent(floor.percent), temp(floor.back))}
+        </span>
       )}
     </Card>
   );
@@ -249,26 +275,25 @@ function CurveCard({ curve, fans, canHold }: CurveCardProps) {
 interface CurveSettingsProps {
   curve: FanCurve;
   hottest: number | null;
-  /** Fan 1 now: it tells the step the fans are on. */
+  /** Fan 1 now: it tells the step the fans are on, where the fans are measured. */
   rpm: number | null;
+  holdFans: HoldFans | null;
 }
 
-function CurveSettings({ curve, hottest, rpm }: CurveSettingsProps) {
+function CurveSettings({ curve, hottest, rpm, holdFans }: CurveSettingsProps) {
   const t = useMessages();
   const [point, setPoint] = useState(FIRST_POINT);
   const { points } = curve;
   const preset = presetOf(points);
   const speed = points[point] ?? 0;
-  const now = hottest === null ? null : speedNow(ownCurve(points), hottest, rpm);
+  const now = hottest === null ? null : speedNow(ownCurve(points), hottest, rpm, holdFans);
   const temp = (value: number) => withUnit(String(value), t.units.celsius);
   return (
     <>
       {hottest !== null && now !== null && (
-        <span className="og-card__label">
-          {t.fans.speedNow(temp(Math.round(hottest)), percent(now))}
-        </span>
+        <span className="og-card__label">{speedLabel(t, temp(Math.round(hottest)), now)}</span>
       )}
-      <CurveChart curve={ownCurve(points)} picked={point} hottest={hottest} speed={now} />
+      <CurveChart curve={ownCurve(points)} picked={point} hottest={hottest} speed={now?.percent ?? null} />
       <span className="og-card__label">{t.fans.preset}</span>
       <ChoiceGroup
         label={t.fans.preset}
@@ -324,23 +349,31 @@ interface HoldSettingsProps {
   held: readonly CurvePoint[] | null;
   hottest: number | null;
   rpm: number | null;
+  holdFans: HoldFans | null;
   /** The fans run at full speed and the chip is still warmer than asked. */
   full: boolean;
 }
 
-/** A temperature to hold: the curve the firmware follows now, and the target on a slider. */
-function HoldSettings({ curve, held, hottest, rpm, full }: HoldSettingsProps) {
+/**
+ * A temperature to hold: the curve the firmware follows now with the temperature it holds marked,
+ * and the target on a slider.
+ */
+function HoldSettings({ curve, held, hottest, rpm, holdFans, full }: HoldSettingsProps) {
   const t = useMessages();
-  const now = held === null || hottest === null ? null : speedNow(held, hottest, rpm);
+  const now = held === null || hottest === null ? null : speedNow(held, hottest, rpm, holdFans);
   const temp = (value: number) => withUnit(String(value), t.units.celsius);
   return (
     <>
       {hottest !== null && (
-        <span className="og-card__label">
-          {t.fans.speedNow(temp(Math.round(hottest)), now === null ? t.unknown : percent(now))}
-        </span>
+        <span className="og-card__label">{speedLabel(t, temp(Math.round(hottest)), now)}</span>
       )}
-      <CurveChart curve={held ?? []} picked={null} hottest={hottest} speed={now} target={curve.target} />
+      <CurveChart
+        curve={held ?? []}
+        picked={null}
+        hottest={hottest}
+        speed={now?.percent ?? null}
+        target={held === null ? curve.target : heldAt(held, curve.target)}
+      />
       <div className="og-card__head">
         <span className="og-card__label">{t.fans.target}</span>
         <span className="og-card__value">{temp(curve.target)}</span>

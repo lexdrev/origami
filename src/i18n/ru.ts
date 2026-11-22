@@ -197,10 +197,13 @@ export const ru: Messages = {
       holding: "Тихо, пока чип не\u00a0теплее цели",
       full: "На\u00a0максимуме · чип теплее цели",
       slowest: "На\u00a0минимуме · чип холоднее цели",
+      floor: "Держит прошивка · чип холоднее",
     },
+    holdUnder: (held, floor) => `Держит ${held} · с\u00a0${floor} громче`,
     curveOff: "Не выше 78% даже при\u00a094\u00a0°C",
     presets: { default: "Дефолт", quiet: "Тихая", balance: "Баланс", power: "Мощная", custom: "Своя" },
     speedNow: (temp, speed) => `Сейчас ${temp} → ${speed}`,
+    speedNowFirmware: (temp, speed) => `Сейчас ${temp} → ${speed} · прошивка`,
     chart: "Скорость вентиляторов от температуры",
     preset: "Пресет",
     point: "Точка",
@@ -211,6 +214,8 @@ export const ru: Messages = {
     target: "Держать не\u00a0выше",
     holdNote: "Обороты подстраиваются сами · на\u00a010\u00a0°C выше цели — всегда 100%",
     holdFull: "Вентиляторы на\u00a0максимуме · холоднее станет с\u00a0меньшим TDP: ватт — около 1\u00a0°C",
+    floorNote: (from, speed, back) =>
+      `С\u00a0${from} прошивка этой консоли сама держит около ${speed} оборотов, пока чип не\u00a0остынет до\u00a0${back}`,
     ownedBy: (plugin) => `Вентиляторами управляет ${plugin}`,
     ownedText: (plugin) =>
       `Кривую задаёт только один плагин, поэтому ORIGAMI её не\u00a0трогает. Выключите или удалите ${plugin} в\u00a0Decky — настройки кривой появятся здесь.`,
