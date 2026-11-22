@@ -56,12 +56,14 @@ jobs:
         with:
           name: dist
           path: dist
-      - name: Install clang and the libbpf headers
+      - name: Install clang, the libbpf headers and pkg-config
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang llvm libbpf-dev
+          sudo apt-get install -y --no-install-recommends clang llvm libbpf-dev pkg-config
       - name: Build the HID-BPF program
         run: bash scripts/build_bpf.sh
+      - name: Build vkBasalt for the sharpness
+        run: bash scripts/build_vkbasalt.sh
       - name: Fetch the LSP plugins of the sound filter
         run: python scripts/fetch_lsp.py
       - name: Build the zip

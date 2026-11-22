@@ -7,7 +7,7 @@ The name stays the same in every release, so the link to the latest release's zi
 
 The archive is reproducible: entries are sorted, timestamps come from
 SOURCE_DATE_EPOCH (or the zip epoch, 1980-01-01) and permissions are fixed.
-Run `npm run build`, scripts/build_bpf.sh and scripts/fetch_lsp.py first.
+Run `npm run build`, scripts/build_bpf.sh, scripts/build_vkbasalt.sh and scripts/fetch_lsp.py first.
 """
 
 import hashlib
@@ -33,6 +33,8 @@ FILES = (
     "bin/lv2/lsp-plugins.lv2/lsp-plugins-lv2.so",
     "bin/lv2/lsp-plugins.lv2/mb_compressor_stereo.ttl",
     "bin/lv2/lsp-plugins.lv2/limiter_stereo.ttl",
+    "bin/vkbasalt/lib64/libvkbasalt.so",
+    "bin/vkbasalt/lib32/libvkbasalt.so",
 )
 PACKAGES = ("py_modules",)
 ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
