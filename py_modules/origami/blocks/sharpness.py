@@ -7,13 +7,13 @@ import asyncio
 import logging
 import os
 import threading
-from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 from origami.blocks import Context
 from origami.decky_plugins import Launcher, launcher_in
+from origami.gameprocs import game_processes
 from origami.proc import CommandError, run_blocking
 from origami.settings import Settings
 from origami.sharpness import (
@@ -41,8 +41,6 @@ LIBRARY = "libvkbasalt.so"
 OWN_VARIABLES = (b"DISABLE_VKBASALT=1", b"ENABLE_VKBASALT=1")
 OWN_CONFIG_VARIABLE = b"VKBASALT_CONFIG_FILE="
 """vkBasalt's variables in a game's environment: its launch options set vkBasalt themselves."""
-STEAM_GAME = b"SteamAppId="
-"""In the environment of every process of a game Steam started, and of no other."""
 MAX_SCRIPT_BYTES = 1_000_000
 """A launch wrapper is a script of some kilobytes; a bigger file is a program and is not read."""
 WATCH_SECONDS = 2.0
@@ -382,18 +380,6 @@ class SharpnessBlock:
         """The user, by the owner of their home; OSError when the home is not there."""
         owner = self._home.stat()
         return owner.st_uid, owner.st_gid
-
-
-def game_processes(root: Path) -> Iterator[tuple[Path, list[bytes]]]:
-    """The processes of the games Steam started: each one's folder in /proc and its environment."""
-    for environment in (root / "proc").glob("[0-9]*/environ"):
-        try:
-            variables = environment.read_bytes().split(b"\0")
-        except OSError:
-            # The process ended meanwhile.
-            continue
-        if any(item.startswith(STEAM_GAME) for item in variables):
-            yield environment.parent, variables
 
 
 def layer_loaded(root: Path) -> bool:
