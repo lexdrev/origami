@@ -3,6 +3,7 @@
 
 import json
 import os
+import shutil
 from pathlib import Path
 
 from origami.proc import CommandError
@@ -191,6 +192,13 @@ class FakeUser:
                 Path(source).replace(target)
             case ("rm", "-f", target):
                 Path(target).unlink(missing_ok=True)
+            case ("sync", "-f", _):
+                pass
+            case ("rm", "-rf", "--one-file-system", "--", target):
+                if Path(target).is_symlink():
+                    Path(target).unlink()
+                else:
+                    shutil.rmtree(target, ignore_errors=True)
             case ("head", "-c", _, source):
                 return Path(source).read_text(encoding="utf-8")
             case _:
@@ -218,3 +226,93 @@ VKBASALT_MANIFEST = json.dumps(
     }
 )
 """The system's manifest as Fedora's package installs it (read on the console)."""
+
+
+def shortcuts_vdf(*shortcuts: tuple[int, str, str]) -> bytes:
+    """Steam's binary list of shortcuts: each one's app id, name and program."""
+    body = b""
+    for index, (app_id, name, program) in enumerate(shortcuts):
+        body += b"\x00" + str(index).encode() + b"\x00"
+        body += b"\x02appid\x00" + app_id.to_bytes(4, "little")
+        body += b"\x01AppName\x00" + name.encode() + b"\x00"
+        body += b"\x01Exe\x00" + f'"{program}"'.encode() + b"\x00"
+        body += b"\x01StartDir\x00" + f'"{Path(program).parent}"'.encode() + b"\x00"
+        body += b"\x08"
+    return b"\x00shortcuts\x00" + body + b"\x08\x08"
+
+
+class FakeSteam:
+    """Steam's folder in a user's home: its libraries, games, caches and prefixes."""
+
+    def __init__(self, home: Path) -> None:
+        self.folder = home / ".local" / "share" / "Steam"
+        self.libraries: dict[Path, list[int]] = {}
+        self.library(self.folder)
+
+    def library(self, path: Path, *, mounted: bool = True) -> Path:
+        """Add a library; one that is not mounted stays in Steam's list with its games."""
+        self.libraries[path] = []
+        if mounted:
+            (path / "steamapps").mkdir(parents=True, exist_ok=True)
+        self._list()
+        return path
+
+    def install(
+        self, app_id: int, name: str, library: Path | None = None, folder: str | None = None
+    ) -> None:
+        """A game Steam has installed: in its list, and with a manifest in a mounted library."""
+        library = library or self.folder
+        self.libraries[library].append(app_id)
+        self._list()
+        apps = library / "steamapps"
+        if not apps.is_dir():
+            return
+        folder = folder or name
+        text = (
+            f'"AppState"\n{{\n\t"appid"\t\t"{app_id}"\n\t"name"\t\t"{name}"\n'
+            f'\t"installdir"\t\t"{folder}"\n\t"UserConfig"\n\t{{\n\t\t"language"\t\t"english"\n\t}}\n}}\n'
+        )
+        (apps / f"appmanifest_{app_id}.acf").write_text(text, encoding="utf-8")
+        self.game_folder(folder, library)
+
+    def game_folder(self, name: str, library: Path | None = None, size: int = 5000) -> Path:
+        folder = (library or self.folder) / "steamapps" / "common" / name
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "game.bin").write_bytes(b"g" * size)
+        return folder
+
+    def shaders(self, app_id: int | str, library: Path | None = None, size: int = 9000) -> Path:
+        cache = (library or self.folder) / "steamapps" / "shadercache" / str(app_id)
+        (cache / "fozpipelinesv6").mkdir(parents=True, exist_ok=True)
+        (cache / "fozpipelinesv6" / "steamapp_pipeline_cache.foz").write_bytes(b"s" * size)
+        return cache
+
+    def prefix(
+        self, app_id: int | str, library: Path | None = None, saves: str | None = "Game"
+    ) -> Path:
+        """A game's prefix: Windows itself and, with `saves`, a folder the game made for them."""
+        prefix = (library or self.folder) / "steamapps" / "compatdata" / str(app_id)
+        windows = prefix / "pfx" / "drive_c" / "windows"
+        windows.mkdir(parents=True, exist_ok=True)
+        (windows / "system32.dll").write_bytes(b"w" * 20000)
+        local = prefix / "pfx" / "drive_c" / "users" / "steamuser" / "AppData" / "Local"
+        (local / "Microsoft").mkdir(parents=True, exist_ok=True)
+        if saves is not None:
+            (local / saves).mkdir()
+            (local / saves / "save.sav").write_bytes(b"v" * 3000)
+        return prefix
+
+    def shortcuts(self, data: bytes, user: str = "1001") -> None:
+        config = self.folder / "userdata" / user / "config"
+        config.mkdir(parents=True, exist_ok=True)
+        (config / "shortcuts.vdf").write_bytes(data)
+
+    def _list(self) -> None:
+        text = '"libraryfolders"\n{\n'
+        for index, (path, apps) in enumerate(self.libraries.items()):
+            games = "".join(f'\t\t\t"{app}"\t\t"1000"\n' for app in apps)
+            text += f'\t"{index}"\n\t{{\n\t\t"path"\t\t"{path}"\n\t\t"label"\t\t""\n'
+            text += f'\t\t"apps"\n\t\t{{\n{games}\t\t}}\n\t}}\n'
+        text += "}\n"
+        (self.folder / "steamapps").mkdir(parents=True, exist_ok=True)
+        (self.folder / "steamapps" / "libraryfolders.vdf").write_text(text, encoding="utf-8")
