@@ -16,18 +16,21 @@
 
 ORIGAMI is a [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) plugin for the ROG Xbox Ally X on
 Bazzite and the ROG Ally on SteamOS. It puts power, fans, display, stick lighting, gamepad and speaker sound
-settings in one place and fixes the problems these consoles have on Linux today.
+settings in one place, sharpens the games' picture, cleans up what Steam leaves on the disk and fixes the
+problems these consoles have on Linux today. It speaks English, Russian, German, Spanish, French and Simplified
+Chinese.
 
 > ORIGAMI is an independent project, not affiliated with ASUS, Microsoft, Valve or the Bazzite team.
 
 ## Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/en/main.png" width="19%" alt="Main screen">
-  <img src="assets/screenshots/en/power.png" width="19%" alt="Power">
-  <img src="assets/screenshots/en/gamepad.png" width="19%" alt="Gamepad">
-  <img src="assets/screenshots/en/fans.png" width="19%" alt="Fans">
-  <img src="assets/screenshots/en/changes.png" width="19%" alt="System changes">
+  <img src="assets/screenshots/en/main.png" width="16%" alt="Main screen">
+  <img src="assets/screenshots/en/power.png" width="16%" alt="Power">
+  <img src="assets/screenshots/en/fans.png" width="16%" alt="Fans">
+  <img src="assets/screenshots/en/gamepad.png" width="16%" alt="Gamepad">
+  <img src="assets/screenshots/en/service.png" width="16%" alt="Service">
+  <img src="assets/screenshots/en/changes.png" width="16%" alt="System changes">
 </p>
 
 ## What it does
@@ -37,9 +40,10 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
 
 - **Power:** TDP from 7 to 35 W with Eco, Balance and Turbo presets, held through sleep, the charger and game
   starts. Power headroom for short bursts, CPU frequency boost, up to 35 W on battery when you allow it, and
-  profiles for single games.
-- **Fans:** one curve for both fans: Quiet, Balanced, Strong or your own points. From 80 °C the fans run at
-  least at 50%, at 100 °C always at 100%.
+  profiles for single games. On battery it shows how long the charge lasts and what the whole console draws.
+- **Fans:** one curve for both fans: Quiet, Balanced, Strong or your own points. Or a temperature to hold: you
+  choose it, and the fans run as quietly as it allows. From 80 °C the fans run at least at 50%, at 100 °C
+  always at 100%.
 - **Display & Light:** screen saturation from 0 to 200% for games and Steam; stick lighting with colours,
   breathing, rainbow and spiral, brightness and a colour of your own.
 - **Gamepad:** handle vibration strength, trigger vibration from games, the gyro fix, QAM assist, the Bazzite
@@ -47,8 +51,13 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
 - **Sound:** louder speakers with no crackle, at +4 or +6 dB, protected by the limits ASUS set for each model;
   wider stereo and clearer dialogue. Each game can have its own sound settings. It works on the built-in
   speakers and pauses while headphones are plugged in.
+- **Service:** sharpness for the games, the same sharpening as Radeon Image Sharpening on Windows, with one
+  switch, a strength you choose and settings for single games; and a cleanup of the disk: the shader caches
+  of installed games and what removed games left behind.
 - **Quick access tab:** the fox in Steam's quick access column at the place you choose, or ORIGAMI only inside the
   Decky tab.
+- **Languages:** English, Russian, German, Spanish, French and Simplified Chinese. ORIGAMI follows Steam's
+  language, or you pick one in its settings.
 - **Updates:** a newer release from GitHub on a press or once a day, what it brings in What's new, and the update
   itself through Decky in one press.
 
@@ -70,12 +79,14 @@ This is all of ORIGAMI, as on the ROG Xbox Ally X. On other models it shows only
 | Paste on Steam's on-screen keyboard types a "v" | Pastes the text; works by itself, there is nothing to switch on |
 | The speakers sound flat compared with Windows, where ASUS's Dolby driver processes them | Sound processing: louder with no crackle, wider stereo, clearer voices |
 | The sound may crackle after sleep until a restart if the console's clock is set to local time, as Windows does | Corrects the clock as soon as the console wakes, so the sound stays clean |
+| Games look softer than on Windows, where the driver sharpens them with one switch | Sharpness for the games, with nothing to add to their launch options |
+| Shader caches only grow, and a removed game leaves its cache, its prefix and sometimes its folder on the disk | Cleanup lists them with their sizes and removes what you pick |
 
 Fixes you have not decided on yet are red in ORIGAMI. Once you switch one on or off yourself, it turns grey.
 
 ## Tested on
 
-- **ROG Xbox Ally X** (board RC73XA): Bazzite 45.20261111, kernel 7.3.3-ogc1.1, InputPlumber 0.84.0,
+- **ROG Xbox Ally X** (board RC73XA): Bazzite 45.20261117.1, kernel 7.3.4-ogc8.1, InputPlumber 0.84.0,
   Decky Loader 3.3.1
 - **ROG Ally** (board RC71L): SteamOS 3.9.5, kernel 7.2.7-valve2, InputPlumber 0.78.0, Decky Loader 3.3.1
 
@@ -88,6 +99,12 @@ has not been tried on them yet.
 
 The Sound tile is available on all five models, each with the speaker protection ASUS tuned for it, but so far
 the sound has only been listened to on the ROG Xbox Ally X.
+
+The fans hold a temperature on the ROG Xbox Ally X, the X20 and the ROG Ally: each console's fans need numbers
+of their own, and the other two models have none yet.
+
+The sharpness and the cleanup are on every model. The sharpness comes with its own copy of the layer that does
+the sharpening, so it does not depend on what the system has; so far it has been tried on Bazzite only.
 
 ## Install
 
@@ -111,15 +128,18 @@ stops for a moment and the system gets its own settings back, so update outside 
 ## Undo everything
 
 **Settings → System changes** lists what ORIGAMI has changed. **Restore everything** brings back the factory
-values, removes ORIGAMI's files and switches its fixes and the sound processing off; Steam sets the TDP again.
-Removing the plugin in Decky does the same first.
+values, removes ORIGAMI's files and switches its fixes, the sound processing and the sharpness off; Steam sets
+the TDP again. Removing the plugin in Decky does the same first. What the cleanup removed is the one thing that
+does not come back.
 
 While the gyro fix is on, ORIGAMI keeps one file outside its folders:
-`/etc/inputplumber/devices.d/50-rog_xbox_ally.yaml`.
+`/etc/inputplumber/devices.d/50-rog_xbox_ally.yaml`. While a game runs with the sharpness on, it keeps three
+more in your home folder: two in `~/.local/share/vulkan/implicit_layer.d/` and `~/.config/vkBasalt/vkBasalt.conf`.
+They are gone as the game ends, and a `vkBasalt.conf` of your own is put back.
 
-If another plugin already controls the power, the fans, the lighting, the saturation, the vibration or the sound,
-ORIGAMI leaves that part alone and shows which plugin has it. The same goes for any other app that processes the
-speakers' sound.
+If another plugin already controls the power, the fans, the lighting, the saturation, the vibration, the sound
+or the sharpness, ORIGAMI leaves that part alone and shows which plugin has it. The same goes for any other app
+that processes the speakers' sound, and for a game whose launch options set the sharpening themselves.
 
 ## Privacy
 
@@ -138,9 +158,10 @@ shows them in **Settings → System changes**), what you did and the latest log 
 - [Bazzite](https://bazzite.gg), for the system
 - [Open Gaming Collective](https://github.com/OpenGamingCollective), for the kernel fixes for the Ally X
 - [Linux Studio Plugins](https://lsp-plug.in), for the compressor and the limiter of the speaker filter
+- [vkBasalt](https://github.com/DadSchoorse/vkBasalt), for the layer that sharpens the games
 
 ## License
 
 ORIGAMI © 2026 Alexander Derevyanko (lexdrev), [GPL-3.0-or-later](LICENSE). The HID-BPF program in `bpf/`, which
-runs in the kernel, is GPL-2.0-or-later. The fonts and the library built into the plugin, and the LSP plugins that
-come with it, are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+runs in the kernel, is GPL-2.0-or-later. The fonts and the library built into the plugin, and the LSP plugins and
+vkBasalt that come with it, are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
