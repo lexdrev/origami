@@ -105,6 +105,19 @@ class Plugin:
     async def get_sharpness(self) -> JsonValue:
         return to_wire(await self._app.sharpness())
 
+    async def get_storage(self) -> JsonValue:
+        return to_wire(await self._app.storage())
+
+    async def scan_cleanup(self) -> JsonValue:
+        return to_wire(await self._app.scan_cleanup())
+
+    async def clean_up(self, keys: object) -> JsonValue:
+        if not isinstance(keys, list) or not all(
+            isinstance(key, str) for key in cast("list[object]", keys)
+        ):
+            raise TypeError("The items to clean up are a list of their keys")
+        return to_wire(await self._app.clean_up(cast("list[str]", keys)))
+
     async def get_changes(self) -> JsonValue:
         return to_wire(await self._app.changes())
 

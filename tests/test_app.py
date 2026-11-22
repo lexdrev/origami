@@ -16,6 +16,7 @@ from origami import power as power_module
 from origami import versions
 from origami.app import Emit, Environment, Origami
 from origami.blocks import buttons as buttons_block
+from origami.blocks import cleanup as cleanup_block
 from origami.blocks import display as display_block
 from origami.blocks import fans as fans_block
 from origami.blocks import gamepad as gamepad_block
@@ -53,7 +54,7 @@ from origami.tdp import Limits
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers, TriggerState
 from origami.vibration import Vibration
 
-from fakes import FakeHidBpf, FakeRoot, FakeUser
+from fakes import FakeHidBpf, FakeRoot, FakeSteam, FakeUser
 
 
 @pytest.fixture(autouse=True)
@@ -2422,5 +2423,37 @@ def test_a_plugin_that_manages_vkbasalt_keeps_it(
         await app.game_starting(1920490)
         assert not (sharpened / SHARPNESS_MANIFEST).exists()
         app.stop()
+
+    asyncio.run(scenario())
+
+
+def test_the_cleanup_is_offered_where_steam_keeps_its_games(
+    ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = FakeUser()
+    monkeypatch.setattr(cleanup_block, "run_blocking", user)
+
+    async def scenario() -> None:
+        app = make_app(ally_x, tmp_path)
+        await app.start()
+        assert not (await app.info()).cleanup
+        app.stop()
+
+        steam = FakeSteam(ally_x.path / "home" / "user")
+        cache = steam.shaders(1172710)
+        again = make_app(ally_x, tmp_path)
+        await again.start()
+        assert (await again.info()).cleanup
+
+        found = await again.scan_cleanup()
+        assert [(item.app_id, item.size > 0) for item in found.items] == [(1172710, True)]
+        assert (await again.storage()).total == found.storage.total
+
+        cleaned = await again.clean_up([found.items[0].key])
+        # The test's own disk tells the gain: never more than the cache took.
+        assert 0 < cleaned.freed <= found.items[0].size and cleaned.failed == ()
+        assert not cache.exists()
+        assert (await again.scan_cleanup()).items == ()
+        again.stop()
 
     asyncio.run(scenario())

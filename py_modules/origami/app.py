@@ -13,6 +13,7 @@ from pathlib import Path
 from origami.blocks import Context, Emit
 from origami.blocks.battery import BatteryBlock
 from origami.blocks.buttons import ButtonsBlock
+from origami.blocks.cleanup import Cleaned, CleanupBlock, CleanupScan, Storage
 from origami.blocks.display import DisplayBlock
 from origami.blocks.fans import FansBlock
 from origami.blocks.gamepad import GamepadBlock
@@ -81,6 +82,8 @@ class Info:
     """The system has an overlay menu of its own that ORIGAMI can keep in sight (B18)."""
     sharpness: bool
     """The system has the layer ORIGAMI sharpens the games with."""
+    cleanup: bool
+    """Steam keeps its games in the user's home, where ORIGAMI can clean up after them."""
 
 
 class Origami:
@@ -139,6 +142,7 @@ class Origami:
         self._sharpness = SharpnessBlock(
             context, home=environment.user_home, companion=SHARPNESS_COMPANION
         )
+        self._cleanup = CleanupBlock(environment.root, home=environment.user_home)
 
     async def start(self) -> None:
         try:
@@ -156,6 +160,7 @@ class Origami:
                 fan_hold=hold_fans(device.board),
                 overlay_menu=await asyncio.to_thread(overlay_offered, self._env.root),
                 sharpness=await asyncio.to_thread(self._sharpness.supported),
+                cleanup=await asyncio.to_thread(self._cleanup.supported),
             )
             log.info("ORIGAMI %s started, board %s", self._env.version, device.board)
         except Exception as error:
@@ -300,6 +305,21 @@ class Origami:
         """How the sharpness stands in the running game and whose it is there, for the screen."""
         await self._started()
         return await self._sharpness.state()
+
+    async def storage(self) -> Storage:
+        """The disk the user's home is on, for the Service tile and the Cleanup screen."""
+        await self._started()
+        return await asyncio.to_thread(self._cleanup.storage)
+
+    async def scan_cleanup(self) -> CleanupScan:
+        """What Steam's folders hold that can go, measured now."""
+        await self._started()
+        return await self._cleanup.scan()
+
+    async def clean_up(self, keys: list[str]) -> Cleaned:
+        """Remove the items of the last scan with these keys."""
+        await self._started()
+        return await self._cleanup.clean(keys)
 
     async def set_game(self, app_id: int | None) -> None:
         """Steam runs this game now, or none: the power, the sound and the sharpness follow its
