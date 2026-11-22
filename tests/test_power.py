@@ -7,6 +7,7 @@ from contextlib import aclosing
 import pytest
 
 from origami.power import (
+    FOREIGN_BURST_SECONDS,
     FOREIGN_LIMIT,
     MIN_LOOK_SECONDS,
     POLL_SECONDS,
@@ -230,12 +231,12 @@ def test_limits_someone_else_writes_are_answered_until_they_keep_coming(
 
     for _ in range(FOREIGN_LIMIT):
         console.overwrite(Limits(35, 36, 37))
-        console.tick()
+        console.tick(FOREIGN_BURST_SECONDS)
         assert console.limits() == Limits(20, 24, 29)
         assert console.keeper.held().contested is False
 
     console.overwrite(Limits(35, 36, 37))
-    console.tick()
+    console.tick(FOREIGN_BURST_SECONDS)
 
     assert console.limits() == Limits(35, 36, 37)
     assert console.keeper.held().contested is True
@@ -245,6 +246,37 @@ def test_limits_someone_else_writes_are_answered_until_they_keep_coming(
     console.tick()
     assert console.limits() == Limits(21, 25, 30)
     assert console.keeper.held().contested is False
+
+
+def test_steam_writing_its_limits_four_times_as_its_session_starts_is_one_writer_settling(
+    console: Console,
+) -> None:
+    hold(console, Power(20))
+    console.tick()
+    console.tick(QUIET_SECONDS)
+
+    # A ROG Ally on SteamOS, 2026-11-22: 30 W written four times within 3 s of the session.
+    for seconds in (2.0, 2.4, 0.05, 0.25):
+        console.overwrite(Limits(30, 30, 30))
+        console.tick(seconds)
+        assert console.limits() == Limits(20, 24, 29)
+
+    assert console.keeper.held().contested is False
+
+
+def test_a_writer_that_goes_on_every_two_seconds_gets_the_tdp_within_a_minute(
+    console: Console,
+) -> None:
+    hold(console, Power(20))
+    console.tick()
+    console.tick(QUIET_SECONDS)
+
+    for _ in range(30):
+        console.overwrite(Limits(35, 36, 37))
+        console.tick()
+
+    assert console.limits() == Limits(35, 36, 37)
+    assert console.keeper.held().contested is True
 
 
 def test_steams_slider_is_answered_at_once_however_often_it_moves(console: Console) -> None:

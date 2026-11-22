@@ -79,6 +79,10 @@ about ten seconds later (probe 21)."""
 FOREIGN_WINDOW_SECONDS = 60.0
 FOREIGN_LIMIT = 3
 """Writes over ORIGAMI's limits in a window that it answers; one more and it stops holding them."""
+FOREIGN_BURST_SECONDS = 10.0
+"""Writes this close to the one counted last are the same writer settling, and count as that one:
+Steam writes its own limits two to four times within 3 s as its session starts (a ROG Ally on
+SteamOS, 2026-11-22). A writer that goes on is still counted, once in this many seconds."""
 OVER_MARGIN_W = 2.0
 OVER_SECONDS = 10.0
 """How long the SoC may draw more than the boost limit before ORIGAMI writes the limits again."""
@@ -393,7 +397,8 @@ class PowerKeeper:
         if target.steam_slider:
             return f"{written} by Steam's slider"
         self._foreign = [at for at in self._foreign if now - at < FOREIGN_WINDOW_SECONDS]
-        self._foreign.append(now)
+        if not self._foreign or now - self._foreign[-1] >= FOREIGN_BURST_SECONDS:
+            self._foreign.append(now)
         if len(self._foreign) > FOREIGN_LIMIT:
             self._contested = True
             log.warning("Something else keeps writing TDP (%s); ORIGAMI stops holding it", current)
