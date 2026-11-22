@@ -21,10 +21,26 @@ import type { TdpPreset } from "../power";
 import type { SaturationPreset } from "../saturation";
 import type { SharpnessPreset, SharpnessStatus } from "../sharpness";
 import type { VibrationPreset } from "../vibration";
+import { de } from "./de";
 import { en } from "./en";
+import { es } from "./es";
+import { fr } from "./fr";
 import { ru } from "./ru";
+import { zh } from "./zh";
 
-export type Language = "ru" | "en";
+export type Language = "de" | "en" | "es" | "fr" | "ru" | "zh";
+
+/** The languages by their own names: a list of them is read by those who know none of the others. */
+export const LANGUAGE_NAMES: Record<Language, string> = {
+  de: "Deutsch",
+  en: "English",
+  es: "Español",
+  fr: "Français",
+  ru: "Русский",
+  zh: "简体中文",
+};
+/** The languages in the order of the list to choose from: by their names, each alphabet in turn. */
+export const LANGUAGES: readonly Language[] = ["de", "en", "es", "fr", "ru", "zh"];
 
 /** An action as a choice: its name and what it does. */
 export interface ActionText {
@@ -91,7 +107,12 @@ export interface Messages {
   settings: {
     title: string;
     language: string;
-    languages: Record<LanguageSetting, string>;
+    /** Under the Language screen's title. */
+    languageSubtitle: string;
+    /** The choice that follows Steam's own language. */
+    likeSteam: string;
+    /** Under that choice: the language it gives now, by its own name. */
+    likeSteamNow(language: string): string;
     system: string;
     manageTdp: string;
     /** What ORIGAMI does while it manages the TDP. */
@@ -543,7 +564,7 @@ export interface Messages {
   };
 }
 
-const catalogs: Record<Language, Messages> = { en, ru };
+const catalogs: Record<Language, Messages> = { de, en, es, fr, ru, zh };
 
 const MessagesContext = createContext<Messages>(en);
 

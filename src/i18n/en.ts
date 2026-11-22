@@ -60,7 +60,9 @@ export const en: Messages = {
   settings: {
     title: "Settings",
     language: "Language",
-    languages: { auto: "Like Steam", ru: "Русский", en: "English" },
+    languageSubtitle: "Settings · the language of ORIGAMI",
+    likeSteam: "Like Steam",
+    likeSteamNow: (language) => `Now\u00a0${language}`,
     system: "System",
     manageTdp: "Manage TDP",
     manageTdpOn: "ORIGAMI sets the TDP and brings it back after sleep and game starts",

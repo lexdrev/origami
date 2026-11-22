@@ -22,6 +22,7 @@ export type ScreenId =
   | "gamepad"
   | "armouryCrate"
   | "settings"
+  | "language"
   | "qamTab"
   | "changes";
 

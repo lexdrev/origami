@@ -164,6 +164,8 @@ ${fontFaces}
   color: var(--og-muted);
   font: 500 10px/1.35 var(--og-mono);
   text-transform: uppercase;
+  /* Its words stay whole: Chinese would otherwise break between any two characters. */
+  word-break: keep-all;
 }
 
 .og-section-label {

@@ -4,7 +4,7 @@
 import { useEffect, useRef, type ComponentType } from "react";
 
 import { missingBackend } from "./backendStart";
-import { I18nProvider, useMessages } from "./i18n";
+import { I18nProvider, messagesFor, useMessages } from "./i18n";
 import { useCurrentScreen, type ScreenId } from "./navigation";
 import { ArmouryCrateScreen } from "./screens/ArmouryCrateScreen";
 import { ChangesScreen } from "./screens/ChangesScreen";
@@ -12,6 +12,7 @@ import { CustomColourScreen } from "./screens/CustomColourScreen";
 import { DisplayScreen } from "./screens/DisplayScreen";
 import { FansScreen } from "./screens/FansScreen";
 import { GamepadScreen } from "./screens/GamepadScreen";
+import { LanguageScreen } from "./screens/LanguageScreen";
 import { MainScreen } from "./screens/MainScreen";
 import { GameProfilesScreen, GameSoundsScreen, SharpnessProfilesScreen } from "./screens/GameProfilesScreen";
 import { GameProfileScreen, PowerScreen } from "./screens/PowerScreen";
@@ -46,6 +47,7 @@ const screens: Record<ScreenId, ComponentType> = {
   gamepad: GamepadScreen,
   armouryCrate: ArmouryCrateScreen,
   settings: SettingsScreen,
+  language: LanguageScreen,
   qamTab: QamTabScreen,
   changes: ChangesScreen,
 };
@@ -55,6 +57,7 @@ export function App() {
   const current = useStore(settings);
   const daily = current.status === "ready" && current.value.updateCheck;
   const root = useRef<HTMLDivElement>(null);
+  const language = useLanguage();
   useScreenPlace(root);
   // The quick access menu mounts the view each time it opens: what failed then gets another try.
   useEffect(() => {
@@ -66,10 +69,11 @@ export function App() {
   }, [daily]);
 
   return (
-    <I18nProvider language={useLanguage()}>
+    <I18nProvider language={language}>
       {/* The style element renders inside the quick access window, which is a separate document. */}
       <style>{styles}</style>
-      <div className="og-root" ref={root}>
+      {/* The language is told to the browser: it picks the Chinese shapes of the characters by it. */}
+      <div className="og-root" lang={messagesFor(language).locale} ref={root}>
         <ScrollBar />
         <MissingBackend />
         <ActionError />

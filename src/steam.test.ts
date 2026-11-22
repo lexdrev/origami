@@ -3,10 +3,28 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { readSteamTdpSlider } from "./steam";
+import { readSteamLanguage, readSteamTdpSlider } from "./steam";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("Steam's language", () => {
+  it.each([
+    ["german", "de"],
+    ["english", "en"],
+    ["spanish", "es"],
+    ["latam", "es"],
+    ["french", "fr"],
+    ["russian", "ru"],
+    ["schinese", "zh"],
+    // Languages ORIGAMI has no words in: traditional Chinese is one of them.
+    ["tchinese", "en"],
+    ["koreana", "en"],
+  ])("%s gives ORIGAMI in %s", async (steam, language) => {
+    vi.stubGlobal("window", { SteamClient: { Settings: { GetCurrentLanguage: () => Promise.resolve(steam) } } });
+    expect(await readSteamLanguage()).toBe(language);
+  });
 });
 
 describe("Steam's TDP slider", () => {

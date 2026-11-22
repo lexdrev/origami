@@ -36,8 +36,22 @@ export function readSteamTdpSlider(): boolean | null {
   return settings.steamos_tdp_limit_enabled === true && settings.steamos_platform_performance_profile === TDP_PROFILE;
 }
 
-/** Interface language of the Steam client, reduced to the languages ORIGAMI has. */
+/**
+ * Steam's names of the languages ORIGAMI has. Steam has one Spanish for Spain and one for Latin
+ * America; of its two Chinese, ORIGAMI has the simplified one.
+ */
+const STEAM_LANGUAGES: Partial<Record<string, Language>> = {
+  english: "en",
+  french: "fr",
+  german: "de",
+  latam: "es",
+  russian: "ru",
+  schinese: "zh",
+  spanish: "es",
+};
+
+/** Interface language of the Steam client, reduced to the languages ORIGAMI has: English for the rest. */
 export async function readSteamLanguage(): Promise<Language> {
   const language = await window.SteamClient.Settings.GetCurrentLanguage();
-  return language === "russian" ? "ru" : "en";
+  return STEAM_LANGUAGES[language] ?? "en";
 }

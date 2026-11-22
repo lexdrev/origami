@@ -8,13 +8,14 @@ import { App } from "../src/App";
 import { watchBackendStart } from "../src/backendStart";
 import { recordFanHistory } from "../src/fanHistory";
 import { watchRunningGame } from "../src/games";
-import { I18nProvider, type Language } from "../src/i18n";
+import { I18nProvider, LANGUAGES, messagesFor, type Language } from "../src/i18n";
 import { readNotices } from "../src/notices";
 import { ArmouryCrateScreen } from "../src/screens/ArmouryCrateScreen";
 import { ChangesScreen } from "../src/screens/ChangesScreen";
 import { CleanupScreen } from "../src/screens/CleanupScreen";
 import { DisplayScreen } from "../src/screens/DisplayScreen";
 import { GamepadScreen } from "../src/screens/GamepadScreen";
+import { LanguageScreen } from "../src/screens/LanguageScreen";
 import { MainScreen } from "../src/screens/MainScreen";
 import { PowerScreen } from "../src/screens/PowerScreen";
 import { QamTabScreen } from "../src/screens/QamTabScreen";
@@ -106,11 +107,17 @@ function DeckyPluginView({ children }: { children: ReactNode }) {
   );
 }
 
+// "?frames=de" shows every frame below in that language, whatever it is made for: all the screens
+// of a language side by side.
+const framesIn = LANGUAGES.find((language) => language === params.get("frames"));
+
 function Static({ language, children }: { language: Language; children: ReactNode }) {
   return (
-    <I18nProvider language={language}>
+    <I18nProvider language={framesIn ?? language}>
       <div className="decky-content">
-        <div className="og-root">{children}</div>
+        <div className="og-root" lang={messagesFor(framesIn ?? language).locale}>
+          {children}
+        </div>
       </div>
     </I18nProvider>
   );
@@ -184,6 +191,11 @@ function Stand() {
         <Frame title="Settings · RU">
           <Static language="ru">
             <SettingsScreen />
+          </Static>
+        </Frame>
+        <Frame title="Language · RU">
+          <Static language="ru">
+            <LanguageScreen />
           </Static>
         </Frame>
         <Frame title="Quick access tab · RU">

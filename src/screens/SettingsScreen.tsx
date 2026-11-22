@@ -4,15 +4,14 @@
 import { Focusable, Navigation } from "@decky/ui";
 import { useEffect } from "react";
 
-import type { LanguageSetting } from "../backend";
-import { useMessages, type Messages } from "../i18n";
+import { LANGUAGE_NAMES, useMessages, type Messages } from "../i18n";
 import { back, navigate } from "../navigation";
 import { unset } from "../problems";
-import { changes, refreshChanges, settings, updateSettings } from "../state";
+import { changes, refreshChanges, settings, steamLanguage, updateSettings } from "../state";
 import { useStore } from "../store";
 import { Card, Header, Screen, SectionLabel, SwitchLine } from "../ui/blocks";
 import { UISound } from "../sounds";
-import { ChoiceGroup, NavRow, Pressable, ToggleRow, type Choice } from "../ui/controls";
+import { NavRow, Pressable, ToggleRow } from "../ui/controls";
 import { FoxMark, GearIcon } from "../ui/icons";
 import { ownTabSummary, quickAccessColumn } from "../tabPosition";
 import {
@@ -41,27 +40,26 @@ export function SettingsScreen() {
   const current = useStore(settings);
   const journal = useStore(changes);
   const column = useStore(quickAccessColumn);
+  const steam = useStore(steamLanguage);
+  const language = current.status === "ready" ? current.value.language : "auto";
 
   useEffect(() => {
     void refreshChanges();
   }, []);
-
-  const languages: Choice<LanguageSetting>[] = (["auto", "ru", "en"] as const).map((value) => ({
-    value,
-    label: t.settings.languages[value],
-  }));
 
   return (
     <Screen onBack={back}>
       <Header onBack={back} icon={<GearIcon size={18} />} title={t.settings.title} />
 
       <SectionLabel>{t.settings.language}</SectionLabel>
-      <ChoiceGroup
-        label={t.settings.language}
-        choices={languages}
-        value={current.status === "ready" ? current.value.language : undefined}
-        action={t.actions.select}
-        onChange={(language) => void updateSettings({ language })}
+      {/* The language in use by its own name; the list of them all is a screen of its own. */}
+      <NavRow
+        title={LANGUAGE_NAMES[language === "auto" ? steam : language]}
+        subtitle={language === "auto" ? t.settings.likeSteam : undefined}
+        action={t.actions.open}
+        onPress={() => {
+          navigate("language");
+        }}
       />
 
       <SectionLabel>{t.settings.system}</SectionLabel>

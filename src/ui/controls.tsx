@@ -142,7 +142,8 @@ function choiceClass(selected: boolean, twoLines: boolean): string {
 export interface Option<T extends string> {
   value: T;
   name: string;
-  detail: string;
+  /** A line of explanation under the name, where the name needs one. */
+  detail?: string;
 }
 
 interface OptionListProps<T extends string> {
@@ -153,7 +154,7 @@ interface OptionListProps<T extends string> {
   onChange: (value: T) => void;
 }
 
-/** One of several choices that need a line of explanation each, in a column (style B2). */
+/** One of several choices in a column, each with a line of explanation where it needs one (style B2). */
 export function OptionList<T extends string>({ label, options, value, action, onChange }: OptionListProps<T>) {
   return (
     <Focusable className="og-options" role="group" aria-label={label}>
@@ -173,7 +174,7 @@ export function OptionList<T extends string>({ label, options, value, action, on
             <span className="og-option__mark" aria-hidden="true" />
             <span className="og-option__text">
               <span className="og-option__name">{option.name}</span>
-              <span className="og-option__detail">{option.detail}</span>
+              {option.detail !== undefined && <span className="og-option__detail">{option.detail}</span>}
             </span>
           </Pressable>
         );
@@ -314,7 +315,8 @@ interface NavRowProps {
   title: string;
   /** Beside the title in amber: how many things the next screen holds. */
   count?: number;
-  subtitle: string;
+  /** Under the title; a row whose title says it all has none. */
+  subtitle?: string | undefined;
   /** A grey line under the subtitle. */
   note?: string | undefined;
   action: string;
@@ -338,10 +340,12 @@ export function NavRow(props: NavRowProps) {
         {title}
         {count !== undefined && <span className="og-row__count">{count}</span>}
       </span>
-      <span className="og-row__sub">
-        {problem && <WarningIcon size={12} />}
-        {subtitle}
-      </span>
+      {subtitle !== undefined && (
+        <span className="og-row__sub">
+          {problem && <WarningIcon size={12} />}
+          {subtitle}
+        </span>
+      )}
       {note !== undefined && <span className="og-row__note">{note}</span>}
       <span className="og-row__chevron">
         <ChevronIcon />

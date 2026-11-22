@@ -100,7 +100,7 @@ export interface Telemetry {
   gamepad: { vibrationPct: [number, number] | null };
 }
 
-export type LanguageSetting = "auto" | "ru" | "en";
+export type LanguageSetting = "auto" | "de" | "en" | "es" | "fr" | "ru" | "zh";
 
 export type LightMode = "static" | "breathing" | "rainbow" | "spiral";
 export type LightSpeed = "slow" | "medium" | "fast";
