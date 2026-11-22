@@ -27,6 +27,7 @@ const info: Info = {
   fanHold: { slowest: 8, rpm: [[0, 0], [100, 8000]], floor: null },
   overlayMenu: true,
   sharpness: true,
+  cleanup: true,
 };
 
 const steamos: Info = {
@@ -43,6 +44,7 @@ const steamos: Info = {
   fanHold: null,
   overlayMenu: true,
   sharpness: true,
+  cleanup: true,
 };
 
 const noOs = { id: null, name: null, versionId: null, imageVersion: null, buildId: null };

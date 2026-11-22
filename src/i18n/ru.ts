@@ -20,7 +20,7 @@ export const ru: Messages = {
     check: "Проверить",
     update: "Обновить",
   },
-  units: { watts: "Вт", rpm: "об/мин", celsius: "°C" },
+  units: { watts: "Вт", rpm: "об/мин", celsius: "°C", mb: "МБ", gb: "ГБ" },
   main: {
     settings: "Настройки",
     tiles: {
@@ -54,6 +54,7 @@ export const ru: Messages = {
     sharpnessOff: "Выкл",
     sharpnessOther: "Другой плагин",
     sharpnessLaunch: "Параметры запуска",
+    storageSub: "Свободно на\u00a0диске",
   },
   settings: {
     title: "Настройки",
@@ -291,6 +292,51 @@ export const ru: Messages = {
     launchText: (game) =>
       `В\u00a0параметрах запуска ${game} заданы переменные vkBasalt, поэтому ORIGAMI резкость в\u00a0неё не\u00a0добавляет. Уберите их из\u00a0параметров запуска\u00a0— настройки резкости появятся здесь.`,
     companionText: (plugin) => `С\u00a0генерацией кадров ${plugin} резкость ORIGAMI работает.`,
+    cleanup: "Очистка",
+    cleanupSub: "Кэш шейдеров и\u00a0остатки удалённых игр",
+  },
+  cleanup: {
+    title: "Очистка",
+    subtitle: "Сервис · кэш и\u00a0остатки игр",
+    scanning: "Считаю, сколько занимают папки Steam…",
+    storage: (free, total) => `На\u00a0диске свободно ${free} из\u00a0${total}`,
+    gameRuns: "Идёт игра",
+    gameRunsText: "Steam и\u00a0игра сейчас пишут в\u00a0эти папки. Очистка откроется, когда игра будет закрыта.",
+    leftovers: "Остатки удалённых игр",
+    leftoversSub: "Кэш, префиксы и\u00a0папки",
+    leftoversHint:
+      "Игры уже нет, а\u00a0её файлы остались. Кэш шейдеров можно удалять смело; в\u00a0префиксе и\u00a0в\u00a0папке игры лежат сохранения.",
+    noLeftovers: "Остатков нет",
+    incomplete: "Не\u00a0все библиотеки Steam на\u00a0месте",
+    incompleteText:
+      "Одна из\u00a0библиотек Steam не\u00a0подключена — возможно, карта памяти не\u00a0в\u00a0слоте. Пока её нет, нельзя понять, какие игры удалены, поэтому их остатки не\u00a0показаны.",
+    caches: "Кэш шейдеров",
+    cachesSub: "Установленные игры",
+    cachesHint: "Игра соберёт кэш заново. Первый запуск после очистки может подтормаживать.",
+    noCaches: "Кэша шейдеров нет",
+    picked: (count, size) => `Выбрано ${count} · ${size}`,
+    kinds: { shaders: "Кэш шейдеров", prefix: "Префикс", folder: "Папка игры" },
+    underOneMb: "меньше 1\u00a0МБ",
+    unknownGame: (appId) => `Игра ${appId}`,
+    removedShortcut: (appId) => `Удалённый ярлык ${appId}`,
+    cloud: "Сохранения есть в\u00a0Steam Cloud",
+    noCloud: "Облака Steam нет · сохранения удалятся",
+    cloudUnknown: "Про облако Steam неизвестно · сохранения могут удалиться",
+    shortcutNote: "Игра не\u00a0из\u00a0Steam · сохранения и\u00a0входы в\u00a0лаунчеры удалятся",
+    folderNote: "Здесь могут быть сохранения и\u00a0моды",
+    inside: (names) => `внутри: ${names}`,
+    busy: "Steam сейчас работает с\u00a0этой игрой",
+    pickSafe: "Выбрать безопасное",
+    pickFirst: "Отметьте, что удалить",
+    remove: (size) => `Удалить выбранное · ${size}`,
+    ask: "Удалить выбранное?",
+    askText: (count, size) =>
+      `${count} ${pluralForm(locale, count, { one: "пункт", few: "пункта", many: "пунктов", other: "пункта" })} · ${size}. Вернуть будет нельзя.`,
+    askSaves: (count) =>
+      `Сохранения, которых нет в\u00a0облаке, удалятся навсегда: таких пунктов — ${count}.`,
+    confirm: "Удалить",
+    freed: (size) => `Освобождено ${size}`,
+    failed: "Не\u00a0удалось удалить",
   },
   display: {
     title: "Дисплей и свет",

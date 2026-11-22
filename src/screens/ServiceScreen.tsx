@@ -21,6 +21,7 @@ import {
 } from "../sharpness";
 import {
   conflicts,
+  info,
   refreshConflicts,
   refreshSharpness,
   setGameSharpness,
@@ -41,7 +42,7 @@ const POLL_INTERVAL_MS = 2000;
 /** The Service screen: the running game's own sharpness switch on top, or the way to the games' profiles. */
 export function ServiceScreen() {
   const t = useMessages();
-  return <ServiceView title={t.service.title} game={useStore(runningGame)} />;
+  return <ServiceView title={t.service.title} game={useStore(runningGame)} tools />;
 }
 
 /** A game's sharpness opened from the list: the screen as it is while that game runs. */
@@ -63,14 +64,17 @@ interface ServiceViewProps {
   title: string;
   subtitle?: string | undefined;
   game: Game | null;
+  /** The screen of the tile itself: under the sharpness it has the tools that are no game's. */
+  tools?: boolean;
 }
 
-function ServiceView({ title, subtitle, game }: ServiceViewProps) {
+function ServiceView({ title, subtitle, game, tools = false }: ServiceViewProps) {
   const t = useMessages();
   const current = useStore(settings);
   const owners = useStore(conflicts);
   const state = useStore(sharpnessState);
   const running = useStore(runningGame);
+  const plugin = useStore(info);
 
   useEffect(() => {
     void refreshConflicts();
@@ -81,11 +85,15 @@ function ServiceView({ title, subtitle, game }: ServiceViewProps) {
   const now = state.status === "ready" ? state.value : null;
   // The running game's launch options keep the sharpness: on this game's screen there is nothing to set.
   const taken = now?.game === "managed" && game !== null && running?.appId === game.appId ? now : null;
+  // Where the system has no layer to sharpen with, the screen has its tools alone.
+  const sharpening = plugin.status !== "ready" || plugin.value.sharpness;
+  const cleaning = tools && plugin.status === "ready" && plugin.value.cleanup;
   return (
     <Screen onBack={back}>
       <Header onBack={back} title={title} subtitle={subtitle} />
-      <LoadFailed loads={[current, owners]} />
-      {current.status === "ready" &&
+      {sharpening && <LoadFailed loads={[current, owners]} />}
+      {sharpening &&
+        current.status === "ready" &&
         owners.status === "ready" &&
         (owner !== null ? (
           <OwnedBy
@@ -98,6 +106,16 @@ function ServiceView({ title, subtitle, game }: ServiceViewProps) {
         ) : (
           <OwnSharpness setting={current.value} game={game} running={running} state={now?.game ?? null} />
         ))}
+      {cleaning && (
+        <NavRow
+          title={t.service.cleanup}
+          subtitle={t.service.cleanupSub}
+          action={t.actions.open}
+          onPress={() => {
+            navigate("cleanup");
+          }}
+        />
+      )}
     </Screen>
   );
 }

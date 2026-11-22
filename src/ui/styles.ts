@@ -248,6 +248,27 @@ ${fontFaces}
 .og-row.og-focused .og-row__chevron { color: var(--og-accent); }
 
 .og-toggle { padding-right: 58px; }
+.og-row__note--danger { color: var(--og-danger-text); }
+/* A list that folds: its chevron points down while folded and up while open. */
+.og-fold .og-row__chevron { transform: rotate(90deg); }
+.og-fold--open .og-row__chevron { transform: rotate(-90deg); }
+.og-check { padding-right: 40px; }
+.og-check__box {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  border: 1px solid var(--og-border);
+  background: var(--og-track);
+  color: #14100a;
+}
+.og-check__box--on { border-color: var(--og-accent); background: var(--og-accent); }
+.og-check.og-focused .og-check__box { box-shadow: 0 0 0 2px var(--og-surface), 0 0 0 4px var(--og-accent); }
 .og-row--problem { border-color: var(--og-danger-line); }
 .og-row--problem .og-row__sub { display: flex; align-items: flex-start; gap: 6px; color: var(--og-danger-text); }
 .og-row--problem .og-row__sub svg { flex-shrink: 0; margin-top: 1px; color: var(--og-danger); }
@@ -510,6 +531,7 @@ ${fontFaces}
 .og-restore__title { font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .og-restore__text { color: var(--og-text-soft); font-size: 11px; line-height: 1.45; }
 .og-restore__note { color: var(--og-muted); font-size: 11px; line-height: 1.45; }
+.og-restore__danger { color: var(--og-danger-text); font-size: 11px; line-height: 1.45; }
 
 .og-disabled { opacity: 0.4; }
 

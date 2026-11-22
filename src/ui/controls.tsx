@@ -5,7 +5,7 @@ import { Focusable, GamepadButton, type GamepadEvent } from "@decky/ui";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 import { playSound, UISound } from "../sounds";
-import { ChevronIcon, WarningIcon } from "./icons";
+import { CheckIcon, ChevronIcon, WarningIcon } from "./icons";
 import { slide } from "./slider";
 
 interface PressableProps {
@@ -228,6 +228,84 @@ export function ToggleRow(props: ToggleRowProps) {
       </span>
       {note !== undefined && <span className="og-row__note">{note}</span>}
       <Switch on={value} />
+    </Pressable>
+  );
+}
+
+interface CheckRowProps {
+  title: string;
+  subtitle: string;
+  /** A line under the subtitle; red with `danger`, for what picking the row costs. */
+  note?: string | undefined;
+  danger?: boolean;
+  value: boolean;
+  action: string;
+  /** The row cannot be picked now; its note says why. */
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}
+
+/** A row of a list to pick from, with a check box. */
+export function CheckRow(props: CheckRowProps) {
+  const { title, subtitle, note, danger = false, value, action, disabled = false, onChange } = props;
+  return (
+    <Pressable
+      className="og-row og-check"
+      action={action}
+      pressed={value}
+      sound={value ? UISound.ToggleOff : UISound.ToggleOn}
+      disabled={disabled}
+      onPress={() => {
+        onChange(!value);
+      }}
+    >
+      <span className="og-row__title">{title}</span>
+      <span className="og-row__sub">{subtitle}</span>
+      {note !== undefined && (
+        <span className={danger ? "og-row__note og-row__note--danger" : "og-row__note"}>{note}</span>
+      )}
+      <span className={value ? "og-check__box og-check__box--on" : "og-check__box"} aria-hidden="true">
+        {value && <CheckIcon />}
+      </span>
+    </Pressable>
+  );
+}
+
+interface FoldRowProps {
+  title: string;
+  /** Beside the title in amber: how many rows the list holds. */
+  count: number;
+  subtitle: string;
+  /** A line under the subtitle, such as what is picked in the list. */
+  note?: string | undefined;
+  open: boolean;
+  action: string;
+  /** An empty list: its subtitle says so, and there is nothing to open. */
+  disabled?: boolean;
+  onToggle: () => void;
+}
+
+/** The head of a list that folds: it opens the rows under itself and closes them again. */
+export function FoldRow(props: FoldRowProps) {
+  const { title, count, subtitle, note, open, action, disabled = false, onToggle } = props;
+  return (
+    <Pressable
+      className={open ? "og-row og-fold og-fold--open" : "og-row og-fold"}
+      action={action}
+      pressed={open}
+      sound={UISound.Press}
+      disabled={disabled}
+      onPress={onToggle}
+    >
+      <span className="og-row__title">
+        {title}
+        <span className="og-row__count">{count}</span>
+      </span>
+      <span className="og-row__sub">{subtitle}</span>
+      {note !== undefined && <span className="og-row__note">{note}</span>}
+      <span className="og-row__chevron">
+        <ChevronIcon />
+      </span>
     </Pressable>
   );
 }

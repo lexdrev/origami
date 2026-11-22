@@ -5,6 +5,7 @@ import { Router } from "@decky/ui";
 
 import { backend } from "./backend";
 import type { Game } from "./gameProfiles";
+import { appDetails } from "./steamApps";
 import { createStore } from "./store";
 
 // Steam shows the game it runs as MainRunningApp some seconds before its lifetime notification
@@ -62,26 +63,8 @@ export function watchRunningGame(): () => void {
 const DETAILS_WAIT_MS = 300;
 
 /** The game's launch options as Steam has them now; null when Steam does not answer in time. */
-export function launchOptions(appId: number): Promise<string | null> {
-  return new Promise((resolve) => {
-    const asked: { answered?: true; registration?: { unregister: () => void } } = {};
-    const answer = (options: string | null) => {
-      if (asked.answered) return;
-      asked.answered = true;
-      clearTimeout(timer);
-      asked.registration?.unregister();
-      resolve(options);
-    };
-    const timer = setTimeout(() => {
-      answer(null);
-    }, DETAILS_WAIT_MS);
-    const registration = window.SteamClient.Apps.RegisterForAppDetails(appId, (details) => {
-      answer(details.strLaunchOptions);
-    });
-    // Steam may answer before the registration is returned.
-    if (asked.answered) registration.unregister();
-    else asked.registration = registration;
-  });
+export async function launchOptions(appId: number): Promise<string | null> {
+  return (await appDetails(appId, DETAILS_WAIT_MS))?.strLaunchOptions ?? null;
 }
 
 /**

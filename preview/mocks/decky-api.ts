@@ -4,6 +4,9 @@
 // Browser stand-in for @decky/api with readings taken from the console (HARDWARE.md).
 
 import type {
+  Cleaned,
+  CleanupItem,
+  CleanupScan,
   Change,
   Conflicts,
   HeldPower,
@@ -68,6 +71,7 @@ const info: Info = {
   fanHold: XBOX_ALLY_X,
   overlayMenu: true,
   sharpness: true,
+  cleanup: true,
 };
 const query = new URLSearchParams(location.search);
 // "?nohold" is a console whose fans hold no temperature: the Fans screen has the curve alone.
@@ -81,6 +85,8 @@ if (ally) {
 }
 // "?nosharpness" is a system without the sharpening layer: the main screen has no Service tile.
 if (query.has("nosharpness")) info.sharpness = false;
+// "?nocleanup" is a home without Steam's folders: the Service screen has no Cleanup row.
+if (query.has("nocleanup")) info.cleanup = false;
 
 let settings: Settings = {
   language: "auto",
@@ -258,8 +264,71 @@ const routes: Record<string, (...args: never[]) => unknown> = {
   set_game: () => undefined,
   game_starting: () => undefined,
   get_sharpness: sharpnessState,
+  get_storage: () => STORAGE,
+  scan_cleanup: scanCleanup,
+  clean_up: cleanUp,
   set_steam_tdp_limit: () => undefined,
 };
+
+const GB = 2 ** 30;
+const STORAGE = { free: 191.4 * GB, total: 698 * GB };
+
+function left(
+  kind: CleanupItem["kind"],
+  owner: CleanupItem["owner"],
+  id: number | string,
+  gb: number,
+  more: Partial<CleanupItem> = {},
+): CleanupItem {
+  const game = typeof id === "number";
+  return {
+    key: `${kind}:0:${id}`,
+    kind,
+    owner,
+    appId: game ? id : null,
+    name: game ? null : id,
+    size: gb * GB,
+    userSize: kind === "prefix" ? 12 * 2 ** 20 : null,
+    hints: [],
+    busy: false,
+    ...more,
+  };
+}
+
+// What the console's own disk held when the feature was made, and a prefix without Steam Cloud.
+// "?cleanempty" is a disk with nothing to clean, "?cleanbusy" a game whose shaders Steam compiles
+// now, "?cleancard" a Steam library that is not mounted; with "?game" a game runs and nothing is
+// listed.
+let cleanupItems: CleanupItem[] = query.has("cleanempty")
+  ? []
+  : [
+      left("shaders", "installed", 2344520, 1.76, { name: "Diablo IV" }),
+      left("shaders", "installed", 668580, 1.21, { name: "Atomic Heart" }),
+      left("prefix", "removed", 617290, 0.92, { hints: ["Remnant"] }),
+      left("prefix", "shortcut", 3293947715, 0.71, { hints: ["BB3"] }),
+      left("shaders", "removed", 1172710, 0.66),
+      left("shaders", "installed", 597820, 0.61, { name: "BIOMUTANT", busy: query.has("cleanbusy") }),
+      left("prefix", "removed", 292030, 0.4, { hints: ["CD Projekt Red"] }),
+      left("folder", "removed", "SubnauticaZero", 0.19),
+      left("shaders", "installed", 2717880, 0.17, { name: "The Rogue Prince of Persia" }),
+      left("folder", "removed", "Pumpkin Jack", 0.0003),
+    ];
+
+function scanCleanup(): CleanupScan {
+  if (query.has("game")) return { items: [], storage: STORAGE, complete: true, game: true };
+  const card = query.has("cleancard");
+  const items = card ? cleanupItems.filter((item) => item.owner === "installed") : cleanupItems;
+  return { items, storage: STORAGE, complete: !card, game: false };
+}
+
+function cleanUp(keys: string[]): Cleaned {
+  const gone = cleanupItems.filter((item) => keys.includes(item.key) && !item.busy);
+  cleanupItems = cleanupItems.filter((item) => !gone.includes(item));
+  return {
+    freed: gone.reduce((total, item) => total + item.size, 0),
+    failed: keys.filter((key) => !gone.some((item) => item.key === key)),
+  };
+}
 
 // The limits as asus-armoury takes them on the charger: the boost from 14 W, the peak from 19 W.
 function heldPower(): HeldPower {

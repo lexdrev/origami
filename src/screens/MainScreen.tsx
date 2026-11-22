@@ -26,10 +26,12 @@ import {
   refreshGyro,
   refreshSharpness,
   refreshSound,
+  refreshStorage,
   refreshTriggerState,
   settings,
   sharpnessState,
   soundState,
+  storage,
   triggerState,
 } from "../state";
 import { useStore } from "../store";
@@ -65,6 +67,8 @@ export function MainScreen() {
   const speakers = plugin.status === "ready" && plugin.value.sound;
   const fanHold = plugin.status === "ready" && plugin.value.fanHold !== null;
   const sharpening = plugin.status === "ready" && plugin.value.sharpness;
+  const cleaning = plugin.status === "ready" && plugin.value.cleanup;
+  const disk = useStore(storage);
   // Steam's own setting, changed from Steam's settings page too; other plugins and the controller
   // can change between visits as well.
   useEffect(() => {
@@ -77,6 +81,10 @@ export function MainScreen() {
   // here, for the Sound tile and its count; headphones come and go while the menu is open.
   usePoll(speakers ? refreshSound : nothing, SOUND_POLL_INTERVAL_MS);
   usePoll(sharpening ? refreshSharpness : nothing, SHARPNESS_POLL_INTERVAL_MS);
+  // Without the sharpness the Service tile shows the space left on the disk.
+  useEffect(() => {
+    if (cleaning && !sharpening) void refreshStorage();
+  }, [cleaning, sharpening]);
   // In the running game the sharpness is another plugin's, or its launch options' own: the tile
   // counts that until the Service screen has said whose it is.
   const sharpnessTaken = sharp.status === "ready" && sharp.value.game === "managed";
@@ -110,17 +118,20 @@ export function MainScreen() {
               : "program"
           : "unknown",
       soundState: soundNow,
+      storage: disk.status === "ready" ? disk.value : null,
       sharpness:
-        setting && others
-          ? others.sharpness !== null
-            ? undefined
-            : sharpnessTaken
-              ? // A plugin's wrapper keeps it, or the game's launch options by themselves.
-                sharp.value.owner === null
-                ? "launch"
-                : undefined
-              : sharpnessFor(setting, running)
-          : "unknown",
+        !sharpening && cleaning
+          ? "none"
+          : setting && others
+            ? others.sharpness !== null
+              ? undefined
+              : sharpnessTaken
+                ? // A plugin's wrapper keeps it, or the game's launch options by themselves.
+                  sharp.value.owner === null
+                  ? "launch"
+                  : undefined
+                : sharpnessFor(setting, running)
+            : "unknown",
     },
     t,
   );
@@ -204,8 +215,8 @@ export function MainScreen() {
             }}
           />
         )}
-        {/* Only where the system has the layer the games are sharpened with. */}
-        {sharpening && (
+        {/* Only where the Service screen has something: the sharpening layer or Steam's folders. */}
+        {(sharpening || cleaning) && (
           <Tile
             icon={<ServiceIcon />}
             name={t.main.tiles.service}

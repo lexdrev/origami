@@ -19,6 +19,7 @@ const none = {
   sound: undefined,
   soundState: null,
   sharpness: undefined,
+  storage: null,
 };
 
 const allyX: Telemetry = {
@@ -46,6 +47,7 @@ describe("tile texts", () => {
       fanCurve: null,
       sound: null,
       sharpness: null,
+      storage: null,
     };
 
     expect(tileTexts(allyX, own, ru)).toEqual({
@@ -175,6 +177,13 @@ describe("tile texts", () => {
     expect(service(null).value).toBe("Off");
     // Another plugin sets it, and before anything is read.
     expect(service(undefined)).toEqual({ value: "—", subtitle: "Another plugin" });
+    // Without the layer the tile is about the cleanup: the space left on the disk.
+    const storage = { free: 191.4 * 2 ** 30, total: 698 * 2 ** 30 };
+    expect(tileTexts(null, { ...none, sharpness: "none", storage }, en).service).toEqual({
+      value: `191${NBSP}GB`,
+      subtitle: `Free on the${NBSP}disk`,
+    });
+    expect(service("none")).toEqual({ value: "—", subtitle: `Free on the${NBSP}disk` });
     // The running game's launch options set the layer by themselves.
     expect(service("launch")).toEqual({ value: "—", subtitle: "Launch options" });
     expect(service("unknown")).toEqual({ value: "—", subtitle: "" });

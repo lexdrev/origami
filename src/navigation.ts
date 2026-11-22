@@ -16,6 +16,7 @@ export type ScreenId =
   | "service"
   | "sharpnessProfiles"
   | "sharpnessProfile"
+  | "cleanup"
   | "display"
   | "customColour"
   | "gamepad"

@@ -60,6 +60,8 @@ export interface Info {
   overlayMenu: boolean;
   /** The system has the layer ORIGAMI sharpens the games with. */
   sharpness: boolean;
+  /** Steam keeps its games in the user's home, where ORIGAMI can clean up after them. */
+  cleanup: boolean;
 }
 
 export interface BatteryTelemetry {
@@ -332,6 +334,53 @@ export interface Settings {
   gameSharpness: GameSharpness[];
 }
 
+/** The disk the user's home is on (origami.blocks.cleanup.Storage), in bytes. */
+export interface Storage {
+  free: number;
+  total: number;
+}
+
+export type CleanupKind = "shaders" | "prefix" | "folder";
+
+/** Something the Cleanup screen lists and can remove (origami.cleanup.Item). */
+export interface CleanupItem {
+  /** What the backend knows the item by; its path stays there. */
+  key: string;
+  kind: CleanupKind;
+  /** An installed game, a game of Steam's store that is removed, or a removed non-Steam shortcut. */
+  owner: "installed" | "removed" | "shortcut";
+  /** Null for a game folder: nothing tells whose it was. */
+  appId: number | null;
+  /** The installed game's name or the folder's; null where only Steam can name the game. */
+  name: string | null;
+  /** Bytes on the disk. */
+  size: number;
+  /** A prefix: the bytes of the player's own part. */
+  userSize: number | null;
+  /** A prefix: folders the game made in it. */
+  hints: string[];
+  /** Steam works with the game's files now. */
+  busy: boolean;
+}
+
+/** What the Cleanup screen shows (origami.blocks.cleanup.CleanupScan). */
+export interface CleanupScan {
+  /** The biggest first. */
+  items: CleanupItem[];
+  storage: Storage;
+  /** Every Steam library was read; else the leftovers of removed games are not told. */
+  complete: boolean;
+  /** A game runs: nothing is listed, and nothing can be removed. */
+  game: boolean;
+}
+
+export interface Cleaned {
+  /** Bytes the removed items took. */
+  freed: number;
+  /** The keys of the items that stay. */
+  failed: string[];
+}
+
 /** Enabled plugins that drive hardware ORIGAMI also drives. */
 export interface Conflicts {
   lighting: string | null;
@@ -376,5 +425,8 @@ export const backend = {
   setGame: callable<[appId: number | null]>("set_game"),
   gameStarting: callable<[appId: number, launchOptions: string | null]>("game_starting"),
   getSharpness: callable<[], SharpnessState>("get_sharpness"),
+  getStorage: callable<[], Storage>("get_storage"),
+  scanCleanup: callable<[], CleanupScan>("scan_cleanup"),
+  cleanUp: callable<[keys: string[]], Cleaned>("clean_up"),
   setSteamTdpLimit: callable<[on: boolean]>("set_steam_tdp_limit"),
 };

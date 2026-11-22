@@ -12,6 +12,7 @@ import { I18nProvider, type Language } from "../src/i18n";
 import { readNotices } from "../src/notices";
 import { ArmouryCrateScreen } from "../src/screens/ArmouryCrateScreen";
 import { ChangesScreen } from "../src/screens/ChangesScreen";
+import { CleanupScreen } from "../src/screens/CleanupScreen";
 import { DisplayScreen } from "../src/screens/DisplayScreen";
 import { GamepadScreen } from "../src/screens/GamepadScreen";
 import { MainScreen } from "../src/screens/MainScreen";
@@ -30,13 +31,32 @@ import { styles } from "../src/ui/styles";
 // "?lang=english" says otherwise. Interface sounds go through Steam; the stand stays silent. Decky
 // reports its version as 3.3.1, or as "?decky=v3.2.10" says.
 const params = new URLSearchParams(location.search);
+/** The removed games Steam's library still knows by name, and whose saves its cloud keeps. */
+const NAMES: Record<number, string | undefined> = {
+  617290: "Remnant: From the Ashes",
+  1172710: "Dune: Awakening",
+  292030: "The Witcher 3: Wild Hunt",
+};
+const CLOUD: Record<number, boolean | undefined> = { 617290: true, 292030: false };
 Object.assign(window, {
   SteamClient: {
     Settings: { GetCurrentLanguage: () => Promise.resolve(params.get("lang") ?? "russian") },
     Apps: {
       RegisterForGameActionStart: () => ({ unregister: () => undefined }),
-      RegisterForAppDetails: () => ({ unregister: () => undefined }),
+      // Steam tells of the cloud of two of the stand's removed games; of the others it says nothing.
+      RegisterForAppDetails: (appId: number, tell: (details: object) => void) => {
+        const cloud = CLOUD[appId];
+        if (cloud !== undefined) {
+          setTimeout(() => {
+            tell({ strLaunchOptions: "", bCloudAvailable: cloud, bCloudEnabledForApp: cloud, bCloudEnabledForAccount: true });
+          }, 50);
+        }
+        return { unregister: () => undefined };
+      },
     },
+  },
+  appStore: {
+    GetAppOverviewByAppID: (appId: number) => (NAMES[appId] === undefined ? null : { display_name: NAMES[appId] }),
   },
   SteamUIStore: { GamepadUIAudio: { PlayNavSound: () => undefined } },
   DeckyBackend: { call: () => Promise.resolve({ current: params.get("decky") ?? "v3.3.1" }) },
@@ -144,6 +164,16 @@ function Stand() {
         <Frame title="Service · EN">
           <Static language="en">
             <ServiceScreen />
+          </Static>
+        </Frame>
+        <Frame title="Cleanup · RU">
+          <Static language="ru">
+            <CleanupScreen />
+          </Static>
+        </Frame>
+        <Frame title="Cleanup · EN">
+          <Static language="en">
+            <CleanupScreen />
           </Static>
         </Frame>
         <Frame title="Armoury Crate · RU">

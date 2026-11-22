@@ -10,7 +10,9 @@ import {
   type Info,
   type Lighting,
   type Settings,
+  type CleanupScan,
   type SharpnessState,
+  type Storage,
   type SoundState,
   type Telemetry,
   type TriggerState,
@@ -30,6 +32,8 @@ export const triggerState = createStore<Loadable<TriggerState>>({ status: "loadi
 export const heldPower = createStore<Loadable<HeldPower>>({ status: "loading" });
 export const soundState = createStore<Loadable<SoundState>>({ status: "loading" });
 export const sharpnessState = createStore<Loadable<SharpnessState>>({ status: "loading" });
+export const storage = createStore<Loadable<Storage>>({ status: "loading" });
+export const cleanupScan = createStore<Loadable<CleanupScan>>({ status: "loading" });
 export const steamLanguage = createStore<Language>("en");
 /** The last failed action, shown until the next one succeeds. */
 export const actionError = createStore<string | null>(null);
@@ -103,6 +107,16 @@ export function refreshSound(): Promise<void> {
 /** Whether the running game has the sharpening layer; games start and end while the screen is open. */
 export function refreshSharpness(): Promise<void> {
   return load(sharpnessState, backend.getSharpness);
+}
+
+/** The free space, for the Service tile where it has nothing else to show. */
+export function refreshStorage(): Promise<void> {
+  return load(storage, backend.getStorage);
+}
+
+/** Measures Steam's folders again; the list shown stays until the new one is there. */
+export function refreshCleanup(): Promise<void> {
+  return load(cleanupScan, backend.scanCleanup);
 }
 
 /** What ORIGAMI changed follows every setting, so this is read when a screen showing it opens. */

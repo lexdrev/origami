@@ -5,6 +5,7 @@ import { createContext, useContext, type ReactNode } from "react";
 
 import type {
   ButtonAction,
+  CleanupKind,
   LanguageSetting,
   LightMode,
   LightSpeed,
@@ -46,7 +47,7 @@ export interface Messages {
     check: string;
     update: string;
   };
-  units: { watts: string; rpm: string; celsius: string };
+  units: { watts: string; rpm: string; celsius: string; mb: string; gb: string };
   main: {
     settings: string;
     tiles: { power: string; fans: string; display: string; gamepad: string; sound: string; service: string };
@@ -82,6 +83,8 @@ export interface Messages {
     sharpnessOther: string;
     /** Under the Service tile while the running game's launch options keep the sharpness. */
     sharpnessLaunch: string;
+    /** Under the Service tile where it has no sharpness: its value is the space left on the disk. */
+    storageSub: string;
   };
   settings: {
     title: string;
@@ -321,6 +324,58 @@ export interface Messages {
     launchText(game: string): string;
     /** Under that: a frame generation plugin in whose games ORIGAMI's sharpness does work. */
     companionText(plugin: string): string;
+    /** The row that opens the Cleanup screen. */
+    cleanup: string;
+    cleanupSub: string;
+  };
+  cleanup: {
+    title: string;
+    subtitle: string;
+    scanning: string;
+    storage(free: string, total: string): string;
+    /** While a game runs nothing is listed. */
+    gameRuns: string;
+    gameRunsText: string;
+    /** What removed games left behind: the list's name, what it holds, and the note inside. */
+    leftovers: string;
+    leftoversSub: string;
+    leftoversHint: string;
+    noLeftovers: string;
+    /** A Steam library is not mounted, so what is removed cannot be told. */
+    incomplete: string;
+    incompleteText: string;
+    /** The shader caches of the installed games. */
+    caches: string;
+    cachesSub: string;
+    cachesHint: string;
+    noCaches: string;
+    /** Under a folded list: how much is picked in it. */
+    picked(count: number, size: string): string;
+    kinds: Record<CleanupKind, string>;
+    underOneMb: string;
+    /** A game Steam cannot name, and a non-Steam game whose shortcut is gone. */
+    unknownGame(appId: number): string;
+    removedShortcut(appId: number): string;
+    /** Under a prefix: where the game's saves are. */
+    cloud: string;
+    noCloud: string;
+    cloudUnknown: string;
+    shortcutNote: string;
+    folderNote: string;
+    /** Folders a game nothing names made in its prefix. */
+    inside(names: string): string;
+    busy: string;
+    pickSafe: string;
+    /** The button with nothing picked, and with something. */
+    pickFirst: string;
+    remove(size: string): string;
+    ask: string;
+    askText(count: number, size: string): string;
+    /** How many of the picked hold saves that are nowhere else. */
+    askSaves(count: number): string;
+    confirm: string;
+    freed(size: string): string;
+    failed: string;
   };
   display: {
     title: string;

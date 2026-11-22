@@ -1,7 +1,17 @@
 // SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { FanCurve, Sharpness, Sound, SoundState, Telemetry, TriggerRumble, Vibration } from "../backend";
+import type {
+  FanCurve,
+  Sharpness,
+  Sound,
+  SoundState,
+  Storage,
+  Telemetry,
+  TriggerRumble,
+  Vibration,
+} from "../backend";
+import { formatSize } from "../cleanup";
 import { curveName, heldTarget } from "../fans";
 import type { Messages } from "../i18n";
 import { formatNumber, withUnit } from "../i18n/format";
@@ -53,9 +63,11 @@ export interface OwnValues {
   /**
    * The sharpness the next game starts with, null until switched on; undefined while another
    * plugin sets it, "launch" while the running game's launch options do, "unknown" until the
-   * settings and the other plugins are read.
+   * settings and the other plugins are read, "none" where the system has no layer to sharpen with.
    */
-  sharpness: Sharpness | null | undefined | "unknown" | "launch";
+  sharpness: Sharpness | null | undefined | "unknown" | "launch" | "none";
+  /** The disk of the user's home, shown where the tile has no sharpness; null until read. */
+  storage: Storage | null;
 }
 
 const SEPARATOR = " · ";
@@ -106,13 +118,19 @@ export function tileTexts(telemetry: Telemetry | null, own: OwnValues, t: Messag
       subtitle: line(t.main.gamepadSub, own.triggers !== undefined && t.main.triggers[triggerLine(own.triggers)]),
     },
     sound: soundText(own.sound, own.soundState, t),
-    service: serviceText(own.sharpness, t),
+    service: serviceText(own.sharpness, own.storage, t),
   };
 }
 
-/** The Service tile shows the sharpness, the one setting of its screen that has a value. */
-function serviceText(sharpness: OwnValues["sharpness"], t: Messages): TileText {
+/**
+ * The Service tile shows the sharpness, the one setting of its screen that has a value; without
+ * it, the free space its cleanup is about.
+ */
+function serviceText(sharpness: OwnValues["sharpness"], storage: Storage | null, t: Messages): TileText {
   if (sharpness === "unknown") return { value: t.unknown, subtitle: "" };
+  if (sharpness === "none") {
+    return { value: storage === null ? t.unknown : formatSize(storage.free, t), subtitle: t.main.storageSub };
+  }
   if (sharpness === undefined) return { value: t.unknown, subtitle: t.main.sharpnessOther };
   if (sharpness === "launch") return { value: t.unknown, subtitle: t.main.sharpnessLaunch };
   return {
