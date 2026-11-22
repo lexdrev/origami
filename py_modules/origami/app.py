@@ -24,7 +24,7 @@ from origami.blocks.sound import LV2_DIR, SoundBlock, SoundState
 from origami.buttons import Button, layout_for
 from origami.decky_plugins import SHARPNESS_COMPANION, Conflicts, describe, read_conflicts
 from origami.device import Device, read_device
-from origami.fans import HOLD_BOARDS
+from origami.fans import HoldFans, hold_fans
 from origami.gyro import GyroState
 from origami.hid_bpf import HidBpfProgram
 from origami.inputplumber import PASTE, NoKeyboardError, press_keys
@@ -75,8 +75,8 @@ class Info:
     """The buttons ORIGAMI may drive here; the system keeps the others (both on the ROG Ally)."""
     sound: bool
     """ORIGAMI processes this console's speakers: it has their protection."""
-    fan_hold: bool
-    """The fans can hold a temperature here: the hold knows this console's fans."""
+    fan_hold: HoldFans | None
+    """What the hold knows of this console's fans; None where they hold no temperature."""
     overlay_menu: bool
     """The system has an overlay menu of its own that ORIGAMI can keep in sight (B18)."""
     sharpness: bool
@@ -153,7 +153,7 @@ class Origami:
                 versions=versions,
                 buttons=tuple(buttons),
                 sound=device.board in SPEAKER_ZONES,
-                fan_hold=device.board in HOLD_BOARDS,
+                fan_hold=hold_fans(device.board),
                 overlay_menu=await asyncio.to_thread(overlay_offered, self._env.root),
                 sharpness=await asyncio.to_thread(self._sharpness.supported),
             )

@@ -7,18 +7,20 @@ import asyncio
 import logging
 import threading
 from collections.abc import Callable
+from pathlib import Path
 
 from origami.blocks import Context
 from origami.fans import (
-    HOLD_BOARDS,
     POLL_SECONDS,
     Curve,
     FanCurve,
     Hold,
     curve_dir,
     curve_on,
+    fan_speed,
     give_back,
     hold_curve,
+    hold_fans,
     hottest,
     own_curve,
     write_curve,
@@ -130,16 +132,17 @@ class FansBlock:
 
     def _holds(self, curve: FanCurve) -> bool:
         """Whether the curve holds a temperature here: asked to, on a console whose fans can."""
-        return curve.hold and self._board() in HOLD_BOARDS
+        return curve.hold and hold_fans(self._board()) is not None
 
     def _wanted(self, curve: FanCurve) -> Curve:
-        """The curve for the firmware now: the user's points, or the slope at the level found."""
-        if not self._holds(curve):
+        """The curve for the firmware now: the user's points, or the level found for the hold."""
+        fans = hold_fans(self._board())
+        if not curve.hold or fans is None:
             return own_curve(curve.points)
         if self._holder is None:
-            self._holder = Hold(curve.target)
+            self._holder = Hold(curve.target, fans)
         self._holder.aim(curve.target)
-        return hold_curve(curve.target, self._holder.level)
+        return hold_curve(self._holder.held, self._holder.level)
 
     def _write(self, curve: Curve) -> None:
         """Send the curve to the fans; blocks briefly."""
@@ -171,10 +174,10 @@ class FansBlock:
             if curve is None or not curve.enabled:
                 continue
             if holder is not None and self._holds(curve):
-                temp = await asyncio.to_thread(hottest, root)
-                # Unread, the slope in the firmware goes on by itself.
+                temp, rpm = await asyncio.to_thread(_readings, root)
+                # Unread, the curve in the firmware goes on by itself.
                 if temp is not None:
-                    holder.look(temp)
+                    holder.look(temp, rpm)
             if self._curve is not curve:
                 # Changed over the look: the new settings were written as they came.
                 continue
@@ -199,3 +202,8 @@ class FansBlock:
             self._written = wanted
             if not moved:
                 log.info("Fan curve switched on again")
+
+
+def _readings(root: Path) -> tuple[float | None, int | None]:
+    """The SoC's temperature and fan 1's speed now, for a look of the hold; blocks briefly."""
+    return hottest(root), fan_speed(root)

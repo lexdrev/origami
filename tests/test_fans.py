@@ -12,10 +12,13 @@ from origami.fans import (
     HOLD_SLOWEST,
     HOLD_START,
     HOLD_WARMEST,
+    ROG_ALLY,
+    XBOX_ALLY_X,
     Curve,
     FanCurve,
     Hold,
     curve_on,
+    fan_speed,
     give_back,
     hold_curve,
     hottest,
@@ -279,6 +282,164 @@ def test_another_target_goes_on_from_the_level_found() -> None:
     assert hold.look(63.0) == leaning - 12
 
 
+class Ally:
+    """The first ROG Ally as its owner recorded it (2026-11-22), second by second.
+
+    From 60 °C the firmware runs the fans at 5350 rpm at least and lets go at 56 °C; under it the
+    fans follow the curve, a step kept for 4 °C on the way down. The SoC goes two thirds of the
+    way to where it rests in 25 s.
+    """
+
+    FLOOR_RPM = 5350
+    # °C over the room per watt, by fan 1's speed: 61.5 °C at 3500 rpm and 15 W, 56 °C at 5350.
+    WARMTH = ((3300, 2.47), (3500, 2.43), (5350, 2.07), (6000, 1.95), (7700, 1.78))
+
+    def __init__(self, target: int) -> None:
+        self.hold = Hold(target, ROG_ALLY)
+        self.temp, self.rpm = 45.0, 3500.0
+        self.taken = 0
+        """Times the firmware took the fans up to its floor."""
+        self._floor = False
+        self._curve = hold_curve(self.hold.held, self.hold.level)
+        self._step = speed_at(self._curve, self.temp)
+
+    def run(self, watts: float, seconds: int) -> list[float]:
+        """Fan 1's speed at each look of the hold, one every 5 s."""
+        speeds: list[float] = []
+        for second in range(1, seconds + 1):
+            self._second(watts)
+            if second % 5 == 0:
+                level = self.hold.look(self.temp, round(self.rpm))
+                curve = hold_curve(self.hold.held, level)
+                if curve != self._curve:
+                    # A curve written is read anew: the step is the one the temperature asks.
+                    self._curve, self._step = curve, speed_at(curve, self.temp)
+                speeds.append(self.rpm)
+        return speeds
+
+    def _second(self, watts: float) -> None:
+        asked = speed_at(self._curve, self.temp)
+        self._step = max(asked, min(self._step, speed_at(self._curve, self.temp + 4)))
+        if self.temp >= 60 and not self._floor:
+            self._floor, self.taken = True, self.taken + 1
+        elif self.temp <= 56:
+            self._floor = False
+        goal = max(ROG_ALLY.rpm_at(self._step), self.FLOOR_RPM if self._floor else 0)
+        self.rpm += max(-250.0, min(250.0, goal - self.rpm))
+        warmth = next(
+            slow + (fast - slow) * (max(self.rpm, low) - low) / (high - low)
+            for (low, slow), (high, fast) in pairwise(self.WARMTH)
+            if self.rpm <= high
+        )
+        self.temp += (25 + warmth * watts - self.temp) / 25
+
+
+def steady(speeds: list[float]) -> bool:
+    """Whether the fans kept one speed over the last two minutes."""
+    return max(speeds[-24:]) - min(speeds[-24:]) <= 300
+
+
+def test_the_fans_speed_at_a_level_is_on_the_line_between_the_two_measured() -> None:
+    assert ROG_ALLY.rpm_at(15) == 3500
+    assert ROG_ALLY.rpm_at(20) == 3800
+    assert ROG_ALLY.rpm_at(100) == 7700
+    assert XBOX_ALLY_X.rpm_at(4) == 1850
+
+
+def test_the_rog_ally_holds_a_target_under_its_firmwares_floor_at_one_speed() -> None:
+    ally = Ally(58)
+
+    speeds = ally.run(15, 900)
+
+    # On a curve the firmware takes the fans from 3500 to 5350 rpm and back every two minutes.
+    assert ally.temp == pytest.approx(58, abs=0.6)
+    assert steady(speeds)
+    assert speeds[-1] < Ally.FLOOR_RPM - 300
+    assert ally.taken == 0
+
+
+def test_a_target_over_the_floor_is_held_under_it_while_slower_fans_keep_the_soc_there() -> None:
+    ally = Ally(65)
+
+    speeds = ally.run(15, 900)
+
+    assert ally.hold.held == 58
+    assert ally.temp == pytest.approx(58, abs=0.6)
+    assert steady(speeds)
+    assert ally.taken == 0
+
+
+def test_a_soc_that_gets_to_the_floor_all_the_same_is_held_at_the_target_itself() -> None:
+    ally = Ally(65)
+
+    speeds = ally.run(20, 900)
+
+    assert ally.hold.held == 65
+    assert ally.temp == pytest.approx(65, abs=0.6)
+    assert steady(speeds)
+    assert ally.hold.level >= 50
+    assert ally.taken == 1
+
+
+def test_a_soc_the_floor_keeps_under_the_target_stays_with_the_fans_at_the_floor() -> None:
+    ally = Ally(75)
+
+    speeds = ally.run(20, 900)
+
+    # Slower than the floor the fans cannot go there, and a lower level would change nothing.
+    assert ally.hold.level == 50
+    assert ally.temp < 70
+    assert steady(speeds)
+
+
+def test_once_the_load_is_lighter_the_fans_go_under_the_floor_again() -> None:
+    ally = Ally(65)
+    ally.run(20, 600)
+
+    speeds = ally.run(15, 900)
+
+    assert ally.hold.held == 58
+    assert ally.temp == pytest.approx(58, abs=0.6)
+    assert steady(speeds)
+    assert speeds[-1] < Ally.FLOOR_RPM - 300
+    assert ally.taken == 1
+
+
+def test_a_heavy_scene_takes_the_fans_to_the_floor_once_and_not_again_after_it() -> None:
+    ally = Ally(58)
+    ally.run(15, 600)
+    ally.run(30, 45)
+
+    speeds = ally.run(15, 900)
+
+    assert ally.temp == pytest.approx(58, abs=0.6)
+    assert steady(speeds)
+    assert ally.taken == 1
+
+
+def test_a_light_load_leaves_the_rog_allys_fans_at_their_slowest() -> None:
+    ally = Ally(65)
+
+    speeds = ally.run(10, 600)
+
+    assert ally.hold.level == ROG_ALLY.slowest
+    assert speeds[-1] == 3500
+    assert ally.taken == 0
+
+
+def test_while_the_firmware_runs_the_fans_the_level_found_waits() -> None:
+    told, run_by_firmware = Hold(58, ROG_ALLY), Hold(58, ROG_ALLY)
+
+    for _ in range(30):
+        # A degree under the target: fans that follow the level, and fans kept at the floor.
+        told.look(57.0, round(ROG_ALLY.rpm_at(told.level)))
+        run_by_firmware.look(57.0, 5350)
+
+    assert told.level == ROG_ALLY.slowest
+    # Let go, the fans are to be near the speed that held the SoC, not at their slowest.
+    assert run_by_firmware.level >= 30
+
+
 def test_the_hottest_is_the_warmer_of_the_two_and_unknown_without_them(fake_root: FakeRoot) -> None:
     assert hottest(fake_root.path) is None
 
@@ -287,3 +448,12 @@ def test_the_hottest_is_the_warmer_of_the_two_and_unknown_without_them(fake_root
 
     fake_root.hwmon(5, "amdgpu", temp1_input=64000)
     assert hottest(fake_root.path) == 64.0
+
+
+def test_fan_1s_speed_is_read_from_the_asus_device_and_unknown_without_it(
+    fake_root: FakeRoot,
+) -> None:
+    assert fan_speed(fake_root.path) is None
+
+    fake_root.hwmon(6, "asus", fan1_input=4600, fan2_input=4700)
+    assert fan_speed(fake_root.path) == 4600

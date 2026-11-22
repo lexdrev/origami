@@ -37,7 +37,7 @@ from origami.decky_plugins import (
     TRIGGER_OWNERS,
     VIBRATION_OWNERS,
 )
-from origami.fans import HOLD_SLOWEST, Curve, hold_curve
+from origami.fans import HOLD_SLOWEST, ROG_ALLY, XBOX_ALLY_X, Curve, hold_curve
 from origami.gyro import GyroState
 from origami.inputplumber import PASTE, Chord, NoKeyboardError
 from origami.journal import Change
@@ -1721,7 +1721,7 @@ def test_origami_holds_its_fan_curve_and_gives_the_fans_back(
 
 
 @pytest.mark.usefixtures("quick_power")
-def test_the_fans_hold_a_temperature_only_on_the_consoles_measured(
+def test_the_fans_hold_a_temperature_only_on_the_consoles_whose_fans_are_known(
     powered: FakeRoot, fan_curves: Path, tmp_path: Path
 ) -> None:
     async def scenario(board: str) -> Origami:
@@ -1732,20 +1732,51 @@ def test_the_fans_hold_a_temperature_only_on_the_consoles_measured(
         return app
 
     async def scenarios() -> None:
-        # The ROG Ally's fans stop where the hold would keep them turning: it follows the points.
-        ally = await scenario("RC71L")
-        assert not (await ally.info()).fan_hold
+        # Nothing is measured of the ROG Ally X's fans: there the curve follows its points.
+        other = await scenario("RC72LA")
+        assert (await other.info()).fan_hold is None
         assert fan_speeds(fan_curves) == [0, 26, 64, 102, 140, 191, 255, 255]
-        assert (await ally.telemetry()).fans.hold_curve is None
-        ally.stop()
+        assert (await other.telemetry()).fans.hold_curve is None
+        other.stop()
 
-        for board in ("RC73XA", "RC74XA"):
+        for board, fans in (("RC73XA", XBOX_ALLY_X), ("RC74XA", XBOX_ALLY_X), ("RC71L", ROG_ALLY)):
             app = await scenario(board)
-            assert (await app.info()).fan_hold
+            assert (await app.info()).fan_hold == fans
             assert (await app.telemetry()).fans.hold_curve is not None
             app.stop()
 
     asyncio.run(scenarios())
+
+
+@pytest.mark.usefixtures("fan_curves")
+def test_on_the_rog_ally_the_hold_stays_under_the_firmwares_floor_while_it_can(
+    powered: FakeRoot, tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        powered.write("sys/class/dmi/id/board_name", "RC71L")
+        powered.write("sys/class/hwmon/hwmon7/temp1_input", 50000)
+        powered.write("sys/class/hwmon/hwmon5/temp1_input", 49000)
+        app = make_app(powered, tmp_path)
+
+        async def held_is(wanted: Curve) -> None:
+            for _ in range(500):
+                if (await app.telemetry()).fans.hold_curve == wanted:
+                    return
+                await asyncio.sleep(0.01)
+            pytest.fail(f"the fans stayed at {(await app.telemetry()).fans.hold_curve}")
+
+        await app.start()
+        await app.update_settings({"fans": {"enabled": True, "hold": True, "target": 65}})
+
+        # A cool SoC: the fans at this console's slowest, and the net two degrees under the floor.
+        await held_is(hold_curve(58, ROG_ALLY.slowest))
+
+        # At the floor all the same, the target itself is held, with the floor's speed at least.
+        powered.write("sys/class/hwmon/hwmon7/temp1_input", 62000)
+        await held_is(hold_curve(65, 50))
+        app.stop()
+
+    asyncio.run(scenario())
 
 
 def test_origami_holds_a_temperature_with_the_fans(
