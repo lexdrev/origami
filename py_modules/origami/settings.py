@@ -35,8 +35,12 @@ FIRST_TAB = -1
 
 class Language(StrEnum):
     AUTO = "auto"
-    RU = "ru"
+    DE = "de"
     EN = "en"
+    ES = "es"
+    FR = "fr"
+    RU = "ru"
+    ZH = "zh"
 
 
 @dataclass(frozen=True, slots=True)

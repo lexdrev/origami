@@ -65,7 +65,7 @@ def test_unreadable_file_is_set_aside_and_defaults_apply(
     assert (tmp_path / "settings.json.bad").read_text(encoding="utf-8") == content
 
 
-@pytest.mark.parametrize("language", ["de", 1])
+@pytest.mark.parametrize("language", ["it", 1])
 def test_a_bad_value_costs_only_its_own_setting(
     tmp_path: Path, language: object, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -77,6 +77,14 @@ def test_a_bad_value_costs_only_its_own_setting(
 
     assert SettingsStore(path).load() == Settings(manage_tdp=False, vibration=None)
     assert "Ignoring the setting language" in caplog.text
+
+
+@pytest.mark.parametrize("language", ["auto", "de", "en", "es", "fr", "ru", "zh"])
+def test_every_language_of_the_interface_is_kept(tmp_path: Path, language: str) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save(Settings().updated({"language": language}))
+
+    assert SettingsStore(tmp_path / "settings.json").load().language.value == language
 
 
 def test_update_changes_only_the_given_field() -> None:
@@ -97,7 +105,7 @@ def test_own_tab_position(before: int | None) -> None:
 @pytest.mark.parametrize(
     "changes",
     [
-        {"language": "de"},
+        {"language": "it"},
         {"theme": "light"},
         {"qam_tab": 1},
         {"qam_tab_before": -2},
@@ -112,7 +120,7 @@ def test_own_tab_position(before: int | None) -> None:
 )
 def test_update_rejects_invalid_changes(changes: dict[str, object]) -> None:
     with pytest.raises(
-        ValueError, match=r"theme|de|qam_tab|position|qam_assist|Saturation|ButtonAction|L5"
+        ValueError, match=r"theme|Language|qam_tab|position|qam_assist|Saturation|ButtonAction|L5"
     ):
         Settings().updated(changes)
 
