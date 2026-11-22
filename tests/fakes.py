@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Alexander Derevyanko (lexdrev)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import json
 import os
 import shutil
 from pathlib import Path
@@ -81,10 +80,8 @@ class FakeRoot:
         self.hidraw(1, driver="asus", phys=f"{phys}1", hid_id=2)
         return self.hidraw(2, driver="asus_rog_ally", phys=f"{phys}2", hid_id=3)
 
-    def vkbasalt(self) -> Path:
-        """Add vkBasalt as Fedora's package installs it, and the user's home; returns the home."""
-        self.write("usr/share/vulkan/implicit_layer.d/vkBasalt.json", VKBASALT_MANIFEST)
-        self.write("usr/lib64/vkbasalt/libvkbasalt.so", "")
+    def home(self) -> Path:
+        """Add the user's home; returns it."""
         home = self.path / "home" / "user"
         home.mkdir(parents=True, exist_ok=True)
         return home
@@ -160,6 +157,11 @@ class FakeDisplay:
         return f"{atom}(CARDINAL) = {self.properties[atom]}\n"
 
 
+def _unlink(targets: list[str]) -> None:
+    for target in targets:
+        Path(target).unlink(missing_ok=True)
+
+
 class FakeUser:
     """The programs ORIGAMI runs as the user to write into their home, done on the test's files."""
 
@@ -190,8 +192,8 @@ class FakeUser:
                 Path(target).chmod(0o644)
             case ("mv", "-f", source, target):
                 Path(source).replace(target)
-            case ("rm", "-f", target):
-                Path(target).unlink(missing_ok=True)
+            case ("rm", "-f", *targets):
+                _unlink(targets)
             case ("sync", "-f", _):
                 pass
             case ("rm", "-rf", "--one-file-system", "--", target):
@@ -206,26 +208,12 @@ class FakeUser:
         return ""
 
 
-VKBASALT_MANIFEST = json.dumps(
-    {
-        "file_format_version": "1.0.0",
-        "layer": {
-            "name": "VK_LAYER_VKBASALT_post_processing",
-            "type": "GLOBAL",
-            "library_path": "/usr/$LIB/vkbasalt/libvkbasalt.so",
-            "api_version": "1.3.223",
-            "implementation_version": "1",
-            "description": "a post processing layer",
-            "functions": {
-                "vkGetInstanceProcAddr": "vkBasalt_GetInstanceProcAddr",
-                "vkGetDeviceProcAddr": "vkBasalt_GetDeviceProcAddr",
-            },
-            "enable_environment": {"ENABLE_VKBASALT": "1"},
-            "disable_environment": {"DISABLE_VKBASALT": "1"},
-        },
-    }
-)
-"""The system's manifest as Fedora's package installs it (read on the console)."""
+def own_layer(folder: Path) -> Path:
+    """ORIGAMI's own builds of vkBasalt, as the plugin's zip has them; returns their folder."""
+    for build in ("lib64", "lib32"):
+        (folder / build).mkdir(parents=True, exist_ok=True)
+        (folder / build / "libvkbasalt.so").touch()
+    return folder
 
 
 def shortcuts_vdf(*shortcuts: tuple[int, str, str]) -> bytes:

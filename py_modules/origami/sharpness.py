@@ -3,12 +3,15 @@
 
 """Sharper games: contrast adaptive sharpening (CAS), as Radeon Image Sharpening does on Windows.
 
-The system ships vkBasalt, a Vulkan layer that runs AMD's CAS shader on a game's own frames, before
-gamescope scales them. Its manifest loads it only into a process started with ENABLE_VKBASALT=1.
-Set for the whole session, that variable reaches gamescope too, which then composites every frame
-and never scans a game's frame out directly. So ORIGAMI leaves the variable alone and puts a second
-manifest of the same layer, without that condition, among the user's layers: the loader finds it
-first and drops the system's as a duplicate. The manifest and vkBasalt's configuration are there
+vkBasalt is a Vulkan layer that runs AMD's CAS shader on a game's own frames, before gamescope
+scales them. Bazzite has it in its image and SteamOS does not, so ORIGAMI brings its own build of
+it, for 64-bit and 32-bit games, and loads that on both.
+
+A system's own vkBasalt loads only into a process started with ENABLE_VKBASALT=1. Set for the
+whole session, that variable reaches gamescope too, which then composites every frame and never
+scans a game's frame out directly. So ORIGAMI sets no variable: it puts manifests of its build,
+without a condition, among the user's layers, where the loader looks first; a system's manifest
+of the same layer is dropped as a duplicate. The manifests and vkBasalt's configuration are there
 only while a game starts and runs, so nothing else loads the layer.
 
 vkBasalt reads its configuration once, as the game creates its Vulkan instance: a change reaches
@@ -19,12 +22,17 @@ import json
 import re
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import cast
 
 from origami.games import parse_game
-from origami.jsonio import JsonValue, expect_bool, parse_object
+from origami.jsonio import JsonValue, expect_bool
 
 LAYER = "VK_LAYER_VKBASALT_post_processing"
+LIBRARY = "libvkbasalt.so"
+BUILDS = {"64": "lib64", "32": "lib32"}
+"""ORIGAMI's builds of the layer: for 64-bit and for 32-bit games, as a manifest names the
+two kinds, and the folder each build is in."""
 MAX_STRENGTH = 100
 OWN_CONFIG = "# ORIGAMI writes this file as a game starts and takes it away as the game ends."
 """The first line of the configuration ORIGAMI writes, by which it knows its own file."""
@@ -141,39 +149,28 @@ def game_state(
     return GameState.WORKING
 
 
-def manifest_text(system_manifest: str) -> str:
-    """The manifest of ORIGAMI's copy of the layer, from the system's own manifest.
+def manifest_text(library: Path, bits: str) -> str:
+    """The manifest of ORIGAMI's build of the layer for 64-bit or for 32-bit programs.
 
-    The same layer and library, enabled wherever the manifest is found: only the condition goes.
-    What switches the layer off (DISABLE_VKBASALT=1) stays, for a game that must not have it.
-    Raise ValueError when the system's manifest is not vkBasalt's.
+    The layer is enabled wherever the manifest is found: it has no condition. What switches it
+    off (DISABLE_VKBASALT=1) is kept, for a game that must not have it. A loader of the other
+    kind skips the manifest by its `library_arch` and takes the one for its own.
     """
-    document, layer, _ = _system_layer(system_manifest)
-    own = {key: value for key, value in layer.items() if key != "enable_environment"}
-    return json.dumps({**document, "layer": own}, indent=2) + "\n"
-
-
-def library_64(system_manifest: str) -> str:
-    """The layer's library a 64-bit game loads, as the system's manifest points at it.
-
-    Fedora's manifest has glibc's $LIB in the path: lib64 in a 64-bit process, lib in a 32-bit
-    one. Raise ValueError when the manifest is not vkBasalt's.
-    """
-    return _system_layer(system_manifest)[2].replace("$LIB", "lib64")
-
-
-def _system_layer(
-    system_manifest: str,
-) -> tuple[dict[str, JsonValue], dict[str, JsonValue], str]:
-    """The system's manifest, its layer and the layer's library path."""
-    document = parse_object(system_manifest)
-    layer = document.get("layer")
-    if not isinstance(layer, dict) or layer.get("name") != LAYER:
-        raise ValueError(f"not a manifest of {LAYER}")
-    library = layer.get("library_path")
-    if not isinstance(library, str):
-        raise ValueError("the layer's manifest names no library")
-    return document, layer, library
+    layer: dict[str, JsonValue] = {
+        "name": LAYER,
+        "type": "GLOBAL",
+        "library_path": str(library),
+        "library_arch": bits,
+        "api_version": "1.3.223",
+        "implementation_version": "1",
+        "description": "ORIGAMI's sharpness: vkBasalt",
+        "functions": {
+            "vkGetInstanceProcAddr": "vkBasalt_GetInstanceProcAddr",
+            "vkGetDeviceProcAddr": "vkBasalt_GetDeviceProcAddr",
+        },
+        "disable_environment": {"DISABLE_VKBASALT": "1"},
+    }
+    return json.dumps({"file_format_version": "1.2.1", "layer": layer}, indent=2) + "\n"
 
 
 def config_text(sharpness: Sharpness) -> str:

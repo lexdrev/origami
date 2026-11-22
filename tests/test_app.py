@@ -25,6 +25,7 @@ from origami.blocks import sharpness as sharpness_block
 from origami.blocks.buttons import BUTTON_ACTION, QAM_PRESSED
 from origami.blocks.sharpness import CONFIG as SHARPNESS_CONFIG
 from origami.blocks.sharpness import MANIFEST as SHARPNESS_MANIFEST
+from origami.blocks.sharpness import VKBASALT_DIR
 from origami.buttons import Button, ButtonAction
 from origami.decky_plugins import (
     BOOST_OWNERS,
@@ -54,7 +55,7 @@ from origami.tdp import Limits
 from origami.triggers import TriggerLevel, TriggerRumble, Triggers, TriggerState
 from origami.vibration import Vibration
 
-from fakes import FakeHidBpf, FakeRoot, FakeSteam, FakeUser
+from fakes import FakeHidBpf, FakeRoot, FakeSteam, FakeUser, own_layer
 
 
 @pytest.fixture(autouse=True)
@@ -2286,21 +2287,23 @@ def test_restoring_leaves_what_another_plugin_drives_now(
 
 
 @pytest.fixture
-def sharpened(ally_x: FakeRoot, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A console whose system has vkBasalt; returns the user's home."""
+def sharpened(ally_x: FakeRoot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A console with the user's home, and ORIGAMI with its layer; returns the home."""
     monkeypatch.setattr(sharpness_block, "run_blocking", FakeUser())
-    return ally_x.vkbasalt()
+    own_layer(tmp_path / "plugin" / VKBASALT_DIR)
+    return ally_x.home()
 
 
-def test_the_sharpness_is_offered_where_the_system_has_its_layer(
+def test_the_sharpness_is_offered_where_origami_has_its_layer_and_the_user_a_home(
     ally_x: FakeRoot, tmp_path: Path
 ) -> None:
     async def scenario() -> None:
+        own_layer(tmp_path / "plugin" / VKBASALT_DIR)
         app = make_app(ally_x, tmp_path)
         await app.start()
         assert not (await app.info()).sharpness
 
-        ally_x.vkbasalt()
+        ally_x.home()
         again = make_app(ally_x, tmp_path)
         await again.start()
         assert (await again.info()).sharpness

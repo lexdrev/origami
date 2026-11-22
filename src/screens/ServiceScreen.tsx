@@ -85,7 +85,7 @@ function ServiceView({ title, subtitle, game, tools = false }: ServiceViewProps)
   const now = state.status === "ready" ? state.value : null;
   // The running game's launch options keep the sharpness: on this game's screen there is nothing to set.
   const taken = now?.game === "managed" && game !== null && running?.appId === game.appId ? now : null;
-  // Where the system has no layer to sharpen with, the screen has its tools alone.
+  // Where ORIGAMI has no layer to sharpen with, the screen has its tools alone.
   const sharpening = plugin.status !== "ready" || plugin.value.sharpness;
   const cleaning = tools && plugin.status === "ready" && plugin.value.cleanup;
   return (

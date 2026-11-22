@@ -17,12 +17,13 @@ from origami.gameprocs import game_processes
 from origami.proc import CommandError, run_blocking
 from origami.settings import Settings
 from origami.sharpness import (
+    BUILDS,
+    LIBRARY,
     GameState,
     Sharpness,
     config_text,
     game_state,
     launch_programs,
-    library_64,
     manifest_text,
     own_config,
     sets_vkbasalt,
@@ -31,13 +32,19 @@ from origami.tasks import BackgroundTask
 
 log = logging.getLogger(__name__)
 
-SYSTEM_MANIFEST = Path("usr/share/vulkan/implicit_layer.d/vkBasalt.json")
-MANIFEST = Path(".local/share/vulkan/implicit_layer.d/origami_sharpness.json")
-"""ORIGAMI's manifest of the layer, in the user's home: the loader looks there before /usr."""
+VKBASALT_DIR = Path("bin/vkbasalt")
+"""ORIGAMI's own builds of vkBasalt in the plugin's folder (scripts/build_vkbasalt.sh)."""
+MANIFESTS = {
+    "64": Path(".local/share/vulkan/implicit_layer.d/origami_sharpness.json"),
+    "32": Path(".local/share/vulkan/implicit_layer.d/origami_sharpness32.json"),
+}
+"""ORIGAMI's manifests of the layer in the user's home, one for each kind of game: the loader
+looks there before /usr."""
+MANIFEST = MANIFESTS["64"]
+"""The manifest most games take: nearly all of them are 64-bit."""
 CONFIG = Path(".config/vkBasalt/vkBasalt.conf")
 """vkBasalt's configuration in the user's home. The one in /etc is not seen inside Steam's
 container, where the games run."""
-LIBRARY = "libvkbasalt.so"
 OWN_VARIABLES = (b"DISABLE_VKBASALT=1", b"ENABLE_VKBASALT=1")
 OWN_CONFIG_VARIABLE = b"VKBASALT_CONFIG_FILE="
 """vkBasalt's variables in a game's environment: its launch options set vkBasalt themselves."""
@@ -97,6 +104,8 @@ class SharpnessBlock:
 
     ORIGAMI runs as root in the user's home, so the files are written and removed by programs run
     as the user: they can do there only what the user can, whatever links the home holds.
+
+    `layer` is the folder of ORIGAMI's own builds of vkBasalt, which the manifests point at.
     """
 
     def __init__(
@@ -104,11 +113,13 @@ class SharpnessBlock:
         context: Context,
         *,
         home: Path,
+        layer: Path,
         companion: str | None = None,
         runner: Runner | None = None,
     ) -> None:
         self._context = context
         self._home = home
+        self._layer = layer
         self._companion = companion
         self._run: Runner = run_blocking if runner is None else runner
         self._settings = Settings()
@@ -131,15 +142,9 @@ class SharpnessBlock:
         self._watch = BackgroundTask("origami-sharpness-watch", self._watch_environment)
 
     def supported(self) -> bool:
-        """The system has vkBasalt with its 64-bit library, and the user has a home."""
-        root = self._context.root
-        try:
-            library = Path(library_64((root / SYSTEM_MANIFEST).read_text(encoding="utf-8")))
-        except OSError, ValueError:
-            return False
-        # A bare library name is found by the loader itself.
-        there = not library.is_absolute() or (root / library.relative_to("/")).is_file()
-        return there and self._home.is_dir()
+        """ORIGAMI has both builds of the layer, and the user has a home."""
+        builds = all((self._layer / folder / LIBRARY).is_file() for folder in BUILDS.values())
+        return builds and self._home.is_dir()
 
     async def follow(self, settings: Settings) -> None:
         """Write or remove the files for these settings and the game that starts or runs."""
@@ -319,25 +324,27 @@ class SharpnessBlock:
 
     def _put(self, sharpness: Sharpness) -> None:
         user = self._user()
-        manifest = manifest_text((self._context.root / SYSTEM_MANIFEST).read_text(encoding="utf-8"))
         journal = self._context.journal
         if not journal.recorded(*JOURNAL):
             journal.record(*JOURNAL, self._users_config(user))
         # The configuration first: the layer never loads with another one.
         self._write(self._home / CONFIG, config_text(sharpness), user, TIMEOUT_SECONDS)
-        self._write(self._home / MANIFEST, manifest, user, TIMEOUT_SECONDS)
+        for bits, manifest in MANIFESTS.items():
+            text = manifest_text(self._layer / BUILDS[bits] / LIBRARY, bits)
+            self._write(self._home / manifest, text, user, TIMEOUT_SECONDS)
         self._on_disk = sharpness
         log.info("Sharpness %d%% for the games that start now", sharpness.strength)
 
     def _take_away(self, timeout: float) -> None:
         journal = self._context.journal
-        manifest, config = self._home / MANIFEST, self._home / CONFIG
-        if not journal.recorded(*JOURNAL) and not os.path.lexists(manifest):
+        config = self._home / CONFIG
+        manifests = [str(self._home / manifest) for manifest in MANIFESTS.values()]
+        if not journal.recorded(*JOURNAL) and not any(map(os.path.lexists, manifests)):
             self._on_disk = None
             return
         user = self._user()
-        self._run("rm", "-f", str(manifest), timeout=timeout, user=user)
-        # Without the manifest the next game needs both files written again, whatever fails below.
+        self._run("rm", "-f", *manifests, timeout=timeout, user=user)
+        # Without the manifests the next game needs the files written again, whatever fails below.
         self._on_disk = None
         # A configuration written over ORIGAMI's meanwhile is somebody's own and stays.
         if os.path.lexists(config) and own_config(self._read(config, user, timeout)):

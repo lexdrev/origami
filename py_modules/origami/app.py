@@ -20,7 +20,7 @@ from origami.blocks.gamepad import GamepadBlock
 from origami.blocks.overlay import OverlayBlock
 from origami.blocks.overlay import offered as overlay_offered
 from origami.blocks.power import PowerBlock, power_settings_changed
-from origami.blocks.sharpness import SharpnessBlock, SharpnessState
+from origami.blocks.sharpness import VKBASALT_DIR, SharpnessBlock, SharpnessState
 from origami.blocks.sound import LV2_DIR, SoundBlock, SoundState
 from origami.buttons import Button, layout_for
 from origami.decky_plugins import SHARPNESS_COMPANION, Conflicts, describe, read_conflicts
@@ -81,7 +81,7 @@ class Info:
     overlay_menu: bool
     """The system has an overlay menu of its own that ORIGAMI can keep in sight (B18)."""
     sharpness: bool
-    """The system has the layer ORIGAMI sharpens the games with."""
+    """ORIGAMI has its layer to sharpen the games with, and the user a home for its files."""
     cleanup: bool
     """Steam keeps its games in the user's home, where ORIGAMI can clean up after them."""
 
@@ -140,7 +140,10 @@ class Origami:
             context, lv2_dir=environment.plugin_dir / LV2_DIR, board=self._board_now
         )
         self._sharpness = SharpnessBlock(
-            context, home=environment.user_home, companion=SHARPNESS_COMPANION
+            context,
+            home=environment.user_home,
+            layer=environment.plugin_dir / VKBASALT_DIR,
+            companion=SHARPNESS_COMPANION,
         )
         self._cleanup = CleanupBlock(environment.root, home=environment.user_home)
 

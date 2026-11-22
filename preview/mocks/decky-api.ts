@@ -83,7 +83,7 @@ if (ally) {
   info.device = { board: "RC71L", product: "ROG Ally RC71L_RC71L", model: "ROG Ally" };
   info.fanHold = ROG_ALLY;
 }
-// "?nosharpness" is a system without the sharpening layer: the main screen has no Service tile.
+// "?nosharpness" is ORIGAMI without its sharpening layer: the Service screen has no sharpness.
 if (query.has("nosharpness")) info.sharpness = false;
 // "?nocleanup" is a home without Steam's folders: the Service screen has no Cleanup row.
 if (query.has("nocleanup")) info.cleanup = false;

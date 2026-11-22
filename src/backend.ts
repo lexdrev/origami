@@ -58,7 +58,7 @@ export interface Info {
   fanHold: HoldFans | null;
   /** The system has an overlay menu of its own that ORIGAMI can keep in sight. */
   overlayMenu: boolean;
-  /** The system has the layer ORIGAMI sharpens the games with. */
+  /** ORIGAMI has its layer to sharpen the games with, and the user a home for its files. */
   sharpness: boolean;
   /** Steam keeps its games in the user's home, where ORIGAMI can clean up after them. */
   cleanup: boolean;

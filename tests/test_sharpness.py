@@ -14,7 +14,7 @@ from origami.blocks.sharpness import (
     CONFIG,
     JOURNAL,
     MANIFEST,
-    SYSTEM_MANIFEST,
+    MANIFESTS,
     SharpnessBlock,
     layer_loaded,
 )
@@ -29,14 +29,12 @@ from origami.sharpness import (
     config_text,
     game_state,
     launch_programs,
-    library_64,
     manifest_text,
     own_config,
     sets_vkbasalt,
 )
 
-from fakes import VKBASALT_MANIFEST as SYSTEM
-from fakes import FakeUser
+from fakes import FakeUser, own_layer
 
 GAME = 1920490
 LAUNCHER = SHARPNESS_LAUNCHERS[0]
@@ -78,23 +76,19 @@ def test_a_game_starts_with_its_own_sharpness_while_that_is_active() -> None:
     assert [profile.active for profile in restored.game_sharpness] == [False, False]
 
 
-def test_the_manifest_is_the_system_s_layer_without_its_condition() -> None:
-    manifest = json.loads(manifest_text(SYSTEM))
+def test_a_manifest_points_at_one_build_of_the_layer_and_has_no_condition() -> None:
+    library = Path("/home/user/homebrew/plugins/Origami/bin/vkbasalt/lib32/libvkbasalt.so")
 
-    assert manifest["layer"]["name"] == LAYER
-    assert manifest["layer"]["library_path"] == "/usr/$LIB/vkbasalt/libvkbasalt.so"
-    assert "enable_environment" not in manifest["layer"]
-    assert manifest["layer"]["disable_environment"] == {"DISABLE_VKBASALT": "1"}
-    assert library_64(SYSTEM) == "/usr/lib64/vkbasalt/libvkbasalt.so"
+    manifest = json.loads(manifest_text(library, "32"))
 
-
-@pytest.mark.parametrize(
-    "text",
-    ["[]", "{}", '{"layer": {"name": "VK_LAYER_other"}}', json.dumps({"layer": {"name": LAYER}})],
-)
-def test_another_manifest_is_not_taken_for_the_layer_s(text: str) -> None:
-    with pytest.raises(ValueError):
-        manifest_text(text)
+    layer = manifest["layer"]
+    assert layer["name"] == LAYER
+    assert layer["library_path"] == str(library)
+    # A 64-bit program's loader skips this manifest, and takes the other.
+    assert layer["library_arch"] == "32"
+    assert "enable_environment" not in layer
+    assert layer["disable_environment"] == {"DISABLE_VKBASALT": "1"}
+    assert set(layer["functions"]) == {"vkGetInstanceProcAddr", "vkGetDeviceProcAddr"}
 
 
 def test_the_configuration_is_cas_alone_at_the_chosen_strength() -> None:
@@ -156,15 +150,10 @@ def test_the_state_of_a_running_game() -> None:
 def make_block(
     tmp_path: Path, user: FakeUser, owner: list[str | None] | None = None
 ) -> tuple[SharpnessBlock, Path]:
-    """A block on a system that has vkBasalt, and the user's home."""
+    """A block with ORIGAMI's builds of the layer, and the user's home."""
     root, home = tmp_path / "root", tmp_path / "root" / "home" / "user"
     home.mkdir(parents=True, exist_ok=True)
-    manifest = root / SYSTEM_MANIFEST
-    manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text(SYSTEM, encoding="utf-8")
-    library = root / "usr/lib64/vkbasalt/libvkbasalt.so"
-    library.parent.mkdir(parents=True, exist_ok=True)
-    library.touch()
+    layer = own_layer(tmp_path / "plugin" / "bin" / "vkbasalt")
 
     async def conflicts() -> Conflicts:
         return Conflicts(
@@ -182,7 +171,7 @@ def make_block(
     journal = ChangeJournal(tmp_path / "changes.json")
     journal.load()
     context = Context(root, journal, conflicts)
-    block = SharpnessBlock(context, home=home, companion="Frame Plugin", runner=user)
+    block = SharpnessBlock(context, home=home, layer=layer, companion="Frame Plugin", runner=user)
     return block, home
 
 
@@ -203,14 +192,14 @@ def game_with_the_layer(tmp_path: Path, pid: int = 5000) -> Path:
     return maps
 
 
-def test_the_system_is_supported_with_the_layer_and_a_home(tmp_path: Path) -> None:
+def test_the_sharpness_needs_both_builds_of_the_layer_and_a_home(tmp_path: Path) -> None:
     block, home = make_block(tmp_path, FakeUser())
+    layer = tmp_path / "plugin" / "bin" / "vkbasalt"
     assert block.supported()
 
-    (tmp_path / "root" / "usr/lib64/vkbasalt/libvkbasalt.so").unlink()
+    (layer / "lib32" / "libvkbasalt.so").unlink()
     assert not block.supported()
-    (tmp_path / "root" / SYSTEM_MANIFEST).unlink()
-    assert not block.supported()
+    own_layer(layer)
     home.rmdir()
     assert not block.supported()
 
@@ -228,19 +217,24 @@ def test_the_files_are_there_from_a_game_s_launch_until_it_ends(tmp_path: Path) 
         assert (await block.state()).game is GameState.NO_GAME
 
         await block.game_starting(settings, GAME)
-        assert json.loads((home / MANIFEST).read_text(encoding="utf-8"))["layer"]["name"] == LAYER
+        layer = tmp_path / "plugin" / "bin" / "vkbasalt"
+        for bits, build in (("64", "lib64"), ("32", "lib32")):
+            manifest = json.loads((home / MANIFESTS[bits]).read_text(encoding="utf-8"))["layer"]
+            assert manifest["library_path"] == str(layer / build / "libvkbasalt.so")
+            assert manifest["library_arch"] == bits
         assert "casSharpness = 0.70\n" in (home / CONFIG).read_text(encoding="utf-8")
         assert in_journal(tmp_path)
         # The configuration is whole before the layer can load.
         written = [call[-1] for call in user.calls if call[0] == "mv"]
-        assert written == [str(home / CONFIG), str(home / MANIFEST)]
+        assert written == [str(home / CONFIG), *(str(home / path) for path in MANIFESTS.values())]
 
         await block.set_game(settings, GAME)
         game_with_the_layer(tmp_path)
         assert (await block.state()).game is GameState.WORKING
 
         await block.set_game(settings, None)
-        assert not (home / MANIFEST).exists() and not (home / CONFIG).exists()
+        assert not any((home / path).exists() for path in MANIFESTS.values())
+        assert not (home / CONFIG).exists()
         assert not in_journal(tmp_path)
         block.stop()
 
